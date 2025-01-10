@@ -16,7 +16,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/visedriver/testutil/testtag"

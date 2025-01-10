@@ -9,9 +9,9 @@ import (
 	"regexp"
 	"testing"
 
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/driver"
 	"github.com/gofrs/uuid"
+	"git.grassecon.net/grassrootseconomics/visedriver/testutil/driver"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil"
 )
 
 var (

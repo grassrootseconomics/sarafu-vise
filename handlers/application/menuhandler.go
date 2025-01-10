@@ -39,8 +39,8 @@ type FlagManager struct {
 	parser *asm.FlagParser
 }
 
-type MenuHandler struct {
-	*Handlers
+type MenuHandlers struct {
+	*handlers.Handlers
 }
 
 // NewFlagManager creates a new FlagManager instance
@@ -61,9 +61,9 @@ func (fm *FlagManager) GetFlag(label string) (uint32, error) {
 	return fm.parser.GetFlag(label)
 }
 
-func ToMenuHandlers(h *Handlers) *MenuHandlers { 
+func ToMenuHandlers(h *handlers.Handlers) *MenuHandlers { 
 	return &MenuHandlers{
-		Handlers: Handlers,
+		Handlers: h,
 	}
 }
 
