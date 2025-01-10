@@ -1,0 +1,55 @@
+{
+    "groups": [
+        { 
+                "name": "menu_my_account_edit_all_account_details_starting_from_gender",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    },
+                    {
+                        "input": "3",
+                        "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "My profile\n1:Edit name\n2:Edit family name\n3:Edit gender\n4:Edit year of birth\n5:Edit location\n6:Edit offerings\n7:View profile\n0:Back"
+                    },
+                    {
+                        "input": "3",
+                        "expectedContent": "Select gender: \n1:Male\n2:Female\n3:Unspecified\n0:Back"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent":  "Enter your year of birth\n0:Back"
+                    },
+                    {
+                        "input": "1940",
+                        "expectedContent": "Enter your location:\n0:Back"
+                    },
+                    {
+                        "input": "Kilifi",
+                        "expectedContent": "Enter the services or goods you offer: \n0:Back"
+                    },
+                    {
+                        "input": "Bananas",
+                        "expectedContent": "Please enter your PIN:"
+                    },
+                    {
+                        "input": "1234",
+                        "expectedContent": "Profile updated successfully\n\n0:Back\n9:Quit"
+                    },
+                    {
+                        "input": "0",
+                        "expectedContent": "My profile\n1:Edit name\n2:Edit family name\n3:Edit gender\n4:Edit year of birth\n5:Edit location\n6:Edit offerings\n7:View profile\n0:Back"
+                    },
+                    {
+                        "input": "0",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    }
+                ]
+            }
+    ]
+}
+      
+      

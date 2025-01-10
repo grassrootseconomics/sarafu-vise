@@ -1,0 +1,133 @@
+[
+    {
+        "name": "session one",
+        "groups": [
+            {
+                "name": "account_creation_successful",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "Welcome to Sarafu Network\nPlease select a language\n1:English\n2:Kiswahili"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/pages/terms-and-conditions\n\n1:Yes\n2:No"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Please enter a new four number PIN for your account:\n0:Exit"
+                    },
+                    {
+                        "input": "1234",
+                        "expectedContent": "Enter your four number PIN again:"
+                    },
+                    {
+                        "input": "1111",
+                        "expectedContent": "The PIN is not a match. Try again\n1:Retry\n9:Quit"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Enter your four number PIN again:"
+                    },
+                    {
+                        "input": "1234",
+                        "expectedContent": "Your account is being created...Thank you for using Sarafu. Goodbye!"
+                    }
+                ]
+            },
+            {
+                "name": "account_creation_reject_terms",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "Welcome to Sarafu Network\nPlease select a language\n1:English\n2:Kiswahili"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/pages/terms-and-conditions\n\n1:Yes\n2:No"
+                    },
+                    {
+                        "input": "2",
+                        "expectedContent": "Thank you for using Sarafu. Goodbye!"
+                    }
+                ]
+            },
+            {
+                "name": "send_with_invite",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Enter recipient's phone number/address/alias:\n0:Back"
+                    },
+                    {
+                        "input": "0@0",
+                        "expectedContent": "0@0 is invalid, please try again:\n1:Retry\n9:Quit"
+                    },
+                    {
+                        "input": "1",
+                        "expectedContent": "Enter recipient's phone number/address/alias:\n0:Back"
+                    },
+                    {
+                        "input": "0712345678",
+                        "expectedContent": "0712345678 is not registered, please try again:\n1:Retry\n2:Invite to Sarafu Network\n9:Quit"
+                    },
+                    {
+                        "input": "2",
+                        "expectedContent": "Your invite request for 0712345678 to Sarafu Network failed. Please try again later."
+                    }
+                ]
+            },
+            {
+                "name": "main_menu_help",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    },
+                    {
+                        "input": "4",
+                        "expectedContent": "For more help,please call: 0757628885"
+                    }
+                ]
+            },
+            {
+                "name": "main_menu_quit",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    },
+                    {
+                        "input": "9",
+                        "expectedContent": "Thank you for using Sarafu. Goodbye!"
+                    }
+                ]
+            },
+            {
+                "name": "menu_my_account_my_address",
+                "steps": [
+                    {
+                        "input": "",
+                        "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    },
+                    {
+                        "input": "3",
+                        "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    },
+                    {
+                        "input": "6",
+                        "expectedContent": "Address: {public_key}\n0:Back\n9:Quit"
+                    },
+                    {
+                        "input": "9",
+                        "expectedContent": "Thank you for using Sarafu. Goodbye!"
+                    }
+                ]
+            }
+        ]
+    }
+]
