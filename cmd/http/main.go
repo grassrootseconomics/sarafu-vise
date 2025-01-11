@@ -21,8 +21,8 @@ import (
 	httpsession "git.grassecon.net/grassrootseconomics/visedriver/session/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/session"
-	"git.grassecon.net/grassrootseconomics/visedriver/remote"
 
+	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
@@ -121,8 +121,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := remote.AccountService{}
-	hl, err := lhs.GetHandler(&accountService)
+	accountService := &httpremote.HTTPAccountService{}
+	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)

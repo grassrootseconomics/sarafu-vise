@@ -4,6 +4,7 @@ go 1.23.4
 
 require (
 	git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d
+	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250111175819-d3e6a462aa0f
 	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250111151614-46bf21b7b8bd
 	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250111150203-fd8301144509
 	github.com/alecthomas/assert/v2 v2.2.2

@@ -11,7 +11,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
-	"git.grassecon.net/grassrootseconomics/visedriver/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
@@ -64,7 +64,7 @@ func (ls *LocalHandlerService) SetDataStore(db *db.Db) {
 	ls.UserdataStore = db
 }
 
-func (ls *LocalHandlerService) GetHandler(accountService remote.AccountServiceInterface) (*application.MenuHandlers, error) {
+func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) (*application.MenuHandlers, error) {
 	replaceSeparatorFunc := func(input string) string {
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}

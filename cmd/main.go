@@ -13,8 +13,8 @@ import (
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
-	"git.grassecon.net/grassrootseconomics/visedriver/remote"
 	"git.grassecon.net/grassrootseconomics/visedriver/common"
+	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
@@ -131,8 +131,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := remote.AccountService{}
-	hl, err := lhs.GetHandler(&accountService)
+	accountService := &httpremote.HTTPAccountService{}
+	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)

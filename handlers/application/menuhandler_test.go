@@ -15,10 +15,10 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/mocks"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
-	"git.grassecon.net/grassrootseconomics/visedriver/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 
 	"git.grassecon.net/grassrootseconomics/visedriver/common"
 	"github.com/alecthomas/assert/v2"

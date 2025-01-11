@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"git.defalsify.org/vise.git/asm"
+	"gopkg.in/leonelquinteros/gotext.v1"
 
+	"git.defalsify.org/vise.git/asm"
 	"git.defalsify.org/vise.git/cache"
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/lang"
@@ -19,9 +20,9 @@ import (
 	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/visedriver/common"
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
-	"git.grassecon.net/grassrootseconomics/visedriver/models"
-	"git.grassecon.net/grassrootseconomics/visedriver/remote"
-	"gopkg.in/leonelquinteros/gotext.v1"
+
+	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -63,14 +64,14 @@ type MenuHandlers struct {
 	userdataStore        common.DataStore
 	adminstore           *utils.AdminStore
 	flagManager          *asm.FlagParser
-	accountService       remote.AccountServiceInterface
+	accountService       remote.AccountService
 	prefixDb             dbstorage.PrefixDb
 	profile              *models.Profile
 	ReplaceSeparatorFunc func(string) string
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *utils.AdminStore, accountService remote.AccountServiceInterface, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *utils.AdminStore, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	testdataloader "github.com/peteole/testdata-loader"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
@@ -18,10 +19,10 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/testservice"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/testtag"
-	testdataloader "github.com/peteole/testdata-loader"
-	"git.grassecon.net/grassrootseconomics/visedriver/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil/testtag"
 )
 
 var (
@@ -168,7 +169,7 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	}
 
 	if testtag.AccountService == nil {
-		testtag.AccountService = &remote.AccountService{}
+		testtag.AccountService = &httpremote.HTTPAccountService{}
 	}
 
 	switch testtag.AccountService.(type) {
@@ -176,7 +177,7 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 		go func() {
 			eventChannel <- false
 		}()
-	case *remote.AccountService:
+	case remote.AccountService:
 		go func() {
 			time.Sleep(5 * time.Second) // Wait for 5 seconds
 			eventChannel <- true
