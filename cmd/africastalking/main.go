@@ -22,7 +22,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/session"
 	
 	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
-	"git.grassecon.net/grassrootseconomics/visedriver-africastalking/args"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"

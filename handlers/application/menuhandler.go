@@ -22,6 +22,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
@@ -62,7 +63,7 @@ type MenuHandlers struct {
 	st                   *state.State
 	ca                   cache.Memory
 	userdataStore        common.DataStore
-	adminstore           *utils.AdminStore
+	adminstore           *store.AdminStore
 	flagManager          *asm.FlagParser
 	accountService       remote.AccountService
 	prefixDb             dbstorage.PrefixDb
@@ -71,7 +72,7 @@ type MenuHandlers struct {
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *utils.AdminStore, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *store.AdminStore, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}

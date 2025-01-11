@@ -15,10 +15,10 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
-	"git.grassecon.net/grassrootseconomics/visedriver/utils"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 
 	"git.grassecon.net/grassrootseconomics/visedriver/common"
 	"github.com/alecthomas/assert/v2"
@@ -124,7 +124,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 func TestInit(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, testStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	fm, err := NewFlagManager(flagsPath)
@@ -132,7 +132,7 @@ func TestInit(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	adminstore, err := utils.NewAdminStore(ctx, "admin_numbers")
+	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -159,7 +159,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "State and memory initialization",
 			setup: func() (*MenuHandlers, context.Context) {
-				pe := persist.NewPersister(store).WithSession(sessionId).WithContent(st, ca)
+				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,
@@ -175,7 +175,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "Non-admin session initialization",
 			setup: func() (*MenuHandlers, context.Context) {
-				pe := persist.NewPersister(store).WithSession("0712345678").WithContent(st, ca)
+				pe := persist.NewPersister(testStore).WithSession("0712345678").WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,
@@ -191,7 +191,7 @@ func TestInit(t *testing.T) {
 		{
 			name: "Move to top node on empty input",
 			setup: func() (*MenuHandlers, context.Context) {
-				pe := persist.NewPersister(store).WithSession(sessionId).WithContent(st, ca)
+				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,

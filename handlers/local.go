@@ -10,9 +10,9 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 
-	"git.grassecon.net/grassrootseconomics/visedriver/utils"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 )
 
 type HandlerService interface {
@@ -33,7 +33,7 @@ type LocalHandlerService struct {
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
-	AdminStore    *utils.AdminStore
+	AdminStore    *store.AdminStore
 	Cfg           engine.Config
 	Rs            resource.Resource
 }
@@ -43,7 +43,7 @@ func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResour
 	if err != nil {
 		return nil, err
 	}
-	adminstore, err := utils.NewAdminStore(ctx, "admin_numbers")
+	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
 	if err != nil {
 		return nil, err
 	}
