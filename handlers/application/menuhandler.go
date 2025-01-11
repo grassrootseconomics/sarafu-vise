@@ -21,7 +21,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/common"
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
 
-	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
@@ -66,7 +66,7 @@ type MenuHandlers struct {
 	flagManager          *asm.FlagParser
 	accountService       remote.AccountService
 	prefixDb             dbstorage.PrefixDb
-	profile              *models.Profile
+	profile              *profile.Profile
 	ReplaceSeparatorFunc func(string) string
 }
 
@@ -89,7 +89,7 @@ func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *
 		adminstore:           adminstore,
 		accountService:       accountService,
 		prefixDb:             prefixDb,
-		profile:              &models.Profile{Max: 6},
+		profile:              &profile.Profile{Max: 6},
 		ReplaceSeparatorFunc: replaceSeparatorFunc,
 	}
 	return h, nil
