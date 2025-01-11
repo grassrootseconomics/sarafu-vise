@@ -21,7 +21,6 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/utils"
 	"git.grassecon.net/grassrootseconomics/visedriver/models"
 	"git.grassecon.net/grassrootseconomics/visedriver/remote"
-	"git.grassecon.net/grassrootseconomics/visedriver/handlers"
 	"gopkg.in/leonelquinteros/gotext.v1"
 
 	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
@@ -37,10 +36,6 @@ var (
 // FlagManager handles centralized flag management
 type FlagManager struct {
 	parser *asm.FlagParser
-}
-
-type MenuHandlers struct {
-	*handlers.Handlers
 }
 
 // NewFlagManager creates a new FlagManager instance
@@ -61,11 +56,54 @@ func (fm *FlagManager) GetFlag(label string) (uint32, error) {
 	return fm.parser.GetFlag(label)
 }
 
-func ToMenuHandlers(h *handlers.Handlers) *MenuHandlers { 
-	return &MenuHandlers{
-		Handlers: h,
-	}
+type MenuHandlers struct {
+	pe                   *persist.Persister
+	st                   *state.State
+	ca                   cache.Memory
+	userdataStore        common.DataStore
+	adminstore           *utils.AdminStore
+	flagManager          *asm.FlagParser
+	accountService       remote.AccountServiceInterface
+	prefixDb             dbstorage.PrefixDb
+	profile              *models.Profile
+	ReplaceSeparatorFunc func(string) string
 }
+
+// NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
+func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *utils.AdminStore, accountService remote.AccountServiceInterface, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+	if userdataStore == nil {
+		return nil, fmt.Errorf("cannot create handler with nil userdata store")
+	}
+	userDb := &common.UserDataStore{
+		Db: userdataStore,
+	}
+
+	// Instantiate the SubPrefixDb with "DATATYPE_USERDATA" prefix
+	prefix := common.ToBytes(db.DATATYPE_USERDATA)
+	prefixDb := dbstorage.NewSubPrefixDb(userdataStore, prefix)
+
+	h := &MenuHandlers{
+		userdataStore:        userDb,
+		flagManager:          appFlags,
+		adminstore:           adminstore,
+		accountService:       accountService,
+		prefixDb:             prefixDb,
+		profile:              &models.Profile{Max: 6},
+		ReplaceSeparatorFunc: replaceSeparatorFunc,
+	}
+	return h, nil
+}
+
+// WithPersister sets persister instance to the handlers.
+//func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
+func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
+	if h.pe != nil {
+		panic("persister already set")
+	}
+	h.pe = pe
+	//return h
+}
+
 
 // Init initializes the handler for a new session.
 func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (resource.Result, error) {
@@ -121,6 +159,7 @@ func (h *MenuHandlers) SetLanguage(ctx context.Context, sym string, input []byte
 	symbol, _ := h.st.Where()
 	code := strings.Split(symbol, "_")[1]
 
+	// TODO: Use defaultlanguage from config
 	if !utils.IsValidISO639(code) {
 		//Fallback to english instead?
 		code = "eng"

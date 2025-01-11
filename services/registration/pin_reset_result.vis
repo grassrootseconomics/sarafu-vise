@@ -1,0 +1,8 @@
+LOAD retrieve_blocked_number 0
+MAP retrieve_blocked_number
+LOAD reset_others_pin 6
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP pin_management 0
+INCMP quit  9

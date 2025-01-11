@@ -1,0 +1,7 @@
+MAP validate_amount
+RELOAD reset_transaction_amount
+MOUT retry 1
+MOUT quit 9
+HALT
+INCMP _ 1
+INCMP quit 9

@@ -1,0 +1,13 @@
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH update_offerings flag_allow_update 1
+LOAD get_current_profile_info 0
+RELOAD get_current_profile_info
+LOAD save_offerings 8
+MOUT back 0
+HALT
+RELOAD set_back 
+CATCH _ flag_back_set 1
+RELOAD save_offerings
+INCMP _ 0
+CATCH pin_entry flag_offerings_set 1
+INCMP update_profile_items *

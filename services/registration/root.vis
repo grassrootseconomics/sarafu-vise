@@ -1,0 +1,10 @@
+CATCH blocked_account flag_account_blocked 1
+CATCH select_language flag_language_set 0
+CATCH terms flag_account_created 0
+LOAD check_account_status 0
+RELOAD check_account_status
+CATCH api_failure  flag_api_call_error  1
+CATCH account_pending flag_account_pending 1
+CATCH create_pin flag_pin_set 0
+CATCH main flag_account_success 1
+HALT

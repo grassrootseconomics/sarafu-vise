@@ -1,0 +1,8 @@
+MAP validate_recipient
+MOUT retry 1
+MOUT invite 2
+MOUT quit 9
+HALT
+INCMP _ 1
+INCMP invite_result 2
+INCMP quit 9

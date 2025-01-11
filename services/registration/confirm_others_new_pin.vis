@@ -1,0 +1,14 @@
+CATCH pin_entry flag_incorrect_pin 1
+RELOAD retrieve_blocked_number
+MAP retrieve_blocked_number
+CATCH invalid_others_pin flag_valid_pin 0
+CATCH pin_reset_result flag_account_authorized 1
+LOAD save_others_temporary_pin 6
+RELOAD save_others_temporary_pin
+MOUT back 0
+HALT 
+INCMP _ 0
+LOAD check_pin_mismatch 0
+RELOAD check_pin_mismatch
+CATCH others_pin_mismatch flag_pin_mismatch 1
+INCMP pin_entry *

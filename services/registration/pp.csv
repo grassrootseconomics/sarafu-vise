@@ -1,0 +1,32 @@
+flag,flag_language_set,8,checks whether the user has set their prefered language
+flag,flag_account_created,9,this is set when an account has been created on the API
+flag,flag_account_creation_failed,10,this is set when there's an error from the API during account creation
+flag,flag_account_pending,11,this is set when an account does not have a status of SUCCESS
+flag,flag_account_success,12,this is set when an account has a status of SUCCESS
+flag,flag_pin_mismatch,13,this is set when the confirmation PIN matches the initial PIN during registration
+flag,flag_pin_set,14,this is set when a newly registered user sets a PIN. This must be present for an account to access the main menu
+flag,flag_account_authorized,15,this is set to allow a user access guarded nodes after providing a correct PIN
+flag,flag_invalid_recipient,16,this is set when the transaction recipient is invalid
+flag,flag_invalid_recipient_with_invite,17,this is set when the transaction recipient is valid but not on the platform
+flag,flag_invalid_amount,18,this is set when the given transaction amount is invalid
+flag,flag_incorrect_pin,19,this is set when the provided PIN is invalid or does not match the current account's PIN
+flag,flag_valid_pin,20,this is set when the given PIN is valid
+flag,flag_allow_update,21,this is set to allow a user to update their profile data
+flag,flag_single_edit,22,this is set to allow a user to edit a single profile item such as year of birth
+flag,flag_incorrect_date_format,23,this is set when the given year of birth is invalid
+flag,flag_incorrect_voucher,24,this is set when the selected voucher is invalid
+flag,flag_api_call_error,25,this is set when communication to an external service fails
+flag,flag_no_active_voucher,26,this is set when a user does not have an active voucher
+flag,flag_admin_privilege,27,this is set when a user has admin privileges.
+flag,flag_unregistered_number,28,this is set when an unregistered phonenumber tries to perform an action
+flag,flag_no_transfers,29,this is set when a user does not have any transactions
+flag,flag_incorrect_statement,30,this is set when the selected statement is invalid
+flag,flag_firstname_set,31,this is set when the first name of the profile is set
+flag,flag_familyname_set,32,this is set when the family name of the profile is set
+flag,flag_yob_set,33,this is set when the yob of the profile is set
+flag,flag_gender_set,34,this is set when the gender of the profile is set
+flag,flag_location_set,35,this is set when the location of the profile is set
+flag,flag_offerings_set,36,this is set when the offerings of the profile is set
+flag,flag_back_set,37,this is set when it is a back navigation
+flag,flag_account_blocked,38,this is set when an account has been blocked after the allowed incorrect PIN attempts have been exceeded
+

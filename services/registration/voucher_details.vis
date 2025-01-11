@@ -1,0 +1,6 @@
+CATCH no_voucher flag_no_active_voucher 1
+LOAD get_voucher_details 0
+MAP get_voucher_details
+MOUT back 0
+HALT
+INCMP _ 0

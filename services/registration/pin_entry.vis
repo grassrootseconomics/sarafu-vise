@@ -1,0 +1,4 @@
+LOAD authorize_account 0
+HALT
+RELOAD authorize_account
+MOVE _

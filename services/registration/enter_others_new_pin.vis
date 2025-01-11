@@ -1,0 +1,12 @@
+LOAD validate_blocked_number 6
+RELOAD validate_blocked_number
+CATCH unregistered_number flag_unregistered_number 1
+LOAD retrieve_blocked_number 0
+RELOAD retrieve_blocked_number
+MAP retrieve_blocked_number
+MOUT back 0
+HALT 
+LOAD verify_new_pin 6
+RELOAD verify_new_pin
+INCMP _ 0
+INCMP * confirm_others_new_pin

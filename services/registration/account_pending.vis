@@ -1,0 +1,3 @@
+RELOAD check_account_status
+CATCH main flag_account_success 1
+HALT

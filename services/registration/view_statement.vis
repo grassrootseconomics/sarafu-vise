@@ -1,0 +1,10 @@
+MAP view_statement
+MOUT back 0
+MOUT quit 9
+MNEXT next 11
+MPREV prev 22
+HALT
+INCMP _ 0
+INCMP quit 9
+INCMP > 11
+INCMP < 22

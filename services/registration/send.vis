@@ -1,0 +1,11 @@
+LOAD transaction_reset 0
+RELOAD transaction_reset
+CATCH no_voucher flag_no_active_voucher 1
+MOUT back 0
+HALT
+LOAD validate_recipient 20
+RELOAD validate_recipient
+CATCH invalid_recipient flag_invalid_recipient 1
+CATCH invite_recipient flag_invalid_recipient_with_invite 1
+INCMP _ 0
+INCMP amount *

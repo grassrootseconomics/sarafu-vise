@@ -1,0 +1,10 @@
+LOAD save_gender 16
+RELOAD save_gender
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH update_gender flag_allow_update 1
+CATCH pin_entry flag_gender_set 1
+CATCH edit_yob flag_yob_set 0
+CATCH edit_location flag_location_set 0
+CATCH edit_offerings flag_offerings_set 0
+CATCH pin_entry flag_gender_set 0
+MOVE edit_yob

@@ -1,0 +1,1 @@
+Amount {{.validate_amount}} is invalid, please try again:

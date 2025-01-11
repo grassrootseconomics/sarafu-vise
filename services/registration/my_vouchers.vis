@@ -1,0 +1,9 @@
+LOAD reset_account_authorized 16
+RELOAD reset_account_authorized
+MOUT select_voucher 1
+MOUT voucher_details 2
+MOUT back 0
+HALT
+INCMP _ 0
+INCMP select_voucher 1
+INCMP voucher_details 2

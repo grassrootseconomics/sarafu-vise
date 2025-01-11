@@ -1,0 +1,12 @@
+LOAD check_transactions 0
+RELOAD check_transactions
+CATCH no_transfers flag_no_transfers 1
+LOAD authorize_account 6
+MOUT back 0
+MOUT quit 9
+HALT
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+INCMP _ 0
+INCMP quit 9
+INCMP transactions *

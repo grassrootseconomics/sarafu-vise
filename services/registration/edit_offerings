@@ -1,0 +1,2 @@
+Current offerings: {{.get_current_profile_info}}
+Enter the services or goods you offer: 

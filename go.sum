@@ -1,9 +1,9 @@
 git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d h1:bPAOVZOX4frSGhfOdcj7kc555f8dc9DmMd2YAyC2AMw=
 git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
-git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250110203936-8387644019e6 h1:KvcNmeY9EpvsVtcwYW48FxTb7cTdDY1aX0Jcwd649c0=
-git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250110203936-8387644019e6/go.mod h1:E6W7ZOa7ZvVr0Bc5ot0LNSwpSPYq4hXlAIvEPy3AJ7U=
-git.grassecon.net/urdt/ussd v0.8.0-beta.11 h1:lAKH5DI21cD+YlS9J+69h5OR45LyYo7dQkufol926FI=
-git.grassecon.net/urdt/ussd v0.8.0-beta.11/go.mod h1:Xct45L7FUE4pYtLN4gmhkMCoafUNpcOJ7horP9kPDAc=
+git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250111151614-46bf21b7b8bd h1:mKCov8udBJBQuMF3aFg38SkClL8OvAUZmtArNzgIPak=
+git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250111151614-46bf21b7b8bd/go.mod h1:E6W7ZOa7ZvVr0Bc5ot0LNSwpSPYq4hXlAIvEPy3AJ7U=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250111150203-fd8301144509 h1:xlX2FAJkjn1/VS/1z8A9eSGnKWDUmBJy+GtEEDRmggc=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250111150203-fd8301144509/go.mod h1:FwJ9MQtaKlDThtL0ovxZXBIDJoDNgiSeSAxeZNriQJk=
 github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=
 github.com/alecthomas/assert/v2 v2.2.2/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/participle/v2 v2.0.0 h1:Fgrq+MbuSsJwIkw3fEj9h75vDP0Er5JzepJ0/HNHv0g=

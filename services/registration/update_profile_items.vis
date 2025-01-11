@@ -1,0 +1,3 @@
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH profile_update_success flag_allow_update 1
+MOVE pin_entry

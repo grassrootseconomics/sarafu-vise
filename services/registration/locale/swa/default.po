@@ -1,0 +1,32 @@
+msgid "Your account balance is %s"
+msgstr "Salio lako ni %s"
+
+msgid "Your request has been sent. %s will receive %s %s from %s."
+msgstr "Ombi lako limetumwa. %s atapokea %s %s kutoka kwa %s."
+
+msgid "Thank you for using Sarafu. Goodbye!"
+msgstr "Asante kwa kutumia huduma ya Sarafu. Kwaheri!"
+
+msgid "For more help, please call: 0757628885"
+msgstr "Kwa usaidizi zaidi, piga: 0757628885"
+
+msgid "Your account has been locked. For help on how to unblock your account, contact support at: 0757628885"
+msgstr "Akaunti yako imefungwa. Kwa usaidizi wa jinsi ya kufungua akaunti yako, wasiliana na usaidizi kwa: 0757628885"
+
+msgid "Balance: %s\n"
+msgstr "Salio: %s\n"
+
+msgid "Your invite request for %s to Sarafu Network failed. Please try again later."
+msgstr "Ombi lako la kumwalika %s kwa matandao wa Sarafu halikufaulu. Tafadhali jaribu tena baadaye."
+
+msgid "Your invitation to %s to join Sarafu Network has been sent."
+msgstr "Ombi lako la kumwalika %s kwa matandao wa Sarafu limetumwa."
+
+msgid "Your request failed. Please try again later."
+msgstr "Ombi lako halikufaulu. Tafadhali jaribu tena baadaye."
+
+msgid "Community Balance: 0.00"
+msgstr "Salio la Kikundi: 0.00"
+
+msgid "Symbol: %s\nBalance: %s"
+msgstr "Sarafu: %s\nSalio: %s"

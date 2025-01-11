@@ -1,0 +1,5 @@
+MOUT yes 1
+MOUT no 2
+HALT
+INCMP create_pin 1
+INCMP quit *

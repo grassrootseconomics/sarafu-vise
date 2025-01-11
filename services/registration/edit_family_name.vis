@@ -1,0 +1,18 @@
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH update_familyname flag_allow_update 1
+LOAD get_current_profile_info 0
+RELOAD get_current_profile_info
+MAP get_current_profile_info
+MOUT back 0
+HALT
+RELOAD set_back 
+CATCH _ flag_back_set 1
+LOAD save_familyname 64
+RELOAD save_familyname
+CATCH pin_entry flag_familyname_set 1
+CATCH select_gender flag_gender_set 0
+CATCH edit_yob flag_yob_set 0
+CATCH edit_location flag_location_set 0
+CATCH edit_offerings flag_offerings_set 0
+CATCH pin_entry flag_familyname_set 0
+INCMP select_gender *

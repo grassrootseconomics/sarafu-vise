@@ -16,7 +16,7 @@ import (
 )
 
 type HandlerService interface {
-	GetHandler() (*application.Handlers, error)
+	GetHandler() (*application.MenuHandlers, error)
 }
 
 func getParser(fp string, debug bool) (*asm.FlagParser, error) {
@@ -64,16 +64,17 @@ func (ls *LocalHandlerService) SetDataStore(db *db.Db) {
 	ls.UserdataStore = db
 }
 
-func (ls *LocalHandlerService) GetHandler(accountService remote.AccountServiceInterface) (*application.Handlers, error) {
+func (ls *LocalHandlerService) GetHandler(accountService remote.AccountServiceInterface) (*application.MenuHandlers, error) {
 	replaceSeparatorFunc := func(input string) string {
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewHandlers(ls.Parser, *ls.UserdataStore, ls.AdminStore, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, ls.AdminStore, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}
-	appHandlers = appHandlers.WithPersister(ls.Pe)
+	//appHandlers = appHandlers.WithPersister(ls.Pe)
+	appHandlers.SetPersister(ls.Pe)
 	ls.DbRs.AddLocalFunc("set_language", appHandlers.SetLanguage)
 	ls.DbRs.AddLocalFunc("create_account", appHandlers.CreateAccount)
 	ls.DbRs.AddLocalFunc("save_temporary_pin", appHandlers.SaveTemporaryPin)

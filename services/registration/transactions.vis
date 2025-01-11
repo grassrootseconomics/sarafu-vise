@@ -1,0 +1,15 @@
+LOAD get_transactions 0
+MAP get_transactions
+MOUT back 0
+MOUT quit 99
+MNEXT next 11
+MPREV prev 22
+HALT
+LOAD view_statement 0
+RELOAD view_statement
+CATCH . flag_incorrect_statement 1
+INCMP ^ 0
+INCMP quit 99
+INCMP > 11
+INCMP < 22
+INCMP view_statement *

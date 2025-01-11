@@ -1,0 +1,2 @@
+Current gender: {{.get_current_profile_info}}
+Select gender: 

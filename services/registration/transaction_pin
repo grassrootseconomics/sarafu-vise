@@ -1,0 +1,2 @@
+{{.get_recipient}} will receive {{.get_amount}} from {{.get_sender}}
+Please enter your PIN to confirm:

@@ -1,0 +1,4 @@
+RELOAD verify_create_pin
+CATCH create_pin_mismatch flag_pin_mismatch 1
+LOAD quit 0
+HALT

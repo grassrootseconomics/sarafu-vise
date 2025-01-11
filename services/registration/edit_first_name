@@ -1,0 +1,2 @@
+Current name: {{.get_current_profile_info}}
+Enter your first names:

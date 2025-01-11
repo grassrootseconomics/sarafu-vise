@@ -1,0 +1,2 @@
+Current location: {{.get_current_profile_info}}
+Enter your location:

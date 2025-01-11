@@ -72,7 +72,7 @@ func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *dbstorage.Sub
 	return spdb
 }
 
-func TestNewHandlers(t *testing.T) {
+func TestNewMenuHandlers(t *testing.T) {
 	_, store := InitializeTestStore(t)
 
 	fm, err := NewFlagManager(flagsPath)
@@ -84,7 +84,7 @@ func TestNewHandlers(t *testing.T) {
 
 	// Test case for valid UserDataStore
 	t.Run("Valid UserDataStore", func(t *testing.T) {
-		handlers, err := NewHandlers(fm.parser, store, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm.parser, store, nil, &accountService, mockReplaceSeparator)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -108,7 +108,7 @@ func TestNewHandlers(t *testing.T) {
 
 	// Test case for nil UserDataStore
 	t.Run("Nil UserDataStore", func(t *testing.T) {
-		handlers, err := NewHandlers(fm.parser, nil, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm.parser, nil, nil, &accountService, mockReplaceSeparator)
 		if err == nil {
 			t.Fatal("expected an error, got none")
 		}
@@ -144,23 +144,23 @@ func TestInit(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		setup          func() (*Handlers, context.Context)
+		setup          func() (*MenuHandlers, context.Context)
 		input          []byte
 		expectedResult resource.Result
 	}{
 		{
 			name: "Handler not ready",
-			setup: func() (*Handlers, context.Context) {
-				return &Handlers{}, ctx
+			setup: func() (*MenuHandlers, context.Context) {
+				return &MenuHandlers{}, ctx
 			},
 			input:          []byte("1"),
 			expectedResult: resource.Result{},
 		},
 		{
 			name: "State and memory initialization",
-			setup: func() (*Handlers, context.Context) {
+			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(store).WithSession(sessionId).WithContent(st, ca)
-				h := &Handlers{
+				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,
 					pe:          pe,
@@ -174,9 +174,9 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "Non-admin session initialization",
-			setup: func() (*Handlers, context.Context) {
+			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(store).WithSession("0712345678").WithContent(st, ca)
-				h := &Handlers{
+				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,
 					pe:          pe,
@@ -190,9 +190,9 @@ func TestInit(t *testing.T) {
 		},
 		{
 			name: "Move to top node on empty input",
-			setup: func() (*Handlers, context.Context) {
+			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(store).WithSession(sessionId).WithContent(st, ca)
-				h := &Handlers{
+				h := &MenuHandlers{
 					flagManager: fm.parser,
 					adminstore:  adminstore,
 					pe:          pe,
@@ -253,7 +253,7 @@ func TestCreateAccount(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 
-			h := &Handlers{
+			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
 				flagManager:    fm.parser,
@@ -275,20 +275,20 @@ func TestCreateAccount(t *testing.T) {
 
 func TestWithPersister(t *testing.T) {
 	// Test case: Setting a persister
-	h := &Handlers{}
+	h := &MenuHandlers{}
 	p := &persist.Persister{}
 
-	result := h.WithPersister(p)
+	h.SetPersister(p)
 
 	assert.Equal(t, p, h.pe, "The persister should be set correctly.")
-	assert.Equal(t, h, result, "The returned handler should be the same instance.")
+	//assert.Equal(t, h, result, "The returned handler should be the same instance.")
 }
 
 func TestWithPersister_PanicWhenAlreadySet(t *testing.T) {
 	// Test case: Panic on multiple calls
-	h := &Handlers{pe: &persist.Persister{}}
+	h := &MenuHandlers{pe: &persist.Persister{}}
 	require.Panics(t, func() {
-		h.WithPersister(&persist.Persister{})
+		h.SetPersister(&persist.Persister{})
 	}, "Should panic when trying to set a persister again.")
 }
 
@@ -317,8 +317,8 @@ func TestSaveFirstname(t *testing.T) {
 
 	expectedResult.FlagSet = []uint32{flag_firstname_set}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm.parser,
 		st:            mockState,
@@ -361,8 +361,8 @@ func TestSaveFamilyname(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 		st:            mockState,
 		flagManager:   fm.parser,
@@ -405,8 +405,8 @@ func TestSaveYoB(t *testing.T) {
 
 	expectedResult.FlagSet = []uint32{flag_yob_set}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm.parser,
 		st:            mockState,
@@ -449,8 +449,8 @@ func TestSaveLocation(t *testing.T) {
 
 	expectedResult.FlagSet = []uint32{flag_location_set}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm.parser,
 		st:            mockState,
@@ -493,8 +493,8 @@ func TestSaveOfferings(t *testing.T) {
 
 	expectedResult.FlagSet = []uint32{flag_offerings_set}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm.parser,
 		st:            mockState,
@@ -560,8 +560,8 @@ func TestSaveGender(t *testing.T) {
 			}
 
 			mockState.ExecPath = append(mockState.ExecPath, tt.executingSymbol)
-			// Create the Handlers instance with the mock store
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock store
+			h := &MenuHandlers{
 				userdataStore: store,
 				st:            mockState,
 				flagManager:   fm.parser,
@@ -597,8 +597,8 @@ func TestSaveTemporaryPin(t *testing.T) {
 
 	flag_incorrect_pin, _ := fm.parser.GetFlag("flag_incorrect_pin")
 
-	// Create the Handlers instance with the mock flag manager
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock flag manager
+	h := &MenuHandlers{
 		flagManager:   fm.parser,
 		userdataStore: store,
 	}
@@ -668,8 +668,8 @@ func TestCheckIdentifier(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Create the Handlers instance with the mock store
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock store
+			h := &MenuHandlers{
 				userdataStore: store,
 			}
 
@@ -688,8 +688,8 @@ func TestGetSender(t *testing.T) {
 	ctx, _ := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	// Create the Handlers instance
-	h := &Handlers{}
+	// Create the MenuHandlers instance
+	h := &MenuHandlers{}
 
 	// Call the method
 	res, _ := h.GetSender(ctx, "get_sender", []byte(""))
@@ -717,8 +717,8 @@ func TestGetAmount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 
@@ -743,8 +743,8 @@ func TestGetRecipient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create the Handlers instance with the mock store
-	h := &Handlers{
+	// Create the MenuHandlers instance with the mock store
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 
@@ -810,8 +810,8 @@ func TestSetLanguage(t *testing.T) {
 			// Set the ExecPath
 			mockState.ExecPath = tt.execPath
 
-			// Create the Handlers instance with the mock flag manager
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock flag manager
+			h := &MenuHandlers{
 				flagManager:   fm.parser,
 				userdataStore: store,
 				st:            mockState,
@@ -854,8 +854,8 @@ func TestResetAllowUpdate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create the Handlers instance with the mock flag manager
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock flag manager
+			h := &MenuHandlers{
 				flagManager: fm.parser,
 			}
 
@@ -896,8 +896,8 @@ func TestResetAccountAuthorized(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create the Handlers instance with the mock flag manager
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock flag manager
+			h := &MenuHandlers{
 				flagManager: fm.parser,
 			}
 
@@ -979,8 +979,8 @@ func TestIncorrectPinReset(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// Create the Handlers instance with the mock flag manager
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock flag manager
+			h := &MenuHandlers{
 				flagManager:   fm.parser,
 				userdataStore: store,
 			}
@@ -1022,8 +1022,8 @@ func TestResetIncorrectYob(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create the Handlers instance with the mock flag manager
-			h := &Handlers{
+			// Create the MenuHandlers instance with the mock flag manager
+			h := &MenuHandlers{
 				flagManager: fm.parser,
 			}
 
@@ -1059,7 +1059,7 @@ func TestAuthorize(t *testing.T) {
 	// Set 1234 is the correct account pin
 	accountPIN := "1234"
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1133,7 +1133,7 @@ func TestVerifyYob(t *testing.T) {
 	flag_incorrect_date_format, _ := fm.parser.GetFlag("flag_incorrect_date_format")
 	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
 		st:             mockState,
@@ -1199,7 +1199,7 @@ func TestVerifyCreatePin(t *testing.T) {
 	flag_pin_mismatch, _ := fm.parser.GetFlag("flag_pin_mismatch")
 	flag_pin_set, _ := fm.parser.GetFlag("flag_pin_set")
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1293,7 +1293,7 @@ func TestCheckAccountStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 
-			h := &Handlers{
+			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
 				flagManager:    fm.parser,
@@ -1333,7 +1333,7 @@ func TestTransactionReset(t *testing.T) {
 
 	mockAccountService := new(mocks.MockAccountService)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1380,7 +1380,7 @@ func TestResetTransactionAmount(t *testing.T) {
 
 	mockAccountService := new(mocks.MockAccountService)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1424,7 +1424,7 @@ func TestInitiateTransaction(t *testing.T) {
 
 	mockAccountService := new(mocks.MockAccountService)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1521,7 +1521,7 @@ func TestQuit(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
 	}
@@ -1570,7 +1570,7 @@ func TestValidateAmount(t *testing.T) {
 
 	mockAccountService := new(mocks.MockAccountService)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		flagManager:    fm.parser,
@@ -1691,8 +1691,8 @@ func TestValidateRecipient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
-			// Create the Handlers instance
-			h := &Handlers{
+			// Create the MenuHandlers instance
+			h := &MenuHandlers{
 				flagManager:    fm.parser,
 				userdataStore:  store,
 				accountService: mockAccountService,
@@ -1745,7 +1745,7 @@ func TestCheckBalance(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 			ctx := context.WithValue(ctx, "SessionId", tt.sessionId)
 
-			h := &Handlers{
+			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
 			}
@@ -1780,7 +1780,7 @@ func TestGetProfile(t *testing.T) {
 	mockAccountService := new(mocks.MockAccountService)
 	mockState := state.NewState(16)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		st:             mockState,
@@ -1858,7 +1858,7 @@ func TestVerifyNewPin(t *testing.T) {
 
 	flag_valid_pin, _ := fm.parser.GetFlag("flag_valid_pin")
 	mockAccountService := new(mocks.MockAccountService)
-	h := &Handlers{
+	h := &MenuHandlers{
 		flagManager:    fm.parser,
 		accountService: mockAccountService,
 	}
@@ -1904,7 +1904,7 @@ func TestConfirmPin(t *testing.T) {
 	fm, _ := NewFlagManager(flagsPath)
 	flag_pin_mismatch, _ := fm.parser.GetFlag("flag_pin_mismatch")
 	mockAccountService := new(mocks.MockAccountService)
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		flagManager:    fm.parser,
 		accountService: mockAccountService,
@@ -1968,7 +1968,7 @@ func TestFetchCommunityBalance(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 			mockState := state.NewState(16)
 
-			h := &Handlers{
+			h := &MenuHandlers{
 				userdataStore:  store,
 				st:             mockState,
 				accountService: mockAccountService,
@@ -2033,7 +2033,7 @@ func TestSetDefaultVoucher(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 
-			h := &Handlers{
+			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
 				flagManager:    fm.parser,
@@ -2066,7 +2066,7 @@ func TestCheckVouchers(t *testing.T) {
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 	spdb := InitializeTestSubPrefixDb(t, ctx)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
 		prefixDb:       spdb,
@@ -2108,8 +2108,8 @@ func TestGetVoucherList(t *testing.T) {
 
 	spdb := InitializeTestSubPrefixDb(t, ctx)
 
-	// Initialize Handlers
-	h := &Handlers{
+	// Initialize MenuHandlers
+	h := &MenuHandlers{
 		prefixDb:             spdb,
 		ReplaceSeparatorFunc: mockReplaceSeparator,
 	}
@@ -2142,7 +2142,7 @@ func TestViewVoucher(t *testing.T) {
 
 	spdb := InitializeTestSubPrefixDb(t, ctx)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm.parser,
 		prefixDb:      spdb,
@@ -2175,7 +2175,7 @@ func TestSetVoucher(t *testing.T) {
 
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 
@@ -2215,7 +2215,7 @@ func TestGetVoucherDetails(t *testing.T) {
 
 	tokA_AAddress := "0x0000000000000000000000000000000000000000"
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore:  store,
 		flagManager:    fm.parser,
 		accountService: mockAccountService,
@@ -2246,7 +2246,7 @@ func TestCountIncorrectPINAttempts(t *testing.T) {
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 	attempts := uint8(2)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 	err := store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(attempts))))
@@ -2279,7 +2279,7 @@ func TestResetIncorrectPINAttempts(t *testing.T) {
 		t.Logf(err.Error())
 	}
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 	h.resetIncorrectPINAttempts(ctx, sessionId)
@@ -2298,7 +2298,7 @@ func TestPersistLanguageCode(t *testing.T) {
 	sessionId := "session123"
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	h := &Handlers{
+	h := &MenuHandlers{
 		userdataStore: store,
 	}
 	tests := []struct {

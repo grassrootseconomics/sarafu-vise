@@ -1,0 +1,9 @@
+LOAD reset_incorrect 0
+RELOAD reset_incorrect
+MAP reset_incorrect
+CATCH blocked_account flag_account_blocked 1
+MOUT retry 1
+MOUT quit 9
+HALT
+INCMP _ 1
+INCMP quit 9

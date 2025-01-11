@@ -1,0 +1,13 @@
+LOAD authorize_account 12
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH old_pin flag_allow_update 0
+MOUT back 0
+HALT
+INCMP _ 0
+LOAD save_temporary_pin 6
+LOAD verify_new_pin 0
+RELOAD save_temporary_pin
+RELOAD verify_new_pin
+INCMP * confirm_pin_change
+

@@ -1,0 +1,7 @@
+LOAD reset_allow_update 0
+MOUT back 0
+HALT
+RELOAD reset_allow_update
+INCMP _ 0
+INCMP new_pin *
+

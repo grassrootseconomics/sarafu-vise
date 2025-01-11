@@ -1,0 +1,5 @@
+CATCH invalid_pin flag_valid_pin 0
+MOUT back 0
+HALT
+INCMP _ 0
+INCMP * pin_reset_success

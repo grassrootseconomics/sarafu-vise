@@ -1,0 +1,9 @@
+**/*.env
+covprofile
+go.work*
+**/*/*.bin
+**/*/.state/
+cmd/.state/
+id_*
+*.gdbm
+*.log

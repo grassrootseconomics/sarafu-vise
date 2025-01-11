@@ -4,8 +4,8 @@ go 1.23.4
 
 require (
 	git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d
-	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250110203936-8387644019e6
-	git.grassecon.net/urdt/ussd v0.8.0-beta.11
+	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250111151614-46bf21b7b8bd
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250111150203-fd8301144509
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta

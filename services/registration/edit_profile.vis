@@ -1,0 +1,23 @@
+LOAD reset_account_authorized 16
+RELOAD reset_account_authorized
+LOAD reset_allow_update 0
+RELOAD reset_allow_update
+MOUT edit_first_name 1
+MOUT edit_family_name 2
+MOUT edit_gender 3
+MOUT edit_yob 4
+MOUT edit_location 5
+MOUT edit_offerings 6
+MOUT view 7
+MOUT back 0
+HALT
+LOAD set_back 6
+INCMP ^ 0
+INCMP edit_first_name 1
+INCMP edit_family_name 2
+INCMP select_gender 3
+INCMP edit_yob 4
+INCMP edit_location 5
+INCMP edit_offerings 6
+INCMP view_profile 7
+INCMP . * 

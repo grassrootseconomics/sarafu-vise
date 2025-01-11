@@ -1,0 +1,6 @@
+MOUT retry 1
+MOUT quit 9
+HALT
+INCMP confirm_pin_change 1
+INCMP quit 9
+

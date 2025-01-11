@@ -1,0 +1,4 @@
+LOAD set_language 6
+RELOAD set_language
+CATCH terms flag_account_created 0
+MOVE language_changed

@@ -1,0 +1,5 @@
+MOUT quit 9
+MOUT back 0
+HALT
+INCMP pin_management 0
+INCMP quit 9

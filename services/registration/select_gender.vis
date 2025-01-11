@@ -1,0 +1,14 @@
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH profile_update_success flag_allow_update 1
+LOAD get_current_profile_info 0
+RELOAD get_current_profile_info
+MOUT male 1
+MOUT female 2
+MOUT unspecified 3
+MOUT back 0
+HALT
+INCMP _ 0
+INCMP set_male 1
+INCMP set_female 2
+INCMP set_unspecified 3
+INCMP . *

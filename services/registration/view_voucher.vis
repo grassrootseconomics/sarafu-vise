@@ -1,0 +1,10 @@
+MAP view_voucher
+MOUT back 0
+MOUT quit 9
+LOAD authorize_account 6
+HALT
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+INCMP _ 0
+INCMP quit 9
+INCMP voucher_set *

@@ -1,0 +1,8 @@
+MOUT change_pin 1
+MOUT reset_pin 2
+MOUT back 0
+HALT
+INCMP my_account 0
+INCMP old_pin  1
+INCMP enter_other_number 2
+INCMP . *
