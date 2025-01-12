@@ -136,8 +136,8 @@ func main() {
 	defer stateStore.Close()
 
 	rp := &httpsession.DefaultRequestParser{}
-	bsh := session.NewBaseSessionHandler(cfg, rs, stateStore, userdataStore, rp, hl)
-	sh := httpsession.NewHTTPSessionHandler(bsh)
+	bsh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh := httpsession.NewHTTPRequestHandler(bsh)
 	s := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),
 		Handler: sh,

@@ -143,8 +143,8 @@ func main() {
 	defer stateStore.Close()
 
 	rp := &at.ATRequestParser{}
-	bsh := session.NewBaseSessionHandler(cfg, rs, stateStore, userdataStore, rp, hl)
-	sh := at.NewATSessionHandler(bsh)
+	bsh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh := at.NewATRequestHandler(bsh)
 
 	mux := http.NewServeMux()
 	mux.Handle(env.GetEnv("AT_ENDPOINT", "/"), sh)

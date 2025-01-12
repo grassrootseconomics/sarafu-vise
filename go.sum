@@ -4,10 +4,10 @@ git.grassecon.net/grassrootseconomics/common v0.0.0-20250112102149-4feac5e490e9 
 git.grassecon.net/grassrootseconomics/common v0.0.0-20250112102149-4feac5e490e9/go.mod h1:wgQJZGIS6QuNLHqDhcsvehsbn5PvgV7aziRebMnJi60=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112102608-1152fb71a590 h1:2twsWy9E3aWgKeY1rNaD/CTq2VtAQfaAhOstTQVQQrc=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112102608-1152fb71a590/go.mod h1:vgPJiqbRBlpsMt1iFd94onNvE7I9s6r78Ph2CpxOUMs=
-git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112102450-dcf777bf08d3 h1:aEy3fuBdKrKs3DC4AcDffed2dRl1I6anVI8DpfmItaE=
-git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112102450-dcf777bf08d3/go.mod h1:E6W7ZOa7ZvVr0Bc5ot0LNSwpSPYq4hXlAIvEPy3AJ7U=
-git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112103524-ca29574a9d0f h1:fvgerf6o1m/tTez07wRijT9aMXDhrS25otSHXAbUQ7g=
-git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112103524-ca29574a9d0f/go.mod h1:ETX362FVrWFw7zIyECBczr3MjQNnOsCAin5NVK5BHKA=
+git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112104023-611c5a8dfc80 h1:8j7iDSC9lzOM8NexEQlMfEn+3mJStDf66OTZK8ulsho=
+git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112104023-611c5a8dfc80/go.mod h1:E6W7ZOa7ZvVr0Bc5ot0LNSwpSPYq4hXlAIvEPy3AJ7U=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112104256-7d37d7f5cac5 h1:byD+vsY9kqCVFX2Kx2+Z3/Lqk10l4MQnUBXm/zLpy20=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112104256-7d37d7f5cac5/go.mod h1:wf5CtGf07LRtnPqr9sefMY+bQK5oASsvzIr7ebs7MWU=
 github.com/alecthomas/assert/v2 v2.2.2 h1:Z/iVC0xZfWTaFNE6bA3z07T86hd45Xe2eLt6WVy2bbk=
 github.com/alecthomas/assert/v2 v2.2.2/go.mod h1:pXcQ2Asjp247dahGEmsZ6ru0UVwnkhktn7S0bBDLxvQ=
 github.com/alecthomas/participle/v2 v2.0.0 h1:Fgrq+MbuSsJwIkw3fEj9h75vDP0Er5JzepJ0/HNHv0g=

@@ -149,7 +149,7 @@ func main() {
 	rp := &asyncRequestParser{
 		sessionId: sessionId,
 	}
-	sh := session.NewBaseSessionHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
 	cfg.SessionId = sessionId
 	rqs := request.RequestSession{
 		Ctx:    ctx,
