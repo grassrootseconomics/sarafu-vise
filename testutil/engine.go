@@ -15,8 +15,8 @@ import (
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
-	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
-	"git.grassecon.net/grassrootseconomics/visedriver/config"
+	"git.grassecon.net/grassrootseconomics/common/env"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
@@ -35,7 +35,7 @@ var (
 )
 
 func init() {
-	initializers.LoadEnvVariablesPath(baseDir)
+	env.LoadEnvVariablesPath(baseDir)
 	config.LoadConfig()
 }
 

@@ -14,8 +14,8 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 
-	"git.grassecon.net/grassrootseconomics/visedriver/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
+	"git.grassecon.net/grassrootseconomics/common/env"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/session"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
@@ -31,7 +31,7 @@ var (
 )
 
 func init() {
-	initializers.LoadEnvVariables()
+	env.LoadEnvVariables()
 }
 
 type asyncRequestParser struct {
@@ -66,8 +66,8 @@ func main() {
 	flag.StringVar(&connStr, "c", "", "connection string")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
-	flag.StringVar(&host, "h", initializers.GetEnv("HOST", "127.0.0.1"), "http host")
-	flag.UintVar(&port, "p", initializers.GetEnvUint("PORT", 7123), "http port")
+	flag.StringVar(&host, "h", env.GetEnv("HOST", "127.0.0.1"), "http host")
+	flag.UintVar(&port, "p", env.GetEnvUint("PORT", 7123), "http port")
 	flag.StringVar(&gettextDir, "gettext", "", "use gettext translations from given directory")
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()

@@ -10,9 +10,9 @@ import (
 
 	testdataloader "github.com/peteole/testdata-loader"
 	"git.defalsify.org/vise.git/logging"
-	"git.grassecon.net/grassrootseconomics/visedriver/config"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
+	"git.grassecon.net/grassrootseconomics/common/env"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	initializers.LoadEnvVariables()
+	env.LoadEnvVariables()
 }
 
 func main() {

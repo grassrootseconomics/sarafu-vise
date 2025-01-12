@@ -11,8 +11,8 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/lang"
-	"git.grassecon.net/grassrootseconomics/visedriver/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
+	"git.grassecon.net/grassrootseconomics/common/env"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
@@ -26,7 +26,7 @@ var (
 )
 
 func init() {
-	initializers.LoadEnvVariables()
+	env.LoadEnvVariables()
 }
 
 // TODO: external script automatically generate language handler list from select language vise code OR consider dynamic menu generation script possibility
