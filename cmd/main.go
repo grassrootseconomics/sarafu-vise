@@ -14,6 +14,8 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
+	devremote "git.grassecon.net/grassrootseconomics/sarafu-api/dev"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
@@ -25,10 +27,11 @@ var (
 )
 
 
-// TODO: external script automatically generate language handler list from select language vise code OR consider dynamic menu generation script possibility
 func main() {
 	config.LoadConfig()
 
+	var accountService remote.AccountService
+	var fakeDir string
 	var connStr string
 	var size uint
 	var sessionId string
@@ -41,6 +44,7 @@ func main() {
 	flag.StringVar(&resourceDir, "resourcedir", scriptDir, "resource dir")
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
 	flag.StringVar(&connStr, "c", "", "connection string")
+	flag.StringVar(&fakeDir, "fakedir", "", "if valid path, enables fake api with fsdb backend")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&gettextDir, "gettext", "", "use gettext translations from given directory")
@@ -124,7 +128,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := &httpremote.HTTPAccountService{}
+	if fakeDir != "" {
+		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
+		svc.AddVoucher(ctx, "BAR")
+		accountService = svc
+	} else {
+		accountService = &httpremote.HTTPAccountService{}
+	}
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
