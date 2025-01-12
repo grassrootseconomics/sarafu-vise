@@ -12,7 +12,6 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
@@ -22,10 +21,6 @@ var (
 	baseDir   = testdataloader.GetBasePath()
 	scriptDir = path.Join("services", "registration")
 )
-
-func init() {
-	env.LoadEnvVariables()
-}
 
 func main() {
 	config.LoadConfig()

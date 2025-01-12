@@ -15,7 +15,6 @@ import (
 	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/ssh"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
@@ -28,10 +27,6 @@ var (
 
 	build = "dev"
 )
-
-func init() {
-	env.LoadEnvVariables()
-}
 
 func main() {
 	config.LoadConfig()
@@ -49,8 +44,8 @@ func main() {
 	flag.StringVar(&resourceDir, "resourcedir", path.Join("services", "registration"), "resource dir")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
-	flag.StringVar(&host, "h", "127.0.0.1", "socket host")
-	flag.UintVar(&port, "p", 7122, "socket port")
+	flag.StringVar(&host, "h", config.HostSSH(), "socket host")
+	flag.UintVar(&port, "p", config.PortSSH(), "socket port")
 	flag.Parse()
 
 	if connStr == "" {

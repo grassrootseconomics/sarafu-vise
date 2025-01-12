@@ -11,7 +11,6 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/env"
 )
 
 const (
@@ -34,10 +33,6 @@ var (
 	mouts string
 	incmps string
 )
-
-func init() {
-	env.LoadEnvVariables()
-}
 
 func toLanguageLabel(ln lang.Language) string {
 	s := ln.Name

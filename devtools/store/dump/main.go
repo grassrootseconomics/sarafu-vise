@@ -8,7 +8,6 @@ import (
 	"path"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/debug"
 	"git.defalsify.org/vise.git/db"
@@ -19,11 +18,6 @@ var (
 	logg      = logging.NewVanilla()
 	scriptDir = path.Join("services", "registration")
 )
-
-func init() {
-	env.LoadEnvVariables()
-}
-
 
 func formatItem(k []byte, v []byte) (string, error) {
 	o, err := debug.FromKey(k)
