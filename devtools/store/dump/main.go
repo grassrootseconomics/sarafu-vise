@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/common/env"
+	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/debug"
 	"git.defalsify.org/vise.git/db"

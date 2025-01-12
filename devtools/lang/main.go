@@ -10,8 +10,8 @@ import (
 
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/lang"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/common/env"
+	"git.grassecon.net/grassrootseconomics/visedriver/config"
+	"git.grassecon.net/grassrootseconomics/visedriver/env"
 )
 
 const (

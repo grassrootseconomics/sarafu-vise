@@ -17,7 +17,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/common/env"
+	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	httpsession "git.grassecon.net/grassrootseconomics/visedriver/session/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/session"

@@ -12,7 +12,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/common/env"
+	"git.grassecon.net/grassrootseconomics/visedriver/env"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
