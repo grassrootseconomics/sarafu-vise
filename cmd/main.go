@@ -47,12 +47,12 @@ func main() {
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()
 
-	if connStr != "" {
+	if connStr == "" {
 		connStr = config.DbConn()
 	}
 	connData, err := storage.ToConnData(connStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
+		fmt.Fprintf(os.Stderr, "connstr err: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -67,7 +67,7 @@ func main() {
 
 	ln, err := lang.LanguageFromCode(config.Language())
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "default language set error: %v", err)
+		fmt.Fprintf(os.Stderr, "default language set error: %v\n", err)
 		os.Exit(1)
 	}
 	ctx = context.WithValue(ctx, "Language", ln)
@@ -82,9 +82,9 @@ func main() {
 		MenuSeparator: menuSeparator,
 	}
 
-	menuStorageService := storage.NewMenuStorageService(connData, "")
+	menuStorageService := storage.NewMenuStorageService(connData, resourceDir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "menu storage service error: %v", err)
+		fmt.Fprintf(os.Stderr, "menu storage service error: %v\n", err)
 		os.Exit(1)
 	}
 	
@@ -94,41 +94,40 @@ func main() {
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "get resource error: %v\n", err)
 		os.Exit(1)
 	}
 
 	pe, err := menuStorageService.GetPersister(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "get persister error: %v\n", err)
 		os.Exit(1)
 	}
 
 	userdatastore, err := menuStorageService.GetUserdataDb(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "get userdata db error: %v\n", err)
 		os.Exit(1)
 	}
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "get dbresource error: %v\n", err)
 		os.Exit(1)
 	}
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userdatastore)
 	lhs.SetPersister(pe)
-
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "localhandler service error: %v\n", err)
 		os.Exit(1)
 	}
 
 	accountService := &httpremote.HTTPAccountService{}
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
 		os.Exit(1)
 	}
 

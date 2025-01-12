@@ -75,7 +75,7 @@ func GetVoucherData(ctx context.Context, db storedb.PrefixDb, input string) (*da
 	for _, key := range keys {
 		value, err := db.Get(ctx, storedb.ToBytes(key))
 		if err != nil {
-			return nil, fmt.Errorf("failed to get %s: %v", storedb.ToBytes(key), err)
+			return nil, fmt.Errorf("failed to get prefix key %x: %v", storedb.ToBytes(key), err)
 		}
 		data[key] = string(value)
 	}

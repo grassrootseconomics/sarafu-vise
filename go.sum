@@ -2,8 +2,8 @@ git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d h1:bPAOVZOX4frSG
 git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
 git.grassecon.net/grassrootseconomics/common v0.0.0-20250112102149-4feac5e490e9 h1:dQ8DtiOUPzzXYgZw6REnIc1dhb3PzCEfN01Rd7Pbw+o=
 git.grassecon.net/grassrootseconomics/common v0.0.0-20250112102149-4feac5e490e9/go.mod h1:wgQJZGIS6QuNLHqDhcsvehsbn5PvgV7aziRebMnJi60=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112110836-26a51bc95f38 h1:M++O6THA26LRdC7jfsPCaIIPMosNhFc+PgnEtDY3+hk=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112110836-26a51bc95f38/go.mod h1:E0ayNSbqpt+aAHoA7f7jXZcH2Zgjkt7rYs50YH9sLgk=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112152617-1865917cb38a h1:nXZEc2pCIZLON4TmBFFPszy7gSfcCAf4Rrgaiduvjp8=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250112152617-1865917cb38a/go.mod h1:SiWT0rbK9QhFpmpAbXOtararIKDmiaAcFLHMCqKibKg=
 git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112121325-9e4c65c8b4d1 h1:RfU5/WFfPxDptlkyx4MT+4YmO79sY6HvIngUq5uwQPU=
 git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112121325-9e4c65c8b4d1/go.mod h1:E6W7ZOa7ZvVr0Bc5ot0LNSwpSPYq4hXlAIvEPy3AJ7U=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112104256-7d37d7f5cac5 h1:byD+vsY9kqCVFX2Kx2+Z3/Lqk10l4MQnUBXm/zLpy20=

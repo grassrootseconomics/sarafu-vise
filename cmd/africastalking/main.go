@@ -40,7 +40,6 @@ func main() {
 	var connStr string
 	var resourceDir string
 	var size uint
-	var database string
 	var engineDebug bool
 	var host string
 	var port uint
@@ -71,7 +70,6 @@ func main() {
 	logg.Infof("start command", "build", build, "conn", connData, "resourcedir", resourceDir, "outputsize", size)
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, "Database", database)
 	ln, err := lang.LanguageFromCode(config.Language())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "default language set error: %v", err)

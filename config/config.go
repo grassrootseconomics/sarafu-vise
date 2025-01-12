@@ -13,7 +13,10 @@ func init() {
 const (
 	defaultSSHHost string = "127.0.0.1"
 	defaultSSHPort uint = 7122
+	defaultHTTPHost string = "127.0.0.1"
+	defaultHTTPPort uint = 7123
 )
+
 
 func LoadConfig() error {
 	err := viseconfig.LoadConfig()
@@ -36,11 +39,11 @@ func Language() string {
 }
 
 func Host() string {
-	return apiconfig.Host()
+	return env.GetEnv("HOST", defaultHTTPHost)
 }
 
 func Port() uint {
-	return apiconfig.Port()
+	return env.GetEnvUint("PORT", defaultHTTPPort)
 }
 
 func HostSSH() string {
