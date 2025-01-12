@@ -74,6 +74,7 @@ const (
 )
 
 const (
+	// List of senders for valid transactions in the user context.
 	DATA_TX_SENDERS = 512 + iota
 	// List of recipients for valid transactions in the user context.
 	DATA_TX_RECIPIENTS
@@ -89,6 +90,11 @@ const (
 	DATA_TX_SYMBOLS
 	// List of voucher decimal counts for valid transactions in the user context.
 	DATA_TX_DECIMALS
+)
+
+const (
+	// Token transfer list
+	DATA_TRANSACTIONS = 1024 + iota
 )
 
 var (

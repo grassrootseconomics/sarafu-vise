@@ -35,3 +35,7 @@ func (store *UserDataStore) WriteEntry(ctx context.Context, sessionId string, ty
 	k := storedb.ToBytes(typ)
 	return store.Put(ctx, k, value)
 }
+
+func StoreToPrefixDb(userStore *UserDataStore, pfx []byte) storedb.PrefixDb {
+	return storedb.NewSubPrefixDb(userStore.Db, pfx)
+}

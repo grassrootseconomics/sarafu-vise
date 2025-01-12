@@ -37,9 +37,9 @@ func main() {
 	flag.Parse()
 
 	if connStr != "" {
-		connStr = config.DbConn
+		connStr = config.DbConn()
 	}
-	connData, err := storage.ToConnData(config.DbConn)
+	connData, err := storage.ToConnData(connStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
 		os.Exit(1)

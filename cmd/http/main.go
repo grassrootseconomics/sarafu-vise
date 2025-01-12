@@ -56,7 +56,7 @@ func main() {
 	flag.Parse()
 
 	if connStr == "" {
-		connStr = config.DbConn
+		connStr = config.DbConn()
 	}
 	connData, err := storage.ToConnData(connStr)
 	if err != nil {
@@ -68,7 +68,7 @@ func main() {
 
 	ctx := context.Background()
 
-	ln, err := lang.LanguageFromCode(config.DefaultLanguage)
+	ln, err := lang.LanguageFromCode(config.Language())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "default language set error: %v", err)
 		os.Exit(1)

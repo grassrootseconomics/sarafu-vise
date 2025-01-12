@@ -49,7 +49,7 @@ func main() {
 	flag.Parse()
 
 	if connStr == "" {
-		connStr = config.DbConn
+		connStr = config.DbConn()
 	}
 	if authConnStr == "" {
 		authConnStr = connStr

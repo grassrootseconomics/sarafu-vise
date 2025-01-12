@@ -32,7 +32,6 @@ func main() {
 	var connStr string
 	var size uint
 	var sessionId string
-	var database string
 	var engineDebug bool
 	var resourceDir string
 	var err error
@@ -49,7 +48,7 @@ func main() {
 	flag.Parse()
 
 	if connStr != "" {
-		connStr = config.DbConn
+		connStr = config.DbConn()
 	}
 	connData, err := storage.ToConnData(connStr)
 	if err != nil {
@@ -60,14 +59,13 @@ func main() {
 	logg.Infof("start command", "conn", connData, "outputsize", size)
 
 	if len(langs.Langs()) == 0 {
-		langs.Set(config.DefaultLanguage)
+		langs.Set(config.Language())
 	}
 
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	ctx = context.WithValue(ctx, "Database", database)
 
-	ln, err := lang.LanguageFromCode(config.DefaultLanguage)
+	ln, err := lang.LanguageFromCode(config.Language())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "default language set error: %v", err)
 		os.Exit(1)

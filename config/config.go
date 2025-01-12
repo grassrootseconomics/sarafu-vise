@@ -15,11 +15,6 @@ const (
 	defaultSSHPort uint = 7122
 )
 
-var (
-	DbConn = viseconfig.DbConn
-	DefaultLanguage = viseconfig.DefaultLanguage
-)
-
 func LoadConfig() error {
 	err := viseconfig.LoadConfig()
 	if err != nil {
@@ -29,9 +24,15 @@ func LoadConfig() error {
 	if err != nil {
 		return err
 	}
-	DbConn = viseconfig.DbConn
-	DefaultLanguage = viseconfig.DefaultLanguage
 	return nil
+}
+
+func DbConn() string {
+	return viseconfig.DbConn
+}
+
+func Language() string {
+	return viseconfig.DefaultLanguage
 }
 
 func Host() string {
