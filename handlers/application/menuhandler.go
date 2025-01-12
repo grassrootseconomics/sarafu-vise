@@ -18,15 +18,17 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	"git.grassecon.net/grassrootseconomics/visedriver/common"
-	"git.grassecon.net/grassrootseconomics/visedriver/utils"
-
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-
-	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
-	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
+	"git.grassecon.net/grassrootseconomics/common/hex"
+	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
+	"git.grassecon.net/grassrootseconomics/common/pin"
+	"git.grassecon.net/grassrootseconomics/common/person"
+	"git.grassecon.net/grassrootseconomics/common/phone"
+	"git.grassecon.net/grassrootseconomics/common/identity"
 )
 
 var (
@@ -62,11 +64,11 @@ type MenuHandlers struct {
 	pe                   *persist.Persister
 	st                   *state.State
 	ca                   cache.Memory
-	userdataStore        common.DataStore
+	userdataStore        store.DataStore
 	adminstore           *store.AdminStore
 	flagManager          *asm.FlagParser
 	accountService       remote.AccountService
-	prefixDb             dbstorage.PrefixDb
+	prefixDb             storedb.PrefixDb
 	profile              *profile.Profile
 	ReplaceSeparatorFunc func(string) string
 }
@@ -76,13 +78,13 @@ func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}
-	userDb := &common.UserDataStore{
+	userDb := &store.UserDataStore{
 		Db: userdataStore,
 	}
 
 	// Instantiate the SubPrefixDb with "DATATYPE_USERDATA" prefix
-	prefix := common.ToBytes(db.DATATYPE_USERDATA)
-	prefixDb := dbstorage.NewSubPrefixDb(userdataStore, prefix)
+	prefix := storedb.ToBytes(db.DATATYPE_USERDATA)
+	prefixDb := storedb.NewSubPrefixDb(userdataStore, prefix)
 
 	h := &MenuHandlers{
 		userdataStore:        userDb,
@@ -162,7 +164,7 @@ func (h *MenuHandlers) SetLanguage(ctx context.Context, sym string, input []byte
 	code := strings.Split(symbol, "_")[1]
 
 	// TODO: Use defaultlanguage from config
-	if !utils.IsValidISO639(code) {
+	if !commonlang.IsValidISO639(code) {
 		//Fallback to english instead?
 		code = "eng"
 	}
@@ -192,9 +194,9 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 	trackingId := r.TrackingId
 	publicKey := r.PublicKey
 
-	data := map[common.DataTyp]string{
-		common.DATA_TRACKING_ID: trackingId,
-		common.DATA_PUBLIC_KEY:  publicKey,
+	data := map[storedb.DataTyp]string{
+		storedb.DATA_TRACKING_ID: trackingId,
+		storedb.DATA_PUBLIC_KEY:  publicKey,
 	}
 	store := h.userdataStore
 	for key, value := range data {
@@ -203,11 +205,11 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 			return err
 		}
 	}
-	publicKeyNormalized, err := common.NormalizeHex(publicKey)
+	publicKeyNormalized, err := hex.NormalizeHex(publicKey)
 	if err != nil {
 		return err
 	}
-	err = store.WriteEntry(ctx, publicKeyNormalized, common.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
+	err = store.WriteEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
 	if err != nil {
 		return err
 	}
@@ -226,7 +228,7 @@ func (h *MenuHandlers) CreateAccount(ctx context.Context, sym string, input []by
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	_, err = store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	_, err = store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		if db.IsNotFound(err) {
 			logg.InfoCtxf(ctx, "Creating an account because it doesn't exist")
@@ -251,15 +253,15 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 	}
 	// Get blocked number from storage.
 	store := h.userdataStore
-	blockedNumber, err := store.ReadEntry(ctx, sessionId, common.DATA_BLOCKED_NUMBER)
+	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", common.DATA_BLOCKED_NUMBER, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
 	// Get temporary PIN for the blocked number.
-	temporaryPin, err := store.ReadEntry(ctx, string(blockedNumber), common.DATA_TEMPORARY_VALUE)
+	temporaryPin, err := store.ReadEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", common.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 	if bytes.Equal(temporaryPin, input) {
@@ -280,7 +282,7 @@ func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byt
 	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
 	pinInput := string(input)
 	// Validate that the PIN is a 4-digit number.
-	if common.IsValidPIN(pinInput) {
+	if pin.IsValidPIN(pinInput) {
 		res.FlagSet = append(res.FlagSet, flag_valid_pin)
 	} else {
 		res.FlagReset = append(res.FlagReset, flag_valid_pin)
@@ -305,15 +307,15 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 	accountPIN := string(input)
 
 	// Validate that the PIN is a 4-digit number.
-	if !common.IsValidPIN(accountPIN) {
+	if !pin.IsValidPIN(accountPIN) {
 		res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
 		return res, nil
 	}
 	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
 	store := h.userdataStore
-	err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(accountPIN))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(accountPIN))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporaryAccountPIN entry with", "key", common.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write temporaryAccountPIN entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
 		return res, err
 	}
 
@@ -332,16 +334,16 @@ func (h *MenuHandlers) SaveOthersTemporaryPin(ctx context.Context, sym string, i
 	}
 	temporaryPin := string(input)
 	// First, we retrieve the blocked number associated with this session
-	blockedNumber, err := store.ReadEntry(ctx, sessionId, common.DATA_BLOCKED_NUMBER)
+	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", common.DATA_BLOCKED_NUMBER, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
 
 	// Then we save the temporary PIN for that blocked number
-	err = store.WriteEntry(ctx, string(blockedNumber), common.DATA_TEMPORARY_VALUE, []byte(temporaryPin))
+	err = store.WriteEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE, []byte(temporaryPin))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporaryPin entry with", "key", common.DATA_TEMPORARY_VALUE, "value", temporaryPin, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryPin, "error", err)
 		return res, err
 	}
 
@@ -358,9 +360,9 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
 
 	store := h.userdataStore
-	temporaryPin, err := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
+	temporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", common.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 	if bytes.Equal(temporaryPin, input) {
@@ -371,16 +373,16 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 
 	// Hash the PIN
-	hashedPIN, err := common.HashPIN(string(temporaryPin))
+	hashedPIN, err := pin.HashPIN(string(temporaryPin))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
 		return res, err
 	}
 
 	// save the hashed PIN as the new account PIN
-	err = store.WriteEntry(ctx, sessionId, common.DATA_ACCOUNT_PIN, []byte(hashedPIN))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", common.DATA_ACCOUNT_PIN, "hashedPIN value", hashedPIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedPIN, "error", err)
 		return res, err
 	}
 	return res, nil
@@ -401,9 +403,9 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	temporaryPin, err := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
+	temporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", common.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 	if bytes.Equal(input, temporaryPin) {
@@ -416,15 +418,15 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	}
 
 	// Hash the PIN
-	hashedPIN, err := common.HashPIN(string(temporaryPin))
+	hashedPIN, err := pin.HashPIN(string(temporaryPin))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
 		return res, err
 	}
 
-	err = store.WriteEntry(ctx, sessionId, common.DATA_ACCOUNT_PIN, []byte(hashedPIN))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", common.DATA_ACCOUNT_PIN, "value", hashedPIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedPIN, "error", err)
 		return res, err
 	}
 
@@ -457,18 +459,18 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 	allowUpdate := h.st.MatchFlag(flag_allow_update, true)
 	firstNameSet := h.st.MatchFlag(flag_firstname_set, true)
 	if allowUpdate {
-		temporaryFirstName, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_FIRST_NAME, []byte(temporaryFirstName))
+		temporaryFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", common.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 	} else {
 		if firstNameSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(firstName))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryFirstName entry with", "key", common.DATA_TEMPORARY_VALUE, "value", firstName, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryFirstName entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", firstName, "error", err)
 				return res, err
 			}
 		} else {
@@ -497,18 +499,18 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 	familyNameSet := h.st.MatchFlag(flag_familyname_set, true)
 
 	if allowUpdate {
-		temporaryFamilyName, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
+		temporaryFamilyName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write familyName entry with", "key", common.DATA_FAMILY_NAME, "value", temporaryFamilyName, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write familyName entry with", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_familyname_set)
 	} else {
 		if familyNameSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(familyName))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryFamilyName entry with", "key", common.DATA_TEMPORARY_VALUE, "value", familyName, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryFamilyName entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", familyName, "error", err)
 				return res, err
 			}
 		} else {
@@ -536,18 +538,18 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 	yobSet := h.st.MatchFlag(flag_yob_set, true)
 
 	if allowUpdate {
-		temporaryYob, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_YOB, []byte(temporaryYob))
+		temporaryYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_YOB, []byte(temporaryYob))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write yob entry with", "key", common.DATA_TEMPORARY_VALUE, "value", temporaryYob, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write yob entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryYob, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_yob_set)
 	} else {
 		if yobSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(yob))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryYob entry with", "key", common.DATA_TEMPORARY_VALUE, "value", yob, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryYob entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", yob, "error", err)
 				return res, err
 			}
 		} else {
@@ -575,18 +577,18 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 	locationSet := h.st.MatchFlag(flag_location_set, true)
 
 	if allowUpdate {
-		temporaryLocation, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_LOCATION, []byte(temporaryLocation))
+		temporaryLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write location entry with", "key", common.DATA_LOCATION, "value", temporaryLocation, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write location entry with", "key", storedb.DATA_LOCATION, "value", temporaryLocation, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_location_set)
 	} else {
 		if locationSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(location))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryLocation entry with", "key", common.DATA_TEMPORARY_VALUE, "value", location, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryLocation entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", location, "error", err)
 				return res, err
 			}
 			res.FlagSet = append(res.FlagSet, flag_location_set)
@@ -616,18 +618,18 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 	genderSet := h.st.MatchFlag(flag_gender_set, true)
 
 	if allowUpdate {
-		temporaryGender, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_GENDER, []byte(temporaryGender))
+		temporaryGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_GENDER, []byte(temporaryGender))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write gender entry with", "key", common.DATA_GENDER, "value", gender, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write gender entry with", "key", storedb.DATA_GENDER, "value", gender, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_gender_set)
 	} else {
 		if genderSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(gender))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(gender))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryGender entry with", "key", common.DATA_TEMPORARY_VALUE, "value", gender, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryGender entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", gender, "error", err)
 				return res, err
 			}
 		} else {
@@ -657,18 +659,18 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 	offeringsSet := h.st.MatchFlag(flag_offerings_set, true)
 
 	if allowUpdate {
-		temporaryOfferings, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
-		err = store.WriteEntry(ctx, sessionId, common.DATA_OFFERINGS, []byte(temporaryOfferings))
+		temporaryOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_OFFERINGS, []byte(temporaryOfferings))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write offerings entry with", "key", common.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write offerings entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
 	} else {
 		if offeringsSet {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(offerings))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write temporaryOfferings entry with", "key", common.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write temporaryOfferings entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
 				return res, err
 			}
 		} else {
@@ -711,7 +713,7 @@ func (h *MenuHandlers) CheckIdentifier(ctx context.Context, sym string, input []
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	publicKey, _ := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	publicKey, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 
 	res.Content = string(publicKey)
 
@@ -732,13 +734,13 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 
 	store := h.userdataStore
-	AccountPin, err := store.ReadEntry(ctx, sessionId, common.DATA_ACCOUNT_PIN)
+	AccountPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", common.DATA_ACCOUNT_PIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
 		return res, err
 	}
 	if len(input) == 4 {
-		if common.VerifyPIN(string(AccountPin), string(input)) {
+		if pin.VerifyPIN(string(AccountPin), string(input)) {
 			if h.st.MatchFlag(flag_account_authorized, false) {
 				res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
 				res.FlagSet = append(res.FlagSet, flag_allow_update, flag_account_authorized)
@@ -784,19 +786,19 @@ func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input 
 
 	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
 
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS)
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			return res, err
 		}
 	}
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	remainingPINAttempts := common.AllowedPINAttempts - uint8(pinAttemptsValue)
+	remainingPINAttempts := pin.AllowedPINAttempts - uint8(pinAttemptsValue)
 	if remainingPINAttempts == 0 {
 		res.FlagSet = append(res.FlagSet, flag_account_blocked)
 		return res, nil
 	}
-	if remainingPINAttempts < common.AllowedPINAttempts {
+	if remainingPINAttempts < pin.AllowedPINAttempts {
 		res.Content = strconv.Itoa(int(remainingPINAttempts))
 	}
 
@@ -830,9 +832,9 @@ func (h *MenuHandlers) CheckAccountStatus(ctx context.Context, sym string, input
 	}
 
 	store := h.userdataStore
-	publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
@@ -910,7 +912,7 @@ func (h *MenuHandlers) VerifyYob(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	if utils.IsValidYOb(date) {
+	if person.IsValidYOb(date) {
 		res.FlagReset = append(res.FlagReset, flag_incorrect_date_format)
 	} else {
 		res.FlagSet = append(res.FlagSet, flag_incorrect_date_format)
@@ -945,7 +947,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	store := h.userdataStore
 
 	// get the active sym and active balance
-	activeSym, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_SYM)
+	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
 		if db.IsNotFound(err) {
 			balance := "0.00"
@@ -953,13 +955,13 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 			return res, nil
 		}
 
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", common.DATA_ACTIVE_SYM, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
 
-	activeBal, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_BAL)
+	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", common.DATA_ACTIVE_BAL, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
 
@@ -1003,25 +1005,25 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	blockedPhonenumber, err := store.ReadEntry(ctx, sessionId, common.DATA_BLOCKED_NUMBER)
+	blockedPhonenumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", common.DATA_BLOCKED_NUMBER, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
-	temporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), common.DATA_TEMPORARY_VALUE)
+	temporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", common.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 
 	// Hash the PIN
-	hashedPIN, err := common.HashPIN(string(temporaryPin))
+	hashedPIN, err := pin.HashPIN(string(temporaryPin))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
 		return res, err
 	}
 
-	err = store.WriteEntry(ctx, string(blockedPhonenumber), common.DATA_ACCOUNT_PIN, []byte(hashedPIN))
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
 	if err != nil {
 		return res, nil
 	}
@@ -1051,8 +1053,8 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 		return res, fmt.Errorf("missing session")
 	}
 	blockedNumber := string(input)
-	_, err = store.ReadEntry(ctx, blockedNumber, common.DATA_PUBLIC_KEY)
-	if !common.IsValidPhoneNumber(blockedNumber) {
+	_, err = store.ReadEntry(ctx, blockedNumber, storedb.DATA_PUBLIC_KEY)
+	if !phone.IsValidPhoneNumber(blockedNumber) {
 		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
 		return res, nil
 	}
@@ -1066,7 +1068,7 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 			return res, err
 		}
 	}
-	err = store.WriteEntry(ctx, sessionId, common.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
 	if err != nil {
 		return res, nil
 	}
@@ -1090,7 +1092,7 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 	recipient := string(input)
 
 	if recipient != "0" {
-		recipientType, err := common.CheckRecipient(recipient)
+		recipientType, err := identity.CheckRecipient(recipient)
 		if err != nil {
 			// Invalid recipient format (not a phone number, address, or valid alias format)
 			res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
@@ -1100,23 +1102,23 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 		}
 
 		// save the recipient as the temporaryRecipient
-		err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(recipient))
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recipient))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", common.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
 			return res, err
 		}
 
 		switch recipientType {
 		case "phone number":
 			// format the phone number
-			formattedNumber, err := common.FormatPhoneNumber(recipient)
+			formattedNumber, err := phone.FormatPhoneNumber(recipient)
 			if err != nil {
 				logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", recipient, "error", err)
 				return res, err
 			}
 
 			// Check if the phone number is registered
-			publicKey, err := store.ReadEntry(ctx, formattedNumber, common.DATA_PUBLIC_KEY)
+			publicKey, err := store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
 			if err != nil {
 				if db.IsNotFound(err) {
 					logg.InfoCtxf(ctx, "Unregistered phone number: %s", recipient)
@@ -1125,22 +1127,22 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 					return res, nil
 				}
 
-				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 				return res, err
 			}
 
 			// Save the publicKey as the recipient
-			err = store.WriteEntry(ctx, sessionId, common.DATA_RECIPIENT, publicKey)
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, publicKey)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", common.DATA_RECIPIENT, "value", string(publicKey), "error", err)
+				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", string(publicKey), "error", err)
 				return res, err
 			}
 
 		case "address":
 			// Save the valid Ethereum address as the recipient
-			err = store.WriteEntry(ctx, sessionId, common.DATA_RECIPIENT, []byte(recipient))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(recipient))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", common.DATA_RECIPIENT, "value", recipient, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", recipient, "error", err)
 				return res, err
 			}
 
@@ -1156,9 +1158,9 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 			}
 
 			// Alias validation succeeded, save the Ethereum address
-			err = store.WriteEntry(ctx, sessionId, common.DATA_RECIPIENT, []byte(r.Address))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(r.Address))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", common.DATA_RECIPIENT, "value", r.Address, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", r.Address, "error", err)
 				return res, err
 			}
 		}
@@ -1181,12 +1183,12 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
 	store := h.userdataStore
-	err = store.WriteEntry(ctx, sessionId, common.DATA_AMOUNT, []byte(""))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(""))
 	if err != nil {
 		return res, nil
 	}
 
-	err = store.WriteEntry(ctx, sessionId, common.DATA_RECIPIENT, []byte(""))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(""))
 	if err != nil {
 		return res, nil
 	}
@@ -1210,7 +1212,7 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
-	recipient, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
+	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 
 	// TODO
 	// send an invitation SMS
@@ -1233,7 +1235,7 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
 	store := h.userdataStore
-	err = store.WriteEntry(ctx, sessionId, common.DATA_AMOUNT, []byte(""))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(""))
 	if err != nil {
 		return res, nil
 	}
@@ -1255,9 +1257,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	}
 	store := h.userdataStore
 
-	activeBal, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_BAL)
+	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", common.DATA_ACTIVE_BAL, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
 
@@ -1281,9 +1283,9 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 	var balanceValue float64
 
 	// retrieve the active balance
-	activeBal, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_BAL)
+	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", common.DATA_ACTIVE_BAL, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
 	balanceValue, err = strconv.ParseFloat(string(activeBal), 64)
@@ -1309,9 +1311,9 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 
 	// Format the amount with 2 decimal places before saving
 	formattedAmount := fmt.Sprintf("%.2f", inputAmount)
-	err = store.WriteEntry(ctx, sessionId, common.DATA_AMOUNT, []byte(formattedAmount))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(formattedAmount))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write amount entry with", "key", common.DATA_AMOUNT, "value", formattedAmount, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write amount entry with", "key", storedb.DATA_AMOUNT, "value", formattedAmount, "error", err)
 		return res, err
 	}
 
@@ -1328,7 +1330,7 @@ func (h *MenuHandlers) GetRecipient(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	recipient, _ := store.ReadEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE)
+	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 
 	res.Content = string(recipient)
 
@@ -1344,7 +1346,7 @@ func (h *MenuHandlers) RetrieveBlockedNumber(ctx context.Context, sym string, in
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	blockedNumber, _ := store.ReadEntry(ctx, sessionId, common.DATA_BLOCKED_NUMBER)
+	blockedNumber, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 
 	res.Content = string(blockedNumber)
 
@@ -1376,13 +1378,13 @@ func (h *MenuHandlers) GetAmount(ctx context.Context, sym string, input []byte) 
 	store := h.userdataStore
 
 	// retrieve the active symbol
-	activeSym, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_SYM)
+	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", common.DATA_ACTIVE_SYM, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
 
-	amount, _ := store.ReadEntry(ctx, sessionId, common.DATA_AMOUNT)
+	amount, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
 
 	res.Content = fmt.Sprintf("%s %s", string(amount), string(activeSym))
 
@@ -1404,12 +1406,12 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
-	data, err := common.ReadTransactionData(ctx, h.userdataStore, sessionId)
+	data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
 	if err != nil {
 		return res, err
 	}
 
-	finalAmountStr, err := common.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
+	finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
 	if err != nil {
 		return res, err
 	}
@@ -1476,7 +1478,7 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 	parts := strings.SplitN(sm, "_", 2)
 	filename := parts[1]
 	dbKeyStr := "DATA_" + strings.ToUpper(filename)
-	dbKey, err := common.StringToDataTyp(dbKeyStr)
+	dbKey, err := storedb.StringToDataTyp(dbKeyStr)
 
 	if err != nil {
 		return res, err
@@ -1484,75 +1486,75 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 	store := h.userdataStore
 
 	switch dbKey {
-	case common.DATA_FIRST_NAME:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_FIRST_NAME)
+	case storedb.DATA_FIRST_NAME:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read first name entry with", "key", "error", common.DATA_FIRST_NAME, err)
+			logg.ErrorCtxf(ctx, "Failed to read first name entry with", "key", "error", storedb.DATA_FIRST_NAME, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 		res.Content = string(profileInfo)
-	case common.DATA_FAMILY_NAME:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_FAMILY_NAME)
+	case storedb.DATA_FAMILY_NAME:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read family name entry with", "key", "error", common.DATA_FAMILY_NAME, err)
+			logg.ErrorCtxf(ctx, "Failed to read family name entry with", "key", "error", storedb.DATA_FAMILY_NAME, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_familyname_set)
 		res.Content = string(profileInfo)
 
-	case common.DATA_GENDER:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_GENDER)
+	case storedb.DATA_GENDER:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read gender entry with", "key", "error", common.DATA_GENDER, err)
+			logg.ErrorCtxf(ctx, "Failed to read gender entry with", "key", "error", storedb.DATA_GENDER, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_gender_set)
 		res.Content = string(profileInfo)
-	case common.DATA_YOB:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_YOB)
+	case storedb.DATA_YOB:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read year of birth(yob) entry with", "key", "error", common.DATA_YOB, err)
+			logg.ErrorCtxf(ctx, "Failed to read year of birth(yob) entry with", "key", "error", storedb.DATA_YOB, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_yob_set)
 		res.Content = string(profileInfo)
-	case common.DATA_LOCATION:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_LOCATION)
+	case storedb.DATA_LOCATION:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read location entry with", "key", "error", common.DATA_LOCATION, err)
+			logg.ErrorCtxf(ctx, "Failed to read location entry with", "key", "error", storedb.DATA_LOCATION, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_location_set)
 		res.Content = string(profileInfo)
-	case common.DATA_OFFERINGS:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, common.DATA_OFFERINGS)
+	case storedb.DATA_OFFERINGS:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
 		if err != nil {
 			if db.IsNotFound(err) {
 				res.Content = defaultValue
 				break
 			}
-			logg.ErrorCtxf(ctx, "Failed to read offerings entry with", "key", "error", common.DATA_OFFERINGS, err)
+			logg.ErrorCtxf(ctx, "Failed to read offerings entry with", "key", "error", storedb.DATA_OFFERINGS, err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
@@ -1592,21 +1594,21 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	}
 	store := h.userdataStore
 	// Retrieve user data as strings with fallback to defaultValue
-	firstName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_FIRST_NAME))
-	familyName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_FAMILY_NAME))
-	yob := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_YOB))
-	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_GENDER))
-	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_LOCATION))
-	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, common.DATA_OFFERINGS))
+	firstName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME))
+	familyName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME))
+	yob := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_YOB))
+	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER))
+	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION))
+	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
 
 	// Construct the full name
-	name := utils.ConstructName(firstName, familyName, defaultValue)
+	name := person.ConstructName(firstName, familyName, defaultValue)
 
 	// Calculate age from year of birth
 	age := defaultValue
 	if yob != defaultValue {
 		if yobInt, err := strconv.Atoi(yob); err == nil {
-			age = strconv.Itoa(utils.CalculateAgeWithYOB(yobInt))
+			age = strconv.Itoa(person.CalculateAgeWithYOB(yobInt))
 		} else {
 			return res, fmt.Errorf("invalid year of birth: %v", err)
 		}
@@ -1637,7 +1639,7 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	var err error
-	store := h.userdataStore
+	userStore := h.userdataStore
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -1647,13 +1649,13 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 
 	// check if the user has an active sym
-	_, err = store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_SYM)
+	_, err = userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 
 	if err != nil {
 		if db.IsNotFound(err) {
-			publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 				return res, err
 			}
 
@@ -1678,37 +1680,38 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			defaultAddr := firstVoucher.ContractAddress
 
 			// Scale down the balance
-			scaledBalance := common.ScaleDownBalance(defaultBal, defaultDec)
+			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
 
+			// TODO: implement atomic transaction
 			// set the active symbol
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_SYM, []byte(defaultSym))
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(defaultSym))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", common.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", storedb.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
 				return res, err
 			}
 			// set the active balance
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_BAL, []byte(scaledBalance))
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL, []byte(scaledBalance))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultBal entry with", "key", common.DATA_ACTIVE_BAL, "value", scaledBalance, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write defaultBal entry with", "key", storedb.DATA_ACTIVE_BAL, "value", scaledBalance, "error", err)
 				return res, err
 			}
 			// set the active decimals
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_DECIMAL, []byte(defaultDec))
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL, []byte(defaultDec))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultDec entry with", "key", common.DATA_ACTIVE_DECIMAL, "value", defaultDec, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write defaultDec entry with", "key", storedb.DATA_ACTIVE_DECIMAL, "value", defaultDec, "error", err)
 				return res, err
 			}
 			// set the active contract address
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_ADDRESS, []byte(defaultAddr))
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte(defaultAddr))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultAddr entry with", "key", common.DATA_ACTIVE_ADDRESS, "value", defaultAddr, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write defaultAddr entry with", "key", storedb.DATA_ACTIVE_ADDRESS, "value", defaultAddr, "error", err)
 				return res, err
 			}
 
 			return res, nil
 		}
 
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", common.DATA_ACTIVE_SYM, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
 
@@ -1726,10 +1729,10 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		return res, fmt.Errorf("missing session")
 	}
 
-	store := h.userdataStore
-	publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
@@ -1740,7 +1743,7 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	}
 
 	// check the current active sym and update the data
-	activeSym, _ := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_SYM)
+	activeSym, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if activeSym != nil {
 		activeSymStr := string(activeSym)
 
@@ -1759,30 +1762,30 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		}
 
 		// Scale down the balance
-		scaledBalance := common.ScaleDownBalance(activeData.Balance, activeData.TokenDecimals)
+		scaledBalance := store.ScaleDownBalance(activeData.Balance, activeData.TokenDecimals)
 
 		// Update the balance field with the scaled value
 		activeData.Balance = scaledBalance
 
 		// Pass the matching voucher data to UpdateVoucherData
-		if err := common.UpdateVoucherData(ctx, h.userdataStore, sessionId, activeData); err != nil {
+		if err := store.UpdateVoucherData(ctx, h.userdataStore, sessionId, activeData); err != nil {
 			logg.ErrorCtxf(ctx, "failed on UpdateVoucherData", "error", err)
 			return res, err
 		}
 	}
 
-	data := common.ProcessVouchers(vouchersResp)
+	data := store.ProcessVouchers(vouchersResp)
 
 	// Store all voucher data
-	dataMap := map[common.DataTyp]string{
-		common.DATA_VOUCHER_SYMBOLS:   data.Symbols,
-		common.DATA_VOUCHER_BALANCES:  data.Balances,
-		common.DATA_VOUCHER_DECIMALS:  data.Decimals,
-		common.DATA_VOUCHER_ADDRESSES: data.Addresses,
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
+		storedb.DATA_VOUCHER_BALANCES:  data.Balances,
+		storedb.DATA_VOUCHER_DECIMALS:  data.Decimals,
+		storedb.DATA_VOUCHER_ADDRESSES: data.Addresses,
 	}
 
 	for key, value := range dataMap {
-		if err := h.prefixDb.Put(ctx, []byte(common.ToBytes(key)), []byte(value)); err != nil {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
 			return res, nil
 		}
 	}
@@ -1795,7 +1798,7 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 	var res resource.Result
 
 	// Read vouchers from the store
-	voucherData, err := h.prefixDb.Get(ctx, common.ToBytes(common.DATA_VOUCHER_SYMBOLS))
+	voucherData, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read the voucherData from prefixDb", "error", err)
 		return res, err
@@ -1829,7 +1832,7 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	metadata, err := common.GetVoucherData(ctx, h.prefixDb, inputStr)
+	metadata, err := store.GetVoucherData(ctx, h.prefixDb, inputStr)
 	if err != nil {
 		return res, fmt.Errorf("failed to retrieve voucher data: %v", err)
 	}
@@ -1839,7 +1842,7 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	if err := common.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
 		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
 		return res, err
 	}
@@ -1860,14 +1863,14 @@ func (h *MenuHandlers) SetVoucher(ctx context.Context, sym string, input []byte)
 	}
 
 	// Get temporary data
-	tempData, err := common.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	tempData, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
 		return res, err
 	}
 
 	// Set as active and clear temporary data
-	if err := common.UpdateVoucherData(ctx, h.userdataStore, sessionId, tempData); err != nil {
+	if err := store.UpdateVoucherData(ctx, h.userdataStore, sessionId, tempData); err != nil {
 		logg.ErrorCtxf(ctx, "failed on UpdateVoucherData", "error", err)
 		return res, err
 	}
@@ -1888,9 +1891,9 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// get the active address
-	activeAddress, err := store.ReadEntry(ctx, sessionId, common.DATA_ACTIVE_ADDRESS)
+	activeAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeAddress entry with", "key", common.DATA_ACTIVE_ADDRESS, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read activeAddress entry with", "key", storedb.DATA_ACTIVE_ADDRESS, "error", err)
 		return res, err
 	}
 
@@ -1919,10 +1922,10 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 	flag_no_transfers, _ := h.flagManager.GetFlag("flag_no_transfers")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
-	store := h.userdataStore
-	publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
@@ -1940,22 +1943,22 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 		return res, nil
 	}
 
-	data := common.ProcessTransfers(transactionsResp)
+	data := store.ProcessTransfers(transactionsResp)
 
 	// Store all transaction data
-	dataMap := map[common.DataTyp]string{
-		common.DATA_TX_SENDERS:    data.Senders,
-		common.DATA_TX_RECIPIENTS: data.Recipients,
-		common.DATA_TX_VALUES:     data.TransferValues,
-		common.DATA_TX_ADDRESSES:  data.Addresses,
-		common.DATA_TX_HASHES:     data.TxHashes,
-		common.DATA_TX_DATES:      data.Dates,
-		common.DATA_TX_SYMBOLS:    data.Symbols,
-		common.DATA_TX_DECIMALS:   data.Decimals,
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_TX_SENDERS:    data.Senders,
+		storedb.DATA_TX_RECIPIENTS: data.Recipients,
+		storedb.DATA_TX_VALUES:     data.TransferValues,
+		storedb.DATA_TX_ADDRESSES:  data.Addresses,
+		storedb.DATA_TX_HASHES:     data.TxHashes,
+		storedb.DATA_TX_DATES:      data.Dates,
+		storedb.DATA_TX_SYMBOLS:    data.Symbols,
+		storedb.DATA_TX_DECIMALS:   data.Decimals,
 	}
 
 	for key, value := range dataMap {
-		if err := h.prefixDb.Put(ctx, []byte(common.ToBytes(key)), []byte(value)); err != nil {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "failed to write to prefixDb", "error", err)
 			return res, err
 		}
@@ -1974,30 +1977,30 @@ func (h *MenuHandlers) GetTransactionsList(ctx context.Context, sym string, inpu
 		return res, fmt.Errorf("missing session")
 	}
 
-	store := h.userdataStore
-	publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
 	// Read transactions from the store and format them
-	TransactionSenders, err := h.prefixDb.Get(ctx, common.ToBytes(common.DATA_TX_SENDERS))
+	TransactionSenders, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_SENDERS))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read the TransactionSenders from prefixDb", "error", err)
 		return res, err
 	}
-	TransactionSyms, err := h.prefixDb.Get(ctx, common.ToBytes(common.DATA_TX_SYMBOLS))
+	TransactionSyms, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_SYMBOLS))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read the TransactionSyms from prefixDb", "error", err)
 		return res, err
 	}
-	TransactionValues, err := h.prefixDb.Get(ctx, common.ToBytes(common.DATA_TX_VALUES))
+	TransactionValues, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_VALUES))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read the TransactionValues from prefixDb", "error", err)
 		return res, err
 	}
-	TransactionDates, err := h.prefixDb.Get(ctx, common.ToBytes(common.DATA_TX_DATES))
+	TransactionDates, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_DATES))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read the TransactionDates from prefixDb", "error", err)
 		return res, err
@@ -2039,10 +2042,10 @@ func (h *MenuHandlers) ViewTransactionStatement(ctx context.Context, sym string,
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	store := h.userdataStore
-	publicKey, err := store.ReadEntry(ctx, sessionId, common.DATA_PUBLIC_KEY)
+	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", common.DATA_PUBLIC_KEY, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
@@ -2064,7 +2067,7 @@ func (h *MenuHandlers) ViewTransactionStatement(ctx context.Context, sym string,
 		return res, fmt.Errorf("invalid input: index must be between 1 and 10")
 	}
 
-	statement, err := common.GetTransferData(ctx, h.prefixDb, string(publicKey), index)
+	statement, err := store.GetTransferData(ctx, h.prefixDb, string(publicKey), index)
 	if err != nil {
 		return res, fmt.Errorf("failed to retrieve transfer data: %v", err)
 	}
@@ -2083,7 +2086,7 @@ func (h *MenuHandlers) ViewTransactionStatement(ctx context.Context, sym string,
 // handles bulk updates of profile information.
 func (h *MenuHandlers) insertProfileItems(ctx context.Context, sessionId string, res *resource.Result) error {
 	var err error
-	store := h.userdataStore
+	userStore := h.userdataStore
 	profileFlagNames := []string{
 		"flag_firstname_set",
 		"flag_familyname_set",
@@ -2092,13 +2095,13 @@ func (h *MenuHandlers) insertProfileItems(ctx context.Context, sessionId string,
 		"flag_location_set",
 		"flag_offerings_set",
 	}
-	profileDataKeys := []common.DataTyp{
-		common.DATA_FIRST_NAME,
-		common.DATA_FAMILY_NAME,
-		common.DATA_GENDER,
-		common.DATA_YOB,
-		common.DATA_LOCATION,
-		common.DATA_OFFERINGS,
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
 	}
 	for index, profileItem := range h.profile.ProfileItems {
 		// Ensure the profileItem is not "0"(is set)
@@ -2106,7 +2109,7 @@ func (h *MenuHandlers) insertProfileItems(ctx context.Context, sessionId string,
 			flag, _ := h.flagManager.GetFlag(profileFlagNames[index])
 			isProfileItemSet := h.st.MatchFlag(flag, true)
 			if !isProfileItemSet {
-				err = store.WriteEntry(ctx, sessionId, profileDataKeys[index], []byte(profileItem))
+				err = userStore.WriteEntry(ctx, sessionId, profileDataKeys[index], []byte(profileItem))
 				if err != nil {
 					logg.ErrorCtxf(ctx, "failed to write profile entry with", "key", profileDataKeys[index], "value", profileItem, "error", err)
 					return err
@@ -2137,14 +2140,14 @@ func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessio
 	var pinAttemptsCount uint8
 	store := h.userdataStore
 
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS)
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
 		if db.IsNotFound(err) {
 			//First time Wrong PIN attempt: initialize with a count of 1
 			pinAttemptsCount = 1
-			err = store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", common.DATA_INCORRECT_PIN_ATTEMPTS, "value", currentWrongPinAttempts, "error", err)
+				logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", currentWrongPinAttempts, "error", err)
 				return err
 			}
 			return nil
@@ -2153,9 +2156,9 @@ func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessio
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
 	pinAttemptsCount = uint8(pinAttemptsValue) + 1
 
-	err = store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", common.DATA_INCORRECT_PIN_ATTEMPTS, "value", pinAttemptsCount, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pinAttemptsCount, "error", err)
 		return err
 	}
 	return nil
@@ -2164,7 +2167,7 @@ func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessio
 // resetIncorrectPINAttempts resets the number of incorrect PIN attempts after a correct PIN entry
 func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId string) error {
 	store := h.userdataStore
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS)
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
 		if db.IsNotFound(err) {
 			return nil
@@ -2172,10 +2175,10 @@ func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId 
 		return err
 	}
 	currentWrongPinAttemptsCount, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	if currentWrongPinAttemptsCount <= uint64(common.AllowedPINAttempts) {
-		err = store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
+	if currentWrongPinAttemptsCount <= uint64(pin.AllowedPINAttempts) {
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", common.DATA_INCORRECT_PIN_ATTEMPTS, "value", common.AllowedPINAttempts, "error", err)
+			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pin.AllowedPINAttempts, "error", err)
 			return err
 		}
 	}
@@ -2189,9 +2192,9 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 	if !ok {
 		return fmt.Errorf("missing session")
 	}
-	err := store.WriteEntry(ctx, sessionId, common.DATA_SELECTED_LANGUAGE_CODE, []byte(code))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE, []byte(code))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to persist language code", "key", common.DATA_SELECTED_LANGUAGE_CODE, "value", code, "error", err)
+		logg.ErrorCtxf(ctx, "failed to persist language code", "key", storedb.DATA_SELECTED_LANGUAGE_CODE, "value", code, "error", err)
 		return err
 	}
 	return nil

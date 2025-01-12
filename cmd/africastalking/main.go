@@ -18,7 +18,7 @@ import (
 
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
-	"git.grassecon.net/grassrootseconomics/visedriver/common"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/session"
 	
 	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
@@ -67,7 +67,7 @@ func main() {
 	if connStr == "" {
 		connStr = config.DbConn
 	}
-	connData, err := common.ToConnData(config.DbConn)
+	connData, err := storage.ToConnData(config.DbConn)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
 		os.Exit(1)
@@ -97,12 +97,7 @@ func main() {
 		cfg.EngineDebug = true
 	}
 
-	menuStorageService, err := common.NewStorageService(connData)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		os.Exit(1)
-	}
-
+	menuStorageService := storage.NewMenuStorageService(connData, "")
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())

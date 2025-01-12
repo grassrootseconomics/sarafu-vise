@@ -13,7 +13,7 @@ import (
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/initializers"
-	"git.grassecon.net/grassrootseconomics/visedriver/common"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
@@ -55,7 +55,7 @@ func main() {
 	if connStr != "" {
 		connStr = config.DbConn
 	}
-	connData, err := common.ToConnData(connStr)
+	connData, err := storage.ToConnData(connStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
 		os.Exit(1)
@@ -88,7 +88,7 @@ func main() {
 		MenuSeparator: menuSeparator,
 	}
 
-	menuStorageService, err := common.NewStorageService(connData)
+	menuStorageService := storage.NewMenuStorageService(connData, "")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "menu storage service error: %v", err)
 		os.Exit(1)

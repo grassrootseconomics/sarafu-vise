@@ -14,13 +14,13 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
+	"git.grassecon.net/grassrootseconomics/common/pin"
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 
-	"git.grassecon.net/grassrootseconomics/visedriver/common"
 	"github.com/alecthomas/assert/v2"
 
 	testdataloader "github.com/peteole/testdata-loader"
@@ -42,7 +42,7 @@ var mockReplaceSeparator = func(input string) string {
 }
 
 // InitializeTestStore sets up and returns an in-memory database and store.
-func InitializeTestStore(t *testing.T) (context.Context, *common.UserDataStore) {
+func InitializeTestStore(t *testing.T) (context.Context, *store.UserDataStore) {
 	ctx := context.Background()
 
 	// Initialize memDb
@@ -51,7 +51,7 @@ func InitializeTestStore(t *testing.T) (context.Context, *common.UserDataStore) 
 	require.NoError(t, err, "Failed to connect to memDb")
 
 	// Create UserDataStore with memDb
-	store := &common.UserDataStore{Db: db}
+	store := &store.UserDataStore{Db: db}
 
 	t.Cleanup(func() {
 		db.Close() // Ensure the DB is closed after each test
@@ -60,14 +60,14 @@ func InitializeTestStore(t *testing.T) (context.Context, *common.UserDataStore) 
 	return ctx, store
 }
 
-func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *dbstorage.SubPrefixDb {
+func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPrefixDb {
 	db := memdb.NewMemDb()
 	err := db.Connect(ctx, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	prefix := common.ToBytes(visedb.DATATYPE_USERDATA)
-	spdb := dbstorage.NewSubPrefixDb(db, prefix)
+	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
+	spdb := storedb.NewSubPrefixDb(db, prefix)
 
 	return spdb
 }
@@ -311,7 +311,7 @@ func TestSaveFirstname(t *testing.T) {
 	// Define test data
 	firstName := "John"
 
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(firstName)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -332,7 +332,7 @@ func TestSaveFirstname(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_FIRST_NAME entry has been updated with the temporary value
-	storedFirstName, _ := store.ReadEntry(ctx, sessionId, common.DATA_FIRST_NAME)
+	storedFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
 	assert.Equal(t, firstName, string(storedFirstName))
 }
 
@@ -357,7 +357,7 @@ func TestSaveFamilyname(t *testing.T) {
 	// Define test data
 	familyName := "Doeee"
 
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(familyName)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -376,7 +376,7 @@ func TestSaveFamilyname(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_FAMILY_NAME entry has been updated with the temporary value
-	storedFamilyName, _ := store.ReadEntry(ctx, sessionId, common.DATA_FAMILY_NAME)
+	storedFamilyName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
 	assert.Equal(t, familyName, string(storedFamilyName))
 }
 
@@ -399,7 +399,7 @@ func TestSaveYoB(t *testing.T) {
 	// Define test data
 	yob := "1980"
 
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(yob)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -420,7 +420,7 @@ func TestSaveYoB(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_YOB entry has been updated with the temporary value
-	storedYob, _ := store.ReadEntry(ctx, sessionId, common.DATA_YOB)
+	storedYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
 	assert.Equal(t, yob, string(storedYob))
 }
 
@@ -443,7 +443,7 @@ func TestSaveLocation(t *testing.T) {
 	// Define test data
 	location := "Kilifi"
 
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(location)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -464,7 +464,7 @@ func TestSaveLocation(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_LOCATION entry has been updated with the temporary value
-	storedLocation, _ := store.ReadEntry(ctx, sessionId, common.DATA_LOCATION)
+	storedLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
 	assert.Equal(t, location, string(storedLocation))
 }
 
@@ -487,7 +487,7 @@ func TestSaveOfferings(t *testing.T) {
 	// Define test data
 	offerings := "Bananas"
 
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(offerings)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -508,7 +508,7 @@ func TestSaveOfferings(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_OFFERINGS entry has been updated with the temporary value
-	storedOfferings, _ := store.ReadEntry(ctx, sessionId, common.DATA_OFFERINGS)
+	storedOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
 	assert.Equal(t, offerings, string(storedOfferings))
 }
 
@@ -555,7 +555,7 @@ func TestSaveGender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
 				t.Fatal(err)
 			}
 
@@ -579,7 +579,7 @@ func TestSaveGender(t *testing.T) {
 			assert.Equal(t, expectedResult, res)
 
 			// Verify that the DATA_GENDER entry has been updated with the temporary value
-			storedGender, _ := store.ReadEntry(ctx, sessionId, common.DATA_GENDER)
+			storedGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
 			assert.Equal(t, tt.expectedGender, string(storedGender))
 		})
 	}
@@ -663,7 +663,7 @@ func TestCheckIdentifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := store.WriteEntry(ctx, sessionId, common.DATA_PUBLIC_KEY, []byte(tt.publicKey))
+			err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -707,12 +707,12 @@ func TestGetAmount(t *testing.T) {
 	amount := "0.03"
 	activeSym := "SRF"
 
-	err := store.WriteEntry(ctx, sessionId, common.DATA_AMOUNT, []byte(amount))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(amount))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_SYM, []byte(activeSym))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(activeSym))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -738,7 +738,7 @@ func TestGetRecipient(t *testing.T) {
 
 	recepient := "0712345678"
 
-	err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(recepient))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recepient))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -975,7 +975,7 @@ func TestIncorrectPinReset(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			if err := store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(tt.attempts)))); err != nil {
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(tt.attempts)))); err != nil {
 				t.Fatal(err)
 			}
 
@@ -1097,13 +1097,13 @@ func TestAuthorize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Hash the PIN
-			hashedPIN, err := common.HashPIN(accountPIN)
+			hashedPIN, err := pin.HashPIN(accountPIN)
 			if err != nil {
 				logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
 				t.Fatal(err)
 			}
 
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACCOUNT_PIN, []byte(hashedPIN))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1230,7 +1230,7 @@ func TestVerifyCreatePin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte("1234"))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte("1234"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1299,7 +1299,7 @@ func TestCheckAccountStatus(t *testing.T) {
 				flagManager:    fm.parser,
 			}
 
-			err = store.WriteEntry(ctx, sessionId, common.DATA_PUBLIC_KEY, []byte(tt.publicKey))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1465,31 +1465,31 @@ func TestInitiateTransaction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(tt.TemporaryValue))
+			err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.TemporaryValue))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_SYM, []byte(tt.ActiveSym))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.ActiveSym))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_AMOUNT, []byte(tt.StoredAmount))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(tt.StoredAmount))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_PUBLIC_KEY, []byte(tt.PublicKey))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.PublicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_RECIPIENT, []byte(tt.Recipient))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(tt.Recipient))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_DECIMAL, []byte(tt.ActiveDecimal))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL, []byte(tt.ActiveDecimal))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_ADDRESS, []byte(tt.ActiveAddress))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte(tt.ActiveAddress))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1612,7 +1612,7 @@ func TestValidateAmount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+			err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1683,7 +1683,7 @@ func TestValidateRecipient(t *testing.T) {
 	}
 
 	// store a public key for the valid recipient
-	err = store.WriteEntry(ctx, "+254711223344", common.DATA_PUBLIC_KEY, []byte(publicKey))
+	err = store.WriteEntry(ctx, "+254711223344", storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1750,11 +1750,11 @@ func TestCheckBalance(t *testing.T) {
 				accountService: mockAccountService,
 			}
 
-			err := store.WriteEntry(ctx, tt.sessionId, common.DATA_ACTIVE_SYM, []byte(tt.activeSym))
+			err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.activeSym))
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = store.WriteEntry(ctx, tt.sessionId, common.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+			err = store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1789,13 +1789,13 @@ func TestGetProfile(t *testing.T) {
 	tests := []struct {
 		name         string
 		languageCode string
-		keys         []common.DataTyp
+		keys         []storedb.DataTyp
 		profileInfo  []string
 		result       resource.Result
 	}{
 		{
 			name:         "Test with full profile information in eng",
-			keys:         []common.DataTyp{common.DATA_FAMILY_NAME, common.DATA_FIRST_NAME, common.DATA_GENDER, common.DATA_OFFERINGS, common.DATA_LOCATION, common.DATA_YOB},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
 			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
 			languageCode: "eng",
 			result: resource.Result{
@@ -1807,7 +1807,7 @@ func TestGetProfile(t *testing.T) {
 		},
 		{
 			name:         "Test with with profile information in swa",
-			keys:         []common.DataTyp{common.DATA_FAMILY_NAME, common.DATA_FIRST_NAME, common.DATA_GENDER, common.DATA_OFFERINGS, common.DATA_LOCATION, common.DATA_YOB},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
 			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
 			languageCode: "swa",
 			result: resource.Result{
@@ -1819,7 +1819,7 @@ func TestGetProfile(t *testing.T) {
 		},
 		{
 			name:         "Test with with profile information with language that is not yet supported",
-			keys:         []common.DataTyp{common.DATA_FAMILY_NAME, common.DATA_FIRST_NAME, common.DATA_GENDER, common.DATA_OFFERINGS, common.DATA_LOCATION, common.DATA_YOB},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
 			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
 			languageCode: "nor",
 			result: resource.Result{
@@ -1928,7 +1928,7 @@ func TestConfirmPin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Set up the expected behavior of the mock
-			err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(tt.temporarypin))
+			err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.temporarypin))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2039,7 +2039,7 @@ func TestSetDefaultVoucher(t *testing.T) {
 				flagManager:    fm.parser,
 			}
 
-			err := store.WriteEntry(ctx, sessionId, common.DATA_PUBLIC_KEY, []byte(publicKey))
+			err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -2072,7 +2072,7 @@ func TestCheckVouchers(t *testing.T) {
 		prefixDb:       spdb,
 	}
 
-	err := store.WriteEntry(ctx, sessionId, common.DATA_PUBLIC_KEY, []byte(publicKey))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2090,7 +2090,7 @@ func TestCheckVouchers(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Read voucher sym data from the store
-	voucherData, err := spdb.Get(ctx, common.ToBytes(common.DATA_VOUCHER_SYMBOLS))
+	voucherData, err := spdb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2117,7 +2117,7 @@ func TestGetVoucherList(t *testing.T) {
 	mockSyms := []byte("1:SRF\n2:MILO")
 
 	// Put voucher sym data from the store
-	err := spdb.Put(ctx, common.ToBytes(common.DATA_VOUCHER_SYMBOLS), mockSyms)
+	err := spdb.Put(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS), mockSyms)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2149,16 +2149,16 @@ func TestViewVoucher(t *testing.T) {
 	}
 
 	// Define mock voucher data
-	mockData := map[common.DataTyp][]byte{
-		common.DATA_VOUCHER_SYMBOLS:   []byte("1:SRF\n2:MILO"),
-		common.DATA_VOUCHER_BALANCES:  []byte("1:100\n2:200"),
-		common.DATA_VOUCHER_DECIMALS:  []byte("1:6\n2:4"),
-		common.DATA_VOUCHER_ADDRESSES: []byte("1:0xd4c288865Ce\n2:0x41c188d63Qa"),
+	mockData := map[storedb.DataTyp][]byte{
+		storedb.DATA_VOUCHER_SYMBOLS:   []byte("1:SRF\n2:MILO"),
+		storedb.DATA_VOUCHER_BALANCES:  []byte("1:100\n2:200"),
+		storedb.DATA_VOUCHER_DECIMALS:  []byte("1:6\n2:4"),
+		storedb.DATA_VOUCHER_ADDRESSES: []byte("1:0xd4c288865Ce\n2:0x41c188d63Qa"),
 	}
 
 	// Put the data
 	for key, value := range mockData {
-		err = spdb.Put(ctx, []byte(common.ToBytes(key)), []byte(value))
+		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -2190,7 +2190,7 @@ func TestSetVoucher(t *testing.T) {
 	expectedData := fmt.Sprintf("%s,%s,%s,%s", tempData.TokenSymbol, tempData.Balance, tempData.TokenDecimals, tempData.ContractAddress)
 
 	// store the expectedData
-	if err := store.WriteEntry(ctx, sessionId, common.DATA_TEMPORARY_VALUE, []byte(expectedData)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(expectedData)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -2220,7 +2220,7 @@ func TestGetVoucherDetails(t *testing.T) {
 		flagManager:    fm.parser,
 		accountService: mockAccountService,
 	}
-	err = store.WriteEntry(ctx, sessionId, common.DATA_ACTIVE_ADDRESS, []byte(tokA_AAddress))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte(tokA_AAddress))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2249,7 +2249,7 @@ func TestCountIncorrectPINAttempts(t *testing.T) {
 	h := &MenuHandlers{
 		userdataStore: store,
 	}
-	err := store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(attempts))))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(attempts))))
 	if err != nil {
 		t.Logf(err.Error())
 	}
@@ -2258,7 +2258,7 @@ func TestCountIncorrectPINAttempts(t *testing.T) {
 		t.Logf(err.Error())
 	}
 
-	attemptsAfterCount, err := store.ReadEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS)
+	attemptsAfterCount, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
 		t.Logf(err.Error())
 	}
@@ -2274,7 +2274,7 @@ func TestResetIncorrectPINAttempts(t *testing.T) {
 	sessionId := "session123"
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	err := store.WriteEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("2")))
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("2")))
 	if err != nil {
 		t.Logf(err.Error())
 	}
@@ -2283,7 +2283,7 @@ func TestResetIncorrectPINAttempts(t *testing.T) {
 		userdataStore: store,
 	}
 	h.resetIncorrectPINAttempts(ctx, sessionId)
-	incorrectAttempts, err := store.ReadEntry(ctx, sessionId, common.DATA_INCORRECT_PIN_ATTEMPTS)
+	incorrectAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 
 	if err != nil {
 		t.Logf(err.Error())
@@ -2323,7 +2323,7 @@ func TestPersistLanguageCode(t *testing.T) {
 		if err != nil {
 			t.Logf(err.Error())
 		}
-		code, err := store.ReadEntry(ctx, sessionId, common.DATA_SELECTED_LANGUAGE_CODE)
+		code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
 
 		assert.Equal(t, test.expectedLanguageCode, string(code))
 	}

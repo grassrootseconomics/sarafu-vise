@@ -4,16 +4,17 @@ go 1.23.4
 
 require (
 	git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d
+	git.grassecon.net/grassrootseconomics/common v0.0.0-20250112090451-d33e94fda029
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250111211303-3ea726a0302c
-	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250111222109-2ea51d88d8c0
-	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250111212417-1f8ba0d7ff9b
+	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112075903-5b312f9569f0
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112092227-e0892ac0be76
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.27.0
+	golang.org/x/crypto v0.32.0
 	gopkg.in/leonelquinteros/gotext.v1 v1.3.1
 )
 
@@ -34,8 +35,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
