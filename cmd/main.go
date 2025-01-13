@@ -10,7 +10,6 @@ import (
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
@@ -31,12 +30,9 @@ var (
 )
 
 type devEmitter struct {
-	h *event.EventsHandler
-	store *store.UserDataStore
-	pe *persist.Persister
+	h *apievent.EventsHandler
 }
 
-// WIP: placeholder emitter, should perform same action as events
 func (d *devEmitter) emit(ctx context.Context, msg apievent.Msg) error {
 	var err error
 	if msg.Typ == apievent.EventTokenTransferTag {
@@ -46,7 +42,7 @@ func (d *devEmitter) emit(ctx context.Context, msg apievent.Msg) error {
 		}
 		logg.InfoCtxf(ctx, "tx emit", "tx", tx)
 		ev := tx.ToTransferEvent()
-		err = d.h.HandleTokenTransfer(ctx, d.store, &ev)
+		err = d.h.Handle(ctx, apievent.EventTokenTransferTag, &ev)
 	} else if msg.Typ == apievent.EventRegistrationTag {
 		acc, ok := msg.Item.(devremote.Account)
 		if !ok {
@@ -54,7 +50,7 @@ func (d *devEmitter) emit(ctx context.Context, msg apievent.Msg) error {
 		}
 		logg.InfoCtxf(ctx, "account emit", "account", acc)
 		ev := acc.ToRegistrationEvent()
-		err = d.h.HandleCustodialRegistration(ctx, d.store, d.pe, &ev)
+		err = d.h.Handle(ctx, apievent.EventRegistrationTag, &ev)
 	}
 	return err
 }
@@ -162,11 +158,12 @@ func main() {
 
 	if fakeDir != "" {
 		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
+		userStore := &store.UserDataStore{
+			Db: userdatastore,
+		}
+		eu := event.NewEventsUpdater(svc, userStore, pe)
 		emitter := &devEmitter{
-			h: event.NewEventsHandler(svc),
-			store: &store.UserDataStore{
-				Db: userdatastore,
-			},
+			h: eu.ToEventsHandler(),
 		}
 		svc = svc.WithEmitter(emitter.emit)
 		svc.AddVoucher(ctx, "BAR")

@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"git.defalsify.org/vise.git/db"
@@ -12,14 +13,14 @@ import (
 )
 
 // execute all 
-func (eh *EventsHandler) updateToken(ctx context.Context, userStore *store.UserDataStore, identity identity.Identity, tokenAddress string) error {
-	err := eh.updateTokenList(ctx, userStore, identity)
+func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Identity, tokenAddress string) error {
+	err := eu.updateTokenList(ctx, identity)
 	if err != nil {
 		return err
 	}
 
-	userStore.Db.SetSession(identity.SessionId)
-	activeSym, err := userStore.ReadEntry(ctx, identity.SessionId, storedb.DATA_ACTIVE_SYM)
+	eu.store.Db.SetSession(identity.SessionId)
+	activeSym, err := eu.store.ReadEntry(ctx, identity.SessionId, storedb.DATA_ACTIVE_SYM)
 	if err == nil {
 		return nil
 	}
@@ -27,18 +28,18 @@ func (eh *EventsHandler) updateToken(ctx context.Context, userStore *store.UserD
 		return err
 	}
 	if activeSym == nil {
-		activeSym, err = eh.toSym(ctx, tokenAddress)
+		activeSym, err = eu.toSym(ctx, tokenAddress)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = updateDefaultToken(ctx, userStore, identity, string(activeSym))
+	err = eu.updateDefaultToken(ctx, identity, string(activeSym))
 	if err != nil {
 		return err
 	}
 
-	err = eh.updateTokenTransferList(ctx, userStore, identity)
+	err = eu.updateTokenTransferList(ctx, identity)
 	if err != nil {
 		return err
 	}
@@ -48,41 +49,48 @@ func (eh *EventsHandler) updateToken(ctx context.Context, userStore *store.UserD
 
 
 // set default token to given symbol.
-func updateDefaultToken(ctx context.Context, userStore *store.UserDataStore, identity identity.Identity, activeSym string) error {
-	pfxDb := toPrefixDb(userStore, identity.SessionId)
+func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identity.Identity, activeSym string) error {
+	pfxDb := toPrefixDb(eu.store, identity.SessionId)
 	// TODO: the activeSym input should instead be newline separated list?
 	tokenData, err := store.GetVoucherData(ctx, pfxDb, activeSym)
 	if err != nil {
 		return err
 	}
-	return store.UpdateVoucherData(ctx, userStore, identity.SessionId, tokenData)
+	return store.UpdateVoucherData(ctx, eu.store, identity.SessionId, tokenData)
 }
 
 
 // handle token transfer.
 //
 // if from and to are NOT the same, handle code will be executed once for each side of the transfer.
-func (eh *EventsHandler) HandleTokenTransfer(ctx context.Context, userStore *store.UserDataStore, ev *apievent.EventTokenTransfer) error {
-	identity, err := store.IdentityFromAddress(ctx, userStore, ev.From)
+func (eh *EventsUpdater) handleTokenTransfer(ctx context.Context, ev any) error {
+	o, ok := ev.(*apievent.EventTokenTransfer)
+	if !ok {
+		fmt.Errorf("invalid event for custodial registration")
+	}
+	return eh.HandleTokenTransfer(ctx, o)
+}
+func (eu *EventsUpdater) HandleTokenTransfer(ctx context.Context, ev *apievent.EventTokenTransfer) error {
+	identity, err := store.IdentityFromAddress(ctx, eu.store, ev.From)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			return err
 		}
 	} else {
-		err = eh.updateToken(ctx, userStore, identity, ev.VoucherAddress)
+		err = eu.updateToken(ctx, identity, ev.VoucherAddress)
 		if err != nil {
 			return err
 		}
 	}
 
 	if strings.Compare(ev.To, ev.From) != 0 {
-		identity, err = store.IdentityFromAddress(ctx, userStore, ev.To)
+		identity, err = store.IdentityFromAddress(ctx, eu.store, ev.To)
 		if err != nil {
 			if !db.IsNotFound(err) {
 				return err
 			}
 		} else {
-			err = eh.updateToken(ctx, userStore, identity, ev.VoucherAddress)
+			err = eu.updateToken(ctx, identity, ev.VoucherAddress)
 			if err != nil {
 				return err
 			}
@@ -93,14 +101,14 @@ func (eh *EventsHandler) HandleTokenTransfer(ctx context.Context, userStore *sto
 }
 
 // handle token mint.
-func (eh *EventsHandler) HandleTokenMint(ctx context.Context, userStore *store.UserDataStore, ev *apievent.EventTokenMint) error {
-	identity, err := store.IdentityFromAddress(ctx, userStore, ev.To)
+func (eu *EventsUpdater) HandleTokenMint(ctx context.Context, ev *apievent.EventTokenMint) error {
+	identity, err := store.IdentityFromAddress(ctx, eu.store, ev.To)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			return err
 		}
 	} else {
-		err = eh.updateToken(ctx, userStore, identity, ev.VoucherAddress)
+		err = eu.updateToken(ctx, identity, ev.VoucherAddress)
 		if err != nil {
 			return err
 		}
@@ -109,7 +117,7 @@ func (eh *EventsHandler) HandleTokenMint(ctx context.Context, userStore *store.U
 }
 
 // use api to resolve address to token symbol.
-func (ev *EventsHandler) toSym(ctx context.Context, address string) ([]byte, error) {
+func (ev *EventsUpdater) toSym(ctx context.Context, address string) ([]byte, error) {
 	voucherData, err := ev.api.VoucherData(ctx, address)
 	if err != nil {
 		return nil, err
@@ -118,8 +126,8 @@ func (ev *EventsHandler) toSym(ctx context.Context, address string) ([]byte, err
 }
 
 // refresh and store token list.
-func (eh *EventsHandler) updateTokenList(ctx context.Context, userStore *store.UserDataStore, identity identity.Identity) error {
-	holdings, err := eh.api.FetchVouchers(ctx, identity.ChecksumAddress)
+func (eu *EventsUpdater) updateTokenList(ctx context.Context, identity identity.Identity) error {
+	holdings, err := eu.api.FetchVouchers(ctx, identity.ChecksumAddress)
 	if err != nil {
 		return err
 	}
@@ -128,7 +136,7 @@ func (eh *EventsHandler) updateTokenList(ctx context.Context, userStore *store.U
 
 	// TODO: make sure subprefixdb is thread safe when using gdbm
 	// TODO: why is address session here unless explicitly set
-	pfxDb := toPrefixDb(userStore, identity.SessionId)
+	pfxDb := toPrefixDb(eu.store, identity.SessionId)
 
 	typ := storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS)
 	err = pfxDb.Put(ctx, typ, []byte(metadata.Symbols))
@@ -158,22 +166,21 @@ func (eh *EventsHandler) updateTokenList(ctx context.Context, userStore *store.U
 }
 
 // refresh and store transaction history.
-func (eh *EventsHandler) updateTokenTransferList(ctx context.Context, userStore *store.UserDataStore, identity identity.Identity) error {
+func (eu *EventsUpdater) updateTokenTransferList(ctx context.Context, identity identity.Identity) error {
 	var r []string
 
-	txs, err := eh.api.FetchTransactions(ctx, identity.ChecksumAddress)
+	txs, err := eu.api.FetchTransactions(ctx, identity.ChecksumAddress)
 	if err != nil {
 		return err
 	}
 
 	for i, tx := range(txs) {
-		//r = append(r, formatTransaction(i, tx))
-		r = append(r, eh.formatFunc(apievent.EventTokenTransferTag, i, tx))
+		r = append(r, eu.formatFunc(apievent.EventTokenTransferTag, i, tx))
 	}
 
 	s := strings.Join(r, "\n")
 
-	return userStore.WriteEntry(ctx, identity.SessionId, storedb.DATA_TRANSACTIONS, []byte(s))
+	return eu.store.WriteEntry(ctx, identity.SessionId, storedb.DATA_TRANSACTIONS, []byte(s))
 }
 
 func toPrefixDb(userStore *store.UserDataStore, sessionId string) storedb.PrefixDb {

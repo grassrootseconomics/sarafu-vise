@@ -2,8 +2,8 @@ package event
 
 import (
 	"context"
+	"fmt"
 
-	"git.defalsify.org/vise.git/persist"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 )
@@ -18,16 +18,24 @@ const (
 // TODO: implement account created in userstore instead, so that
 // the need for persister and state use here is eliminated (it
 // introduces concurrency risks)
-func (eh *EventsHandler) HandleCustodialRegistration(ctx context.Context, userStore *store.UserDataStore, pr *persist.Persister, ev *apievent.EventCustodialRegistration) error {
-	identity, err := store.IdentityFromAddress(ctx, userStore, ev.Account)
+func (eh *EventsUpdater) handleCustodialRegistration(ctx context.Context, ev any) error {
+	o, ok := ev.(*apievent.EventCustodialRegistration)
+	if !ok {
+		fmt.Errorf("invalid event for custodial registration")
+	}
+	return eh.HandleCustodialRegistration(ctx, o)
+}
+
+func (eh *EventsUpdater) HandleCustodialRegistration(ctx context.Context, ev *apievent.EventCustodialRegistration) error {
+	identity, err := store.IdentityFromAddress(ctx, eh.store, ev.Account)
 	if err != nil {
 		return err
 	}
-	err = pr.Load(identity.SessionId)
+	err = eh.pe.Load(identity.SessionId)
 	if err != nil {
 		return err
 	}
-	st := pr.GetState()
+	st := eh.pe.GetState()
 	st.SetFlag(accountCreatedFlag)
-	return pr.Save(identity.SessionId)
+	return eh.pe.Save(identity.SessionId)
 }
