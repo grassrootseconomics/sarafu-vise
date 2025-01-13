@@ -16,6 +16,7 @@ import (
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	devremote "git.grassecon.net/grassrootseconomics/sarafu-api/dev"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
@@ -26,6 +27,24 @@ var (
 	menuSeparator = ": "
 )
 
+// WIP: placeholder emitter, should perform same action as events
+func emitter(ctx context.Context, msg event.Msg) error {
+	if msg.Typ == event.EventTokenTransferTag {
+		tx, ok := msg.Item.(devremote.Tx)
+		if !ok {
+			return fmt.Errorf("not a valid tx")
+		}
+		logg.InfoCtxf(ctx, "tx emit", "tx", tx)
+	} else if msg.Typ == event.EventRegistrationTag {
+		acc, ok := msg.Item.(devremote.Account)
+		if !ok {
+			return fmt.Errorf("not a valid tx")
+		}
+		logg.InfoCtxf(ctx, "account emit", "account", acc)
+
+	}
+	return nil
+}
 
 func main() {
 	config.LoadConfig()
@@ -129,7 +148,7 @@ func main() {
 	}
 
 	if fakeDir != "" {
-		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
+		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42).WithEmitter(emitter)
 		svc.AddVoucher(ctx, "BAR")
 		accountService = svc
 	} else {
