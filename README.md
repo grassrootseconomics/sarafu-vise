@@ -1,5 +1,7 @@
 # URDT USSD service
 
+![img](https://git.grassecon.net/grassrootseconomics/sarafu-vise/raw/commit/53d09688c1516747488ef8d77bb60aac1d3151c2/doc/modules.svg)
+
 This is a USSD service built using the [go-vise](https://github.com/nolash/go-vise) engine.
 
 ## Prerequisites
