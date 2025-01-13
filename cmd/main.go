@@ -10,15 +10,18 @@ import (
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	devremote "git.grassecon.net/grassrootseconomics/sarafu-api/dev"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/event"
+	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/event"
 )
 
 var (
@@ -27,23 +30,33 @@ var (
 	menuSeparator = ": "
 )
 
+type devEmitter struct {
+	h *event.EventsHandler
+	store *store.UserDataStore
+	pe *persist.Persister
+}
+
 // WIP: placeholder emitter, should perform same action as events
-func emitter(ctx context.Context, msg event.Msg) error {
-	if msg.Typ == event.EventTokenTransferTag {
+func (d *devEmitter) emit(ctx context.Context, msg apievent.Msg) error {
+	var err error
+	if msg.Typ == apievent.EventTokenTransferTag {
 		tx, ok := msg.Item.(devremote.Tx)
 		if !ok {
 			return fmt.Errorf("not a valid tx")
 		}
 		logg.InfoCtxf(ctx, "tx emit", "tx", tx)
-	} else if msg.Typ == event.EventRegistrationTag {
+		ev := tx.ToTransferEvent()
+		err = d.h.HandleTokenTransfer(ctx, d.store, &ev)
+	} else if msg.Typ == apievent.EventRegistrationTag {
 		acc, ok := msg.Item.(devremote.Account)
 		if !ok {
 			return fmt.Errorf("not a valid tx")
 		}
 		logg.InfoCtxf(ctx, "account emit", "account", acc)
-
+		ev := acc.ToRegistrationEvent()
+		err = d.h.HandleCustodialRegistration(ctx, d.store, d.pe, &ev)
 	}
-	return nil
+	return err
 }
 
 func main() {
@@ -148,7 +161,14 @@ func main() {
 	}
 
 	if fakeDir != "" {
-		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42).WithEmitter(emitter)
+		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
+		emitter := &devEmitter{
+			h: event.NewEventsHandler(svc),
+			store: &store.UserDataStore{
+				Db: userdatastore,
+			},
+		}
+		svc = svc.WithEmitter(emitter.emit)
 		svc.AddVoucher(ctx, "BAR")
 		accountService = svc
 	} else {
