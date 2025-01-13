@@ -21,7 +21,7 @@ const (
 func (eh *EventsUpdater) handleCustodialRegistration(ctx context.Context, ev any) error {
 	o, ok := ev.(*apievent.EventCustodialRegistration)
 	if !ok {
-		fmt.Errorf("invalid event for custodial registration")
+		return fmt.Errorf("invalid event for custodial registration")
 	}
 	return eh.HandleCustodialRegistration(ctx, o)
 }
