@@ -1,0 +1,18 @@
+digraph {
+	visedriver -> "sarafu-api"
+	visedriver -> "visedriver-africastalking"
+	"visedriver-africastalking" -> "sarafu-vise"
+	visedriver -> "sarafu-vise"
+	"sarafu-api" -> "sarafu-vise"
+	"sarafu-vise" -> "sarafu-vise-events"
+	"sarafu-api" -> "eth-custodial-api" [style="dashed",color="grey"]
+	"ge-common" -> "sarafu-api"
+	"ge-common" -> "sarafu-vise"
+	"ge-common" -> "sarafu-vise-events"
+	"ge-common" -> "eth-custodial-api" [style="dashed",color="grey"]
+	"sarafu-vise" -> INSTANCE
+	"sarafu-vise-events" -> INSTANCE
+	INSTANCE [fillcolor="green",color="green",fontcolor="green"]
+	"eth-custodial-api" [fillcolor="grey",color="grey",fontcolor="grey"]
+
+}
