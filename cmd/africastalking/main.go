@@ -93,44 +93,44 @@ func main() {
 	menuStorageService := storage.NewMenuStorageService(connData, "")
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "menustorageservice: %v\n", err)
 		os.Exit(1)
 	}
 
 	userdataStore, err := menuStorageService.GetUserdataDb(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "userdatadb: %v\n", err)
 		os.Exit(1)
 	}
 	defer userdataStore.Close()
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
+		fmt.Fprintf(os.Stderr, "dbresource\n")
 		os.Exit(1)
 	}
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "localhandlerservice: %v\n", err)
 		os.Exit(1)
 	}
 	lhs.SetDataStore(&userdataStore)
-
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "setdatastore: %v\n", err)
 		os.Exit(1)
 	}
 
 	accountService := &httpremote.HTTPAccountService{}
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "httpaccountservice: %v\n", err)
 		os.Exit(1)
 	}
 
 	stateStore, err := menuStorageService.GetStateStore(ctx)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "getstatestore: %v\n", err)
 		os.Exit(1)
 	}
 	defer stateStore.Close()
