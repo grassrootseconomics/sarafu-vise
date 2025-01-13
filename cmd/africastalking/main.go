@@ -90,7 +90,7 @@ func main() {
 		cfg.EngineDebug = true
 	}
 
-	menuStorageService := storage.NewMenuStorageService(connData, "")
+	menuStorageService := storage.NewMenuStorageService(connData, resourceDir)
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "menustorageservice: %v\n", err)
