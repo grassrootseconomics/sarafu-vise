@@ -13,14 +13,14 @@ import (
 )
 
 // execute all 
-func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Identity, tokenAddress string) error {
-	err := eu.updateTokenList(ctx, identity)
+func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore, tokenAddress string) error {
+	err := eu.updateTokenList(ctx, identity, userStore)
 	if err != nil {
 		return err
 	}
 
-	eu.store.Db.SetSession(identity.SessionId)
-	activeSym, err := eu.store.ReadEntry(ctx, identity.SessionId, storedb.DATA_ACTIVE_SYM)
+	userStore.Db.SetSession(identity.SessionId)
+	activeSym, err := userStore.ReadEntry(ctx, identity.SessionId, storedb.DATA_ACTIVE_SYM)
 	if err == nil {
 		return nil
 	}
@@ -34,12 +34,12 @@ func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Iden
 		}
 	}
 
-	err = eu.updateDefaultToken(ctx, identity, string(activeSym))
+	err = eu.updateDefaultToken(ctx, identity, userStore, string(activeSym))
 	if err != nil {
 		return err
 	}
 
-	err = eu.updateTokenTransferList(ctx, identity)
+	err = eu.updateTokenTransferList(ctx, identity, userStore)
 	if err != nil {
 		return err
 	}
@@ -49,14 +49,14 @@ func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Iden
 
 
 // set default token to given symbol.
-func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identity.Identity, activeSym string) error {
-	pfxDb := toPrefixDb(eu.store, identity.SessionId)
+func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore, activeSym string) error {
+	pfxDb := toPrefixDb(userStore, identity.SessionId)
 	// TODO: the activeSym input should instead be newline separated list?
 	tokenData, err := store.GetVoucherData(ctx, pfxDb, activeSym)
 	if err != nil {
 		return err
 	}
-	return store.UpdateVoucherData(ctx, eu.store, identity.SessionId, tokenData)
+	return store.UpdateVoucherData(ctx, userStore, identity.SessionId, tokenData)
 }
 
 
@@ -71,26 +71,30 @@ func (eh *EventsUpdater) handleTokenTransfer(ctx context.Context, ev any) error 
 	return eh.HandleTokenTransfer(ctx, o)
 }
 func (eu *EventsUpdater) HandleTokenTransfer(ctx context.Context, ev *apievent.EventTokenTransfer) error {
-	identity, err := store.IdentityFromAddress(ctx, eu.store, ev.From)
+	_, userStore, err := eu.getStore(ctx)
+	if err != nil {
+		return err
+	}
+	identity, err := store.IdentityFromAddress(ctx, userStore, ev.From)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			return err
 		}
 	} else {
-		err = eu.updateToken(ctx, identity, ev.VoucherAddress)
+		err = eu.updateToken(ctx, identity, userStore, ev.VoucherAddress)
 		if err != nil {
 			return err
 		}
 	}
 
 	if strings.Compare(ev.To, ev.From) != 0 {
-		identity, err = store.IdentityFromAddress(ctx, eu.store, ev.To)
+		identity, err = store.IdentityFromAddress(ctx, userStore, ev.To)
 		if err != nil {
 			if !db.IsNotFound(err) {
 				return err
 			}
 		} else {
-			err = eu.updateToken(ctx, identity, ev.VoucherAddress)
+			err = eu.updateToken(ctx, identity, userStore, ev.VoucherAddress)
 			if err != nil {
 				return err
 			}
@@ -102,13 +106,17 @@ func (eu *EventsUpdater) HandleTokenTransfer(ctx context.Context, ev *apievent.E
 
 // handle token mint.
 func (eu *EventsUpdater) HandleTokenMint(ctx context.Context, ev *apievent.EventTokenMint) error {
-	identity, err := store.IdentityFromAddress(ctx, eu.store, ev.To)
+	_, userStore, err := eu.getStore(ctx)
+	if err != nil {
+		return err
+	}
+	identity, err := store.IdentityFromAddress(ctx, userStore, ev.To)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			return err
 		}
 	} else {
-		err = eu.updateToken(ctx, identity, ev.VoucherAddress)
+		err = eu.updateToken(ctx, identity, userStore, ev.VoucherAddress)
 		if err != nil {
 			return err
 		}
@@ -117,8 +125,8 @@ func (eu *EventsUpdater) HandleTokenMint(ctx context.Context, ev *apievent.Event
 }
 
 // use api to resolve address to token symbol.
-func (ev *EventsUpdater) toSym(ctx context.Context, address string) ([]byte, error) {
-	voucherData, err := ev.api.VoucherData(ctx, address)
+func (eu *EventsUpdater) toSym(ctx context.Context, address string) ([]byte, error) {
+	voucherData, err := eu.api.VoucherData(ctx, address)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +134,7 @@ func (ev *EventsUpdater) toSym(ctx context.Context, address string) ([]byte, err
 }
 
 // refresh and store token list.
-func (eu *EventsUpdater) updateTokenList(ctx context.Context, identity identity.Identity) error {
+func (eu *EventsUpdater) updateTokenList(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore) error {
 	holdings, err := eu.api.FetchVouchers(ctx, identity.ChecksumAddress)
 	if err != nil {
 		return err
@@ -136,7 +144,7 @@ func (eu *EventsUpdater) updateTokenList(ctx context.Context, identity identity.
 
 	// TODO: make sure subprefixdb is thread safe when using gdbm
 	// TODO: why is address session here unless explicitly set
-	pfxDb := toPrefixDb(eu.store, identity.SessionId)
+	pfxDb := toPrefixDb(userStore, identity.SessionId)
 
 	typ := storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS)
 	err = pfxDb.Put(ctx, typ, []byte(metadata.Symbols))
@@ -166,7 +174,7 @@ func (eu *EventsUpdater) updateTokenList(ctx context.Context, identity identity.
 }
 
 // refresh and store transaction history.
-func (eu *EventsUpdater) updateTokenTransferList(ctx context.Context, identity identity.Identity) error {
+func (eu *EventsUpdater) updateTokenTransferList(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore) error {
 	var r []string
 
 	txs, err := eu.api.FetchTransactions(ctx, identity.ChecksumAddress)
@@ -180,7 +188,7 @@ func (eu *EventsUpdater) updateTokenTransferList(ctx context.Context, identity i
 
 	s := strings.Join(r, "\n")
 
-	return eu.store.WriteEntry(ctx, identity.SessionId, storedb.DATA_TRANSACTIONS, []byte(s))
+	return userStore.WriteEntry(ctx, identity.SessionId, storedb.DATA_TRANSACTIONS, []byte(s))
 }
 
 func toPrefixDb(userStore *store.UserDataStore, sessionId string) storedb.PrefixDb {

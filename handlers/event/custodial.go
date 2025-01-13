@@ -26,16 +26,20 @@ func (eh *EventsUpdater) handleCustodialRegistration(ctx context.Context, ev any
 	return eh.HandleCustodialRegistration(ctx, o)
 }
 
-func (eh *EventsUpdater) HandleCustodialRegistration(ctx context.Context, ev *apievent.EventCustodialRegistration) error {
-	identity, err := store.IdentityFromAddress(ctx, eh.store, ev.Account)
+func (eu *EventsUpdater) HandleCustodialRegistration(ctx context.Context, ev *apievent.EventCustodialRegistration) error {
+	pe, userStore, err := eu.getStore(ctx)
 	if err != nil {
 		return err
 	}
-	err = eh.pe.Load(identity.SessionId)
+	identity, err := store.IdentityFromAddress(ctx, userStore, ev.Account)
 	if err != nil {
 		return err
 	}
-	st := eh.pe.GetState()
+	err = pe.Load(identity.SessionId)
+	if err != nil {
+		return err
+	}
+	st := pe.GetState()
 	st.SetFlag(accountCreatedFlag)
-	return eh.pe.Save(identity.SessionId)
+	return pe.Save(identity.SessionId)
 }

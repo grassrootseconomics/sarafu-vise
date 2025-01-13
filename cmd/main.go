@@ -19,7 +19,6 @@ import (
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/event"
 )
 
@@ -158,10 +157,7 @@ func main() {
 
 	if fakeDir != "" {
 		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
-		userStore := &store.UserDataStore{
-			Db: userdatastore,
-		}
-		eu := event.NewEventsUpdater(svc, userStore, pe)
+		eu := event.NewEventsUpdater(svc, menuStorageService)
 		emitter := &devEmitter{
 			h: eu.ToEventsHandler(),
 		}
