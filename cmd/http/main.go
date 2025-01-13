@@ -17,9 +17,9 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	httpsession "git.grassecon.net/grassrootseconomics/visedriver/session/http"
+	httprequest "git.grassecon.net/grassrootseconomics/visedriver/request/http"
+	"git.grassecon.net/grassrootseconomics/visedriver/request"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/session"
 
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
@@ -130,9 +130,9 @@ func main() {
 	}
 	defer stateStore.Close()
 
-	rp := &httpsession.DefaultRequestParser{}
-	bsh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
-	sh := httpsession.NewHTTPRequestHandler(bsh)
+	rp := &httprequest.DefaultRequestParser{}
+	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh := httprequest.NewHTTPRequestHandler(bsh)
 	s := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),
 		Handler: sh,

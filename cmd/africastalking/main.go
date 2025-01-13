@@ -18,7 +18,7 @@ import (
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/session"
+	"git.grassecon.net/grassrootseconomics/visedriver/request"
 	
 	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
@@ -136,7 +136,7 @@ func main() {
 	defer stateStore.Close()
 
 	rp := &at.ATRequestParser{}
-	bsh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
 	sh := at.NewATRequestHandler(bsh)
 
 	mux := http.NewServeMux()

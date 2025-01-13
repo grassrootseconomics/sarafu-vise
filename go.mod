@@ -6,8 +6,8 @@ require (
 	git.defalsify.org/vise.git v0.2.3-0.20250103172917-3e190a44568d
 	git.grassecon.net/grassrootseconomics/common v0.0.0-20250112155828-b55686e830fd
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250113085238-f65abf625d34
-	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250112155457-f13dab9a4505
-	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250112155731-5718f7d18fbf
+	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250113103142-5bf0a0e85893
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250113103030-f0b2056fd87d
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta

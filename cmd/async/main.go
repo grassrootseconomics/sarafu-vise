@@ -16,7 +16,6 @@ import (
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/session"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
@@ -144,7 +143,7 @@ func main() {
 	rp := &asyncRequestParser{
 		sessionId: sessionId,
 	}
-	sh := session.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
 	cfg.SessionId = sessionId
 	rqs := request.RequestSession{
 		Ctx:    ctx,
