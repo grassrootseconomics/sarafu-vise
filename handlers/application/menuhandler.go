@@ -2196,7 +2196,7 @@ func (h *MenuHandlers) persistInitialLanguageCode(ctx context.Context, sessionId
 	if !db.IsNotFound(err) {
 		return err
 	}
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE, []byte(code))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE, []byte(code))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to persist initial language code", "key", storedb.DATA_INITIAL_LANGUAGE_CODE, "value", code, "error", err)
 		return err
