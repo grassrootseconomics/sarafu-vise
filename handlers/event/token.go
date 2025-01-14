@@ -66,7 +66,7 @@ func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identi
 func (eh *EventsUpdater) handleTokenTransfer(ctx context.Context, ev any) error {
 	o, ok := ev.(*apievent.EventTokenTransfer)
 	if !ok {
-		fmt.Errorf("invalid event for custodial registration")
+		fmt.Errorf("invalid event for token transfer")
 	}
 	return eh.HandleTokenTransfer(ctx, o)
 }
@@ -105,6 +105,13 @@ func (eu *EventsUpdater) HandleTokenTransfer(ctx context.Context, ev *apievent.E
 }
 
 // handle token mint.
+func (eh *EventsUpdater) handleTokenMint(ctx context.Context, ev any) error {
+	o, ok := ev.(*apievent.EventTokenMint)
+	if !ok {
+		fmt.Errorf("invalid event for token mint")
+	}
+	return eh.HandleTokenMint(ctx, o)
+}
 func (eu *EventsUpdater) HandleTokenMint(ctx context.Context, ev *apievent.EventTokenMint) error {
 	_, userStore, err := eu.getStore(ctx)
 	if err != nil {

@@ -34,9 +34,9 @@ func NewEventsUpdater(api remote.AccountService, store storage.StorageService) *
 
 func (eu *EventsUpdater) ToEventsHandler() *apievent.EventsHandler {
 	eh := apievent.NewEventsHandler()
+	eh = eh.WithHandler(apievent.EventTokenMintTag, eu.handleTokenMint)
 	eh = eh.WithHandler(apievent.EventTokenTransferTag, eu.handleTokenTransfer)
 	eh = eh.WithHandler(apievent.EventRegistrationTag, eu.handleCustodialRegistration)
-	eh = eh.WithHandler(apievent.EventTokenMintTag, eu.handleNoop)
 	return eh
 }
 
