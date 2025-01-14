@@ -27,7 +27,7 @@ func (eh *EventsUpdater) handleCustodialRegistration(ctx context.Context, ev any
 }
 
 func (eu *EventsUpdater) HandleCustodialRegistration(ctx context.Context, ev *apievent.EventCustodialRegistration) error {
-	pe, userStore, err := eu.getStore(ctx)
+	_, userStore, err := eu.getStore(ctx)
 	if err != nil {
 		return err
 	}
@@ -35,11 +35,13 @@ func (eu *EventsUpdater) HandleCustodialRegistration(ctx context.Context, ev *ap
 	if err != nil {
 		return err
 	}
-	err = pe.Load(identity.SessionId)
-	if err != nil {
-		return err
-	}
-	st := pe.GetState()
-	st.SetFlag(accountCreatedFlag)
-	return pe.Save(identity.SessionId)
+//	err = pe.Load(identity.SessionId)
+//	if err != nil {
+//		return err
+//	}
+//	st := pe.GetState()
+//	st.SetFlag(accountCreatedFlag)
+//	return pe.Save(identity.SessionId)
+	logg.DebugCtxf(ctx, "received custodial registration event", "identity", identity)
+	return nil
 }
