@@ -1698,7 +1698,7 @@ func TestValidateRecipient(t *testing.T) {
 				accountService: mockAccountService,
 			}
 
-			aliasResponse := &dataserviceapi.AliasAddress{
+			aliasResponse := &models.AliasAddress{
 				Address: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 			}
 

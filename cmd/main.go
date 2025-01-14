@@ -156,7 +156,9 @@ func main() {
 	}
 
 	if fakeDir != "" {
-		svc := devremote.NewDevAccountService(ctx, fakeDir).WithAutoVoucher(ctx, "FOO", 42)
+		svc := devremote.NewDevAccountService()
+		svc = svc.WithFs(ctx, fakeDir)
+		svc = svc.WithAutoVoucher(ctx, "FOO", 42)
 		eu := event.NewEventsUpdater(svc, menuStorageService)
 		emitter := &devEmitter{
 			h: eu.ToEventsHandler(),

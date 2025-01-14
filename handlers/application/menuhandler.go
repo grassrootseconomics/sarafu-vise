@@ -1076,6 +1076,8 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 }
 
 // ValidateRecipient validates that the given input is valid.
+//
+// TODO: split up functino
 func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
