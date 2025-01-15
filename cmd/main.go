@@ -13,13 +13,9 @@ import (
 	"git.defalsify.org/vise.git/lang"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
-	devremote "git.grassecon.net/grassrootseconomics/sarafu-api/dev"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/event"
 )
 
 var (
@@ -28,37 +24,9 @@ var (
 	menuSeparator = ": "
 )
 
-type devEmitter struct {
-	h *apievent.EventsHandler
-}
-
-func (d *devEmitter) emit(ctx context.Context, msg apievent.Msg) error {
-	var err error
-	if msg.Typ == apievent.EventTokenTransferTag {
-		tx, ok := msg.Item.(devremote.Tx)
-		if !ok {
-			return fmt.Errorf("not a valid tx")
-		}
-		logg.InfoCtxf(ctx, "tx emit", "tx", tx)
-		ev := tx.ToTransferEvent()
-		err = d.h.Handle(ctx, apievent.EventTokenTransferTag, &ev)
-	} else if msg.Typ == apievent.EventRegistrationTag {
-		acc, ok := msg.Item.(devremote.Account)
-		if !ok {
-			return fmt.Errorf("not a valid tx")
-		}
-		logg.InfoCtxf(ctx, "account emit", "account", acc)
-		ev := acc.ToRegistrationEvent()
-		err = d.h.Handle(ctx, apievent.EventRegistrationTag, &ev)
-	}
-	return err
-}
-
 func main() {
 	config.LoadConfig()
 
-	var accountService remote.AccountService
-	var fakeDir string
 	var connStr string
 	var size uint
 	var sessionId string
@@ -71,7 +39,6 @@ func main() {
 	flag.StringVar(&resourceDir, "resourcedir", scriptDir, "resource dir")
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
 	flag.StringVar(&connStr, "c", "", "connection string")
-	flag.StringVar(&fakeDir, "fakedir", "", "if valid path, enables fake api with fsdb backend")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&gettextDir, "gettext", "", "use gettext translations from given directory")
@@ -155,20 +122,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if fakeDir != "" {
-		svc := devremote.NewDevAccountService()
-		svc = svc.WithFs(ctx, fakeDir)
-		svc = svc.WithAutoVoucher(ctx, "FOO", 42)
-		eu := event.NewEventsUpdater(svc, menuStorageService)
-		emitter := &devEmitter{
-			h: eu.ToEventsHandler(),
-		}
-		svc = svc.WithEmitter(emitter.emit)
-		svc.AddVoucher(ctx, "BAR")
-		accountService = svc
-	} else {
-		accountService = &httpremote.HTTPAccountService{}
-	}
+	accountService := services.New(ctx, menuStorageService, connData)
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
