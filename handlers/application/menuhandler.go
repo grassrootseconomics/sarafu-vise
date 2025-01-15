@@ -188,7 +188,14 @@ func (h *MenuHandlers) SetAccountFlags(ctx context.Context, sym string, input []
 		return res, nil
 	}
 
-	res.Content = string(code)
+	codeStr := string(code)
+
+	// fallback for unsupported languages
+	if codeStr != "eng" && codeStr != "swa" {
+		codeStr = "swa"
+	}
+
+	res.Content = codeStr
 
 	res.FlagSet = append(res.FlagSet, state.FLAG_LANG)
 	res.FlagSet = append(res.FlagSet, flag_language_set)
@@ -206,7 +213,7 @@ func (h *MenuHandlers) SetAccountFlags(ctx context.Context, sym string, input []
 	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
 		if !db.IsNotFound(err) {
-			return res, err
+			return res, nil
 		}
 	}
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
