@@ -825,6 +825,17 @@ func TestSetLanguage(t *testing.T) {
 
 			// Assert that the Result FlagSet has the required flags after language switch
 			assert.Equal(t, res, tt.expectedResult, "Result should match expected result")
+			code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+			if err != nil {
+				t.Error(err)
+			}
+
+			assert.Equal(t, string(code), tt.expectedResult.Content)
+			code, err = store.ReadEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, string(code), "eng")
 		})
 	}
 }

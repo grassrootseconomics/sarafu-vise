@@ -59,6 +59,8 @@ const (
 	DATA_INCORRECT_PIN_ATTEMPTS
 	//ISO 639 code for the selected language.
 	DATA_SELECTED_LANGUAGE_CODE
+	//ISO 639 code for the language initially selected.
+	DATA_INITIAL_LANGUAGE_CODE
 )
 
 const (
