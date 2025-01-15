@@ -17,7 +17,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
 
@@ -180,7 +180,8 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 
 	// TODO: clear up why pointer here and by-value other cmds
-	accountService := &httpremote.HTTPAccountService{}
+	accountService := services.New(ctx, menuStorageService, s.Conn)
+
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		return nil, nil, err
