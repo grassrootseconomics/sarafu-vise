@@ -75,6 +75,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	}
 	//appHandlers = appHandlers.WithPersister(ls.Pe)
 	appHandlers.SetPersister(ls.Pe)
+	ls.DbRs.AddLocalFunc("set_account_flags", appHandlers.SetAccountFlags)
 	ls.DbRs.AddLocalFunc("set_language", appHandlers.SetLanguage)
 	ls.DbRs.AddLocalFunc("create_account", appHandlers.CreateAccount)
 	ls.DbRs.AddLocalFunc("save_temporary_pin", appHandlers.SaveTemporaryPin)

@@ -18,17 +18,17 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
+	"git.grassecon.net/grassrootseconomics/common/hex"
+	"git.grassecon.net/grassrootseconomics/common/identity"
+	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
+	"git.grassecon.net/grassrootseconomics/common/person"
+	"git.grassecon.net/grassrootseconomics/common/phone"
+	"git.grassecon.net/grassrootseconomics/common/pin"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	"git.grassecon.net/grassrootseconomics/common/hex"
-	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
-	"git.grassecon.net/grassrootseconomics/common/pin"
-	"git.grassecon.net/grassrootseconomics/common/person"
-	"git.grassecon.net/grassrootseconomics/common/phone"
-	"git.grassecon.net/grassrootseconomics/common/identity"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
 var (
@@ -99,7 +99,7 @@ func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *
 }
 
 // WithPersister sets persister instance to the handlers.
-//func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
+// func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
 func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
 	if h.pe != nil {
 		panic("persister already set")
@@ -107,7 +107,6 @@ func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
 	h.pe = pe
 	//return h
 }
-
 
 // Init initializes the handler for a new session.
 func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (resource.Result, error) {
@@ -154,6 +153,70 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 
 func (h *MenuHandlers) Exit() {
 	h.pe = nil
+}
+
+// SetAccountFlags queries the storage to check if the data exits
+// it then sets the required flags to prevent a registered user from registering afresh
+func (h *MenuHandlers) SetAccountFlags(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+
+	flag_language_set, _ := h.flagManager.GetFlag("flag_language_set")
+	flag_account_created, _ := h.flagManager.GetFlag("flag_account_created")
+	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	store := h.userdataStore
+
+	// check account creation status
+	_, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, nil
+	}
+
+	res.FlagSet = append(res.FlagSet, flag_account_created)
+
+	// check language status
+	code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read language code entry with", "key", storedb.DATA_SELECTED_LANGUAGE_CODE, "error", err)
+		return res, nil
+	}
+
+	res.Content = string(code)
+
+	res.FlagSet = append(res.FlagSet, state.FLAG_LANG)
+	res.FlagSet = append(res.FlagSet, flag_language_set)
+
+	// check if the account is guarded by a PIN
+	_, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read account PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
+		return res, nil
+	}
+
+	res.FlagSet = append(res.FlagSet, flag_pin_set)
+
+	// check PIN attempts
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			return res, err
+		}
+	}
+	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	remainingPINAttempts := pin.AllowedPINAttempts - uint8(pinAttemptsValue)
+	if remainingPINAttempts == 0 {
+		res.FlagSet = append(res.FlagSet, flag_account_blocked)
+		return res, nil
+	}
+
+	return res, nil
 }
 
 // SetLanguage sets the language across the menu.
