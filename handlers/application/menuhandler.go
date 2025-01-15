@@ -182,7 +182,7 @@ func (h *MenuHandlers) SetAccountFlags(ctx context.Context, sym string, input []
 	res.FlagSet = append(res.FlagSet, flag_account_created)
 
 	// check language status
-	code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+	code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read language code entry with", "key", storedb.DATA_SELECTED_LANGUAGE_CODE, "error", err)
 		return res, nil
