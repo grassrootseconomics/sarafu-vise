@@ -44,6 +44,8 @@ func(s *SshKeyStore) AddFromFile(ctx context.Context, fp string, sessionId strin
 		return fmt.Errorf("Failed to parse public key: %v", err)
 	}
 	k := append([]byte{0x01}, pubKey.Marshal()...)
+	s.store.SetLanguage(nil)
+	s.store.SetSession("")
 	s.store.SetPrefix(storage.DATATYPE_EXTEND)
 	logg.Infof("Added key", "sessionId", sessionId, "public key", string(publicBytes))
 	return s.store.Put(ctx, k, []byte(sessionId))
@@ -51,6 +53,7 @@ func(s *SshKeyStore) AddFromFile(ctx context.Context, fp string, sessionId strin
 
 func(s *SshKeyStore) Get(ctx context.Context, pubKey ssh.PublicKey) (string, error) {
 	s.store.SetLanguage(nil)
+	s.store.SetSession("")
 	s.store.SetPrefix(storage.DATATYPE_EXTEND)
 	k := append([]byte{0x01}, pubKey.Marshal()...)
 	v, err := s.store.Get(ctx, k)
