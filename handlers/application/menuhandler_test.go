@@ -825,6 +825,17 @@ func TestSetLanguage(t *testing.T) {
 
 			// Assert that the Result FlagSet has the required flags after language switch
 			assert.Equal(t, res, tt.expectedResult, "Result should match expected result")
+			code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+			if err != nil {
+				t.Error(err)
+			}
+
+			assert.Equal(t, string(code), tt.expectedResult.Content)
+			code, err = store.ReadEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
+			if err != nil {
+				t.Error(err)
+			}
+			assert.Equal(t, string(code), "eng")
 		})
 	}
 }
@@ -1698,7 +1709,7 @@ func TestValidateRecipient(t *testing.T) {
 				accountService: mockAccountService,
 			}
 
-			aliasResponse := &dataserviceapi.AliasAddress{
+			aliasResponse := &models.AliasAddress{
 				Address: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 			}
 

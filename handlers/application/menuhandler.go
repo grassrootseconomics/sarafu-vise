@@ -1139,6 +1139,8 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 }
 
 // ValidateRecipient validates that the given input is valid.
+//
+// TODO: split up functino
 func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -2248,6 +2250,23 @@ func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId 
 	return nil
 }
 
+func (h *MenuHandlers) persistInitialLanguageCode(ctx context.Context, sessionId string, code string) error {
+	store := h.userdataStore
+	_, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
+	if err == nil {
+		return nil
+	}
+	if !db.IsNotFound(err) {
+		return err
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE, []byte(code))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to persist initial language code", "key", storedb.DATA_INITIAL_LANGUAGE_CODE, "value", code, "error", err)
+		return err
+	}
+	return nil
+}
+
 // persistLanguageCode persists the selected ISO 639 language code
 func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) error {
 	store := h.userdataStore
@@ -2260,5 +2279,5 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 		logg.ErrorCtxf(ctx, "failed to persist language code", "key", storedb.DATA_SELECTED_LANGUAGE_CODE, "value", code, "error", err)
 		return err
 	}
-	return nil
+	return h.persistInitialLanguageCode(ctx, sessionId, code)
 }
