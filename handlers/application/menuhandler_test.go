@@ -84,7 +84,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for valid UserDataStore
 	t.Run("Valid UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm.parser, store, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, store, nil, &accountService, mockReplaceSeparator)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -108,7 +108,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for nil UserDataStore
 	t.Run("Nil UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm.parser, nil, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, nil, nil, &accountService, mockReplaceSeparator)
 		if err == nil {
 			t.Fatal("expected an error, got none")
 		}
@@ -161,7 +161,7 @@ func TestInit(t *testing.T) {
 			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
-					flagManager: fm.parser,
+					flagManager: fm,
 					adminstore:  adminstore,
 					pe:          pe,
 				}
@@ -177,7 +177,7 @@ func TestInit(t *testing.T) {
 			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(testStore).WithSession("0712345678").WithContent(st, ca)
 				h := &MenuHandlers{
-					flagManager: fm.parser,
+					flagManager: fm,
 					adminstore:  adminstore,
 					pe:          pe,
 				}
@@ -193,7 +193,7 @@ func TestInit(t *testing.T) {
 			setup: func() (*MenuHandlers, context.Context) {
 				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
-					flagManager: fm.parser,
+					flagManager: fm,
 					adminstore:  adminstore,
 					pe:          pe,
 				}
@@ -256,7 +256,7 @@ func TestCreateAccount(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
-				flagManager:    fm.parser,
+				flagManager:    fm,
 			}
 
 			mockAccountService.On("CreateAccount").Return(tt.serverResponse, nil)
@@ -320,7 +320,7 @@ func TestSaveFirstname(t *testing.T) {
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		st:            mockState,
 	}
 
@@ -365,7 +365,7 @@ func TestSaveFamilyname(t *testing.T) {
 	h := &MenuHandlers{
 		userdataStore: store,
 		st:            mockState,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 	}
 
 	// Call the method
@@ -408,7 +408,7 @@ func TestSaveYoB(t *testing.T) {
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		st:            mockState,
 	}
 
@@ -452,7 +452,7 @@ func TestSaveLocation(t *testing.T) {
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		st:            mockState,
 	}
 
@@ -496,7 +496,7 @@ func TestSaveOfferings(t *testing.T) {
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		st:            mockState,
 	}
 
@@ -564,7 +564,7 @@ func TestSaveGender(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore: store,
 				st:            mockState,
-				flagManager:   fm.parser,
+				flagManager:   fm,
 			}
 
 			expectedResult := resource.Result{}
@@ -595,11 +595,11 @@ func TestSaveTemporaryPin(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_incorrect_pin, _ := fm.parser.GetFlag("flag_incorrect_pin")
+	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
 
 	// Create the MenuHandlers instance with the mock flag manager
 	h := &MenuHandlers{
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		userdataStore: store,
 	}
 
@@ -812,7 +812,7 @@ func TestSetLanguage(t *testing.T) {
 
 			// Create the MenuHandlers instance with the mock flag manager
 			h := &MenuHandlers{
-				flagManager:   fm.parser,
+				flagManager:   fm,
 				userdataStore: store,
 				st:            mockState,
 			}
@@ -846,7 +846,7 @@ func TestResetAllowUpdate(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_allow_update, _ := fm.parser.GetFlag("flag_allow_update")
+	flag_allow_update, _ := fm.GetFlag("flag_allow_update")
 
 	// Define test cases
 	tests := []struct {
@@ -867,7 +867,7 @@ func TestResetAllowUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create the MenuHandlers instance with the mock flag manager
 			h := &MenuHandlers{
-				flagManager: fm.parser,
+				flagManager: fm,
 			}
 
 			// Call the method
@@ -888,7 +888,7 @@ func TestResetAccountAuthorized(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_account_authorized, _ := fm.parser.GetFlag("flag_account_authorized")
+	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
 
 	// Define test cases
 	tests := []struct {
@@ -909,7 +909,7 @@ func TestResetAccountAuthorized(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create the MenuHandlers instance with the mock flag manager
 			h := &MenuHandlers{
-				flagManager: fm.parser,
+				flagManager: fm,
 			}
 
 			// Call the method
@@ -933,8 +933,8 @@ func TestIncorrectPinReset(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_incorrect_pin, _ := fm.parser.GetFlag("flag_incorrect_pin")
-	flag_account_blocked, _ := fm.parser.GetFlag("flag_account_blocked")
+	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
+	flag_account_blocked, _ := fm.GetFlag("flag_account_blocked")
 
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
@@ -992,7 +992,7 @@ func TestIncorrectPinReset(t *testing.T) {
 
 			// Create the MenuHandlers instance with the mock flag manager
 			h := &MenuHandlers{
-				flagManager:   fm.parser,
+				flagManager:   fm,
 				userdataStore: store,
 			}
 
@@ -1014,7 +1014,7 @@ func TestResetIncorrectYob(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_incorrect_date_format, _ := fm.parser.GetFlag("flag_incorrect_date_format")
+	flag_incorrect_date_format, _ := fm.GetFlag("flag_incorrect_date_format")
 
 	// Define test cases
 	tests := []struct {
@@ -1035,7 +1035,7 @@ func TestResetIncorrectYob(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create the MenuHandlers instance with the mock flag manager
 			h := &MenuHandlers{
-				flagManager: fm.parser,
+				flagManager: fm,
 			}
 
 			// Call the method
@@ -1073,7 +1073,7 @@ func TestAuthorize(t *testing.T) {
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		st:             mockState,
 	}
 
@@ -1141,12 +1141,12 @@ func TestVerifyYob(t *testing.T) {
 	// Create required mocks
 	mockAccountService := new(mocks.MockAccountService)
 	mockState := state.NewState(16)
-	flag_incorrect_date_format, _ := fm.parser.GetFlag("flag_incorrect_date_format")
+	flag_incorrect_date_format, _ := fm.GetFlag("flag_incorrect_date_format")
 	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
 
 	h := &MenuHandlers{
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		st:             mockState,
 	}
 
@@ -1206,14 +1206,14 @@ func TestVerifyCreatePin(t *testing.T) {
 	mockAccountService := new(mocks.MockAccountService)
 	mockState := state.NewState(16)
 
-	flag_valid_pin, _ := fm.parser.GetFlag("flag_valid_pin")
-	flag_pin_mismatch, _ := fm.parser.GetFlag("flag_pin_mismatch")
-	flag_pin_set, _ := fm.parser.GetFlag("flag_pin_set")
+	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
+	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
+	flag_pin_set, _ := fm.GetFlag("flag_pin_set")
 
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		st:             mockState,
 	}
 
@@ -1307,7 +1307,7 @@ func TestCheckAccountStatus(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
-				flagManager:    fm.parser,
+				flagManager:    fm,
 			}
 
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
@@ -1347,7 +1347,7 @@ func TestTransactionReset(t *testing.T) {
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 	}
 	tests := []struct {
 		name           string
@@ -1387,14 +1387,14 @@ func TestResetTransactionAmount(t *testing.T) {
 		t.Logf(err.Error())
 	}
 
-	flag_invalid_amount, _ := fm.parser.GetFlag("flag_invalid_amount")
+	flag_invalid_amount, _ := fm.GetFlag("flag_invalid_amount")
 
 	mockAccountService := new(mocks.MockAccountService)
 
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 	}
 
 	tests := []struct {
@@ -1431,14 +1431,14 @@ func TestInitiateTransaction(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
-	account_authorized_flag, _ := fm.parser.GetFlag("flag_account_authorized")
+	account_authorized_flag, _ := fm.GetFlag("flag_account_authorized")
 
 	mockAccountService := new(mocks.MockAccountService)
 
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 	}
 
 	tests := []struct {
@@ -1524,7 +1524,7 @@ func TestQuit(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
-	flag_account_authorized, _ := fm.parser.GetFlag("flag_account_authorized")
+	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
 
 	mockAccountService := new(mocks.MockAccountService)
 
@@ -1534,7 +1534,7 @@ func TestQuit(t *testing.T) {
 
 	h := &MenuHandlers{
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 	}
 	tests := []struct {
 		name           string
@@ -1577,14 +1577,14 @@ func TestValidateAmount(t *testing.T) {
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	flag_invalid_amount, _ := fm.parser.GetFlag("flag_invalid_amount")
+	flag_invalid_amount, _ := fm.GetFlag("flag_invalid_amount")
 
 	mockAccountService := new(mocks.MockAccountService)
 
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 	}
 	tests := []struct {
 		name           string
@@ -1651,8 +1651,8 @@ func TestValidateRecipient(t *testing.T) {
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	flag_invalid_recipient, _ := fm.parser.GetFlag("flag_invalid_recipient")
-	flag_invalid_recipient_with_invite, _ := fm.parser.GetFlag("flag_invalid_recipient_with_invite")
+	flag_invalid_recipient, _ := fm.GetFlag("flag_invalid_recipient")
+	flag_invalid_recipient_with_invite, _ := fm.GetFlag("flag_invalid_recipient_with_invite")
 
 	// Define test cases
 	tests := []struct {
@@ -1704,7 +1704,7 @@ func TestValidateRecipient(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 			// Create the MenuHandlers instance
 			h := &MenuHandlers{
-				flagManager:    fm.parser,
+				flagManager:    fm,
 				userdataStore:  store,
 				accountService: mockAccountService,
 			}
@@ -1867,10 +1867,10 @@ func TestVerifyNewPin(t *testing.T) {
 
 	fm, _ := NewFlagManager(flagsPath)
 
-	flag_valid_pin, _ := fm.parser.GetFlag("flag_valid_pin")
+	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
 	mockAccountService := new(mocks.MockAccountService)
 	h := &MenuHandlers{
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		accountService: mockAccountService,
 	}
 	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
@@ -1913,11 +1913,11 @@ func TestConfirmPin(t *testing.T) {
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	fm, _ := NewFlagManager(flagsPath)
-	flag_pin_mismatch, _ := fm.parser.GetFlag("flag_pin_mismatch")
+	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
 	mockAccountService := new(mocks.MockAccountService)
 	h := &MenuHandlers{
 		userdataStore:  store,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		accountService: mockAccountService,
 	}
 
@@ -2047,7 +2047,7 @@ func TestSetDefaultVoucher(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
-				flagManager:    fm.parser,
+				flagManager:    fm,
 			}
 
 			err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
@@ -2155,7 +2155,7 @@ func TestViewVoucher(t *testing.T) {
 
 	h := &MenuHandlers{
 		userdataStore: store,
-		flagManager:   fm.parser,
+		flagManager:   fm,
 		prefixDb:      spdb,
 	}
 
@@ -2228,7 +2228,7 @@ func TestGetVoucherDetails(t *testing.T) {
 
 	h := &MenuHandlers{
 		userdataStore:  store,
-		flagManager:    fm.parser,
+		flagManager:    fm,
 		accountService: mockAccountService,
 	}
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte(tokA_AAddress))

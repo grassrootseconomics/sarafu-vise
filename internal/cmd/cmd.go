@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/asm"
 	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
 var (
@@ -16,13 +16,13 @@ var (
 type Cmd struct {
 	sessionId string
 	conn storage.ConnData
-	flagParser *asm.FlagParser
+	flagParser *application.FlagManager
 	cmd int
 	enable bool
 	exec func(ctx context.Context, ss storage.StorageService) error
 }
 
-func NewCmd(conn storage.ConnData, sessionId string, flagParser *asm.FlagParser) *Cmd {
+func NewCmd(conn storage.ConnData, sessionId string, flagParser *application.FlagManager) *Cmd {
 	return &Cmd{
 		conn: conn,
 		sessionId: sessionId,

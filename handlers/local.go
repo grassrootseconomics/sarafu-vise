@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"git.defalsify.org/vise.git/asm"
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/persist"
@@ -19,17 +18,8 @@ type HandlerService interface {
 	GetHandler() (*application.MenuHandlers, error)
 }
 
-func getParser(fp string, debug bool) (*asm.FlagParser, error) {
-	flagParser := asm.NewFlagParser().WithDebug()
-	_, err := flagParser.Load(fp)
-	if err != nil {
-		return nil, err
-	}
-	return flagParser, nil
-}
-
 type LocalHandlerService struct {
-	Parser        *asm.FlagParser
+	Parser        *application.FlagManager
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
@@ -39,9 +29,12 @@ type LocalHandlerService struct {
 }
 
 func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResource *resource.DbResource, cfg engine.Config, rs resource.Resource) (*LocalHandlerService, error) {
-	parser, err := getParser(fp, debug)
+	parser, err := application.NewFlagManager(fp)
 	if err != nil {
 		return nil, err
+	}
+	if debug {
+		parser.SetDebug()
 	}
 	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
 	if err != nil {

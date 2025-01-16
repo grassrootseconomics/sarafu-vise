@@ -8,11 +8,11 @@ import (
 	"path"
 
 	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/asm"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/internal/cmd"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
 var (
@@ -41,10 +41,9 @@ func main() {
 	}
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	
+
 	pfp := path.Join(scriptDir, "pp.csv")
-	flagParser := asm.NewFlagParser().WithDebug()
-	_, err = flagParser.Load(pfp)
+	flagParser, err := application.NewFlagManager(pfp)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "flagparser fail: %v\n", err)
 		os.Exit(1)
