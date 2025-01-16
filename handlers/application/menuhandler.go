@@ -37,6 +37,7 @@ var (
 	translationDir = path.Join(scriptDir, "locale")
 )
 
+// TODO: this is only in use in testing, should be moved to test domain and/or replaced by asm.FlagParser
 // FlagManager handles centralized flag management
 type FlagManager struct {
 	parser *asm.FlagParser
