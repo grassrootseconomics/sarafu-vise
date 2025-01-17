@@ -20,12 +20,12 @@ var (
 )
 
 func formatItem(k []byte, v []byte, sessionId string) (string, error) {
-	//o, err := debug.FromKey(k)
 	o, err := debug.ToKeyInfo(k, sessionId)
 	if err != nil {
 		return "", err
 	}
-	s := fmt.Sprintf("%vValue: %v\n\n", o, string(v))
+	s := fmt.Sprintf("%v\t%v\n", o.Label, string(v))
+
 	return s, nil
 }
 
@@ -37,6 +37,7 @@ func main() {
 	var database string
 	var engineDebug bool
 	var err error
+	var first bool
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
 	flag.StringVar(&connStr, "c", "", "connection string")
@@ -79,6 +80,10 @@ func main() {
 		k, v := d.Next(ctx)
 		if k == nil {
 			break
+		}
+		if !first {
+			fmt.Printf("Session ID: %s\n---\n", sessionId)
+			first = true
 		}
 		r, err := formatItem(append([]byte{db.DATATYPE_USERDATA}, k...), v, sessionId)
 		if err != nil {
