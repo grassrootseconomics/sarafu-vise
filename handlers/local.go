@@ -11,7 +11,6 @@ import (
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 )
 
 type HandlerService interface {
@@ -23,7 +22,6 @@ type LocalHandlerService struct {
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
-	AdminStore    *store.AdminStore
 	Cfg           engine.Config
 	Rs            resource.Resource
 }
@@ -36,16 +34,12 @@ func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResour
 	if debug {
 		parser.SetDebug()
 	}
-	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
-	if err != nil {
-		return nil, err
-	}
+
 	return &LocalHandlerService{
-		Parser:     parser,
-		DbRs:       dbResource,
-		AdminStore: adminstore,
-		Cfg:        cfg,
-		Rs:         rs,
+		Parser: parser,
+		DbRs:   dbResource,
+		Cfg:    cfg,
+		Rs:     rs,
 	}, nil
 }
 
@@ -62,7 +56,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, ls.AdminStore, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}

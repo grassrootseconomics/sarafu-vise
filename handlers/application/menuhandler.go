@@ -70,7 +70,6 @@ type MenuHandlers struct {
 	st                   *state.State
 	ca                   cache.Memory
 	userdataStore        store.DataStore
-	adminstore           *store.AdminStore
 	flagManager          *FlagManager
 	accountService       remote.AccountService
 	prefixDb             storedb.PrefixDb
@@ -79,7 +78,7 @@ type MenuHandlers struct {
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, adminstore *store.AdminStore, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}
@@ -94,7 +93,6 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, adminstore *sto
 	h := &MenuHandlers{
 		userdataStore:        userDb,
 		flagManager:          appFlags,
-		adminstore:           adminstore,
 		accountService:       accountService,
 		prefixDb:             prefixDb,
 		profile:              &profile.Profile{Max: 6},
