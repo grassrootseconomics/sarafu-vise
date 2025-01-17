@@ -138,15 +138,6 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 		ctx = context.WithValue(ctx, "SessionId", sessionId)
 	}
 
-	flag_admin_privilege, _ := h.flagManager.GetFlag("flag_admin_privilege")
-	isAdmin, _ := h.adminstore.IsAdmin(sessionId)
-
-	if isAdmin {
-		r.FlagSet = append(r.FlagSet, flag_admin_privilege)
-	} else {
-		r.FlagReset = append(r.FlagReset, flag_admin_privilege)
-	}
-
 	if h.st == nil || h.ca == nil {
 		logg.ErrorCtxf(ctx, "perister fail in handler", "state", h.st, "cache", h.ca)
 		return r, fmt.Errorf("cannot get state and memory for handler")
