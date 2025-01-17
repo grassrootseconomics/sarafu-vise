@@ -19,8 +19,9 @@ var (
 	scriptDir = path.Join("services", "registration")
 )
 
-func formatItem(k []byte, v []byte) (string, error) {
-	o, err := debug.FromKey(k)
+func formatItem(k []byte, v []byte, sessionId string) (string, error) {
+	//o, err := debug.FromKey(k)
+	o, err := debug.ToKeyInfo(k, sessionId)
 	if err != nil {
 		return "", err
 	}
@@ -38,16 +39,16 @@ func main() {
 	var err error
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
-	flag.StringVar(&connStr, "c", ".state", "connection string")
+	flag.StringVar(&connStr, "c", "", "connection string")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.Parse()
 
-	if connStr != "" {
+	if connStr == "" {
 		connStr = config.DbConn()
 	}
 	connData, err := storage.ToConnData(connStr)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
+		fmt.Fprintf(os.Stderr, "connstr err: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -65,9 +66,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "get userdata db: %v\n", err.Error())
 		os.Exit(1)
 	}
+	store.SetSession(sessionId)
 	store.SetPrefix(db.DATATYPE_USERDATA)
 
-	d, err := store.Dump(ctx, []byte(sessionId))
+	d, err := store.Dump(ctx, []byte(""))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "store dump fail: %v\n", err.Error())
 		os.Exit(1)
@@ -78,9 +80,9 @@ func main() {
 		if k == nil {
 			break
 		}
-		r, err := formatItem(k, v)
+		r, err := formatItem(append([]byte{db.DATATYPE_USERDATA}, k...), v, sessionId)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "format db item error: %v", err)
+			fmt.Fprintf(os.Stderr, "format db item error: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Printf(r)
