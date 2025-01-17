@@ -4,7 +4,6 @@ import (
 	"context"
 	"strings"
 
-	"git.defalsify.org/vise.git/asm"
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/persist"
@@ -12,47 +11,35 @@ import (
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 )
 
 type HandlerService interface {
 	GetHandler() (*application.MenuHandlers, error)
 }
 
-func getParser(fp string, debug bool) (*asm.FlagParser, error) {
-	flagParser := asm.NewFlagParser().WithDebug()
-	_, err := flagParser.Load(fp)
-	if err != nil {
-		return nil, err
-	}
-	return flagParser, nil
-}
-
 type LocalHandlerService struct {
-	Parser        *asm.FlagParser
+	Parser        *application.FlagManager
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
-	AdminStore    *store.AdminStore
 	Cfg           engine.Config
 	Rs            resource.Resource
 }
 
 func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResource *resource.DbResource, cfg engine.Config, rs resource.Resource) (*LocalHandlerService, error) {
-	parser, err := getParser(fp, debug)
+	parser, err := application.NewFlagManager(fp)
 	if err != nil {
 		return nil, err
 	}
-	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
-	if err != nil {
-		return nil, err
+	if debug {
+		parser.SetDebug()
 	}
+
 	return &LocalHandlerService{
-		Parser:     parser,
-		DbRs:       dbResource,
-		AdminStore: adminstore,
-		Cfg:        cfg,
-		Rs:         rs,
+		Parser: parser,
+		DbRs:   dbResource,
+		Cfg:    cfg,
+		Rs:     rs,
 	}, nil
 }
 
@@ -69,7 +56,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, ls.AdminStore, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}
