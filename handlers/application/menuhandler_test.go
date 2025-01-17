@@ -14,11 +14,11 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"git.grassecon.net/grassrootseconomics/common/pin"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 
 	"github.com/alecthomas/assert/v2"
@@ -84,7 +84,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for valid UserDataStore
 	t.Run("Valid UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, store, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, store, &accountService, mockReplaceSeparator)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -108,7 +108,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for nil UserDataStore
 	t.Run("Nil UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, nil, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, nil, &accountService, mockReplaceSeparator)
 		if err == nil {
 			t.Fatal("expected an error, got none")
 		}
@@ -132,15 +132,8 @@ func TestInit(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	adminstore, err := store.NewAdminStore(ctx, "admin_numbers")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-
 	st := state.NewState(128)
 	ca := cache.NewCache()
-
-	flag_admin_privilege, _ := fm.GetFlag("flag_admin_privilege")
 
 	tests := []struct {
 		name           string
@@ -162,15 +155,12 @@ func TestInit(t *testing.T) {
 				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm,
-					adminstore:  adminstore,
 					pe:          pe,
 				}
 				return h, context.WithValue(ctx, "SessionId", sessionId)
 			},
-			input: []byte("1"),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_admin_privilege},
-			},
+			input:          []byte("1"),
+			expectedResult: resource.Result{},
 		},
 		{
 			name: "Non-admin session initialization",
@@ -178,15 +168,12 @@ func TestInit(t *testing.T) {
 				pe := persist.NewPersister(testStore).WithSession("0712345678").WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm,
-					adminstore:  adminstore,
 					pe:          pe,
 				}
 				return h, context.WithValue(context.Background(), "SessionId", "0712345678")
 			},
-			input: []byte("1"),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_admin_privilege},
-			},
+			input:          []byte("1"),
+			expectedResult: resource.Result{},
 		},
 		{
 			name: "Move to top node on empty input",
@@ -194,16 +181,13 @@ func TestInit(t *testing.T) {
 				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
 				h := &MenuHandlers{
 					flagManager: fm,
-					adminstore:  adminstore,
 					pe:          pe,
 				}
 				st.Code = []byte("some pending bytecode")
 				return h, context.WithValue(ctx, "SessionId", sessionId)
 			},
-			input: []byte(""),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_admin_privilege},
-			},
+			input:          []byte(""),
+			expectedResult: resource.Result{},
 		},
 	}
 
