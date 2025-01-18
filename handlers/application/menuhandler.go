@@ -18,17 +18,20 @@ import (
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
+	"git.grassecon.net/grassrootseconomics/common/hex"
+	"git.grassecon.net/grassrootseconomics/common/identity"
+	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
+	"git.grassecon.net/grassrootseconomics/common/person"
+	"git.grassecon.net/grassrootseconomics/common/phone"
+	"git.grassecon.net/grassrootseconomics/common/pin"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/dev"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	"git.grassecon.net/grassrootseconomics/common/hex"
-	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
-	"git.grassecon.net/grassrootseconomics/common/pin"
-	"git.grassecon.net/grassrootseconomics/common/person"
-	"git.grassecon.net/grassrootseconomics/common/phone"
-	"git.grassecon.net/grassrootseconomics/common/identity"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
 var (
@@ -99,7 +102,7 @@ func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *
 }
 
 // WithPersister sets persister instance to the handlers.
-//func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
+// func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
 func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
 	if h.pe != nil {
 		panic("persister already set")
@@ -107,7 +110,6 @@ func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
 	h.pe = pe
 	//return h
 }
-
 
 // Init initializes the handler for a new session.
 func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (resource.Result, error) {
@@ -463,6 +465,10 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
+			return res, err
+		}
+		err := h.constructAccountAlias(ctx)
+		if err != nil {
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
@@ -1080,16 +1086,16 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 // TODO: split up functino
 func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	var AliasAddressResult string
+	var AliasAddress *models.AliasAddress
 	store := h.userdataStore
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	recipient := string(input)
 
@@ -1149,21 +1155,32 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 			}
 
 		case "alias":
-			// Call the API to validate and retrieve the address for the alias
-			r, aliasErr := h.accountService.CheckAliasAddress(ctx, recipient)
-			if aliasErr != nil {
-				res.FlagSet = append(res.FlagSet, flag_api_error)
-				res.Content = recipient
-
-				logg.ErrorCtxf(ctx, "failed on CheckAliasAddress", "error", aliasErr)
-				return res, err
+			if strings.Contains(recipient, ".") {
+				AliasAddress, err = h.accountService.CheckAliasAddress(ctx, recipient)
+				if err == nil {
+					AliasAddressResult = AliasAddress.Address
+				}
+			} else {
+				//Perform a search for each search domain,break on first match
+				for _, domain := range config.SearchDomains() {
+					fqdn := fmt.Sprintf("%s.%s", recipient, domain)
+					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
+					if err == nil {
+						AliasAddressResult = AliasAddress.Address
+						continue
+					}
+				}
 			}
-
-			// Alias validation succeeded, save the Ethereum address
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(r.Address))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", r.Address, "error", err)
-				return res, err
+			if AliasAddressResult == "" {
+				res.Content = recipient
+				res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
+				return res, nil
+			} else {
+				err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(AliasAddressResult))
+				if err != nil {
+					logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", AliasAddressResult, "error", err)
+					return res, err
+				}
 			}
 		}
 	}
@@ -1889,7 +1906,6 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// get the active address
@@ -2134,6 +2150,10 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 	if err != nil {
 		return res, err
 	}
+	err = h.constructAccountAlias(ctx)
+	if err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
@@ -2217,4 +2237,43 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 		return err
 	}
 	return h.persistInitialLanguageCode(ctx, sessionId, code)
+}
+
+func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
+	var alias string
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return fmt.Errorf("missing session")
+	}
+	firstName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
+	if err != nil {
+		return err
+	}
+	familyName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
+	if err != nil {
+		return err
+	}
+	pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		return err
+	}
+	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
+	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
+	}
+	if _, ok := h.accountService.(*dev.DevAccountService); ok {
+		//If using local dev api,append sarafu.local to the assigned available alias
+		alias = aliasResult.Alias + ".sarafu.local"
+	} else {
+		alias = aliasResult.Alias + ".sarafu.eth"
+	}
+	//Store the alias
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_ACCOUNT_ALIAS, "value", alias, "error", err)
+		return err
+	}
+	return nil
 }
