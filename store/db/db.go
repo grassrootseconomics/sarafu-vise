@@ -61,6 +61,8 @@ const (
 	DATA_SELECTED_LANGUAGE_CODE
 	//ISO 639 code for the language initially selected.
 	DATA_INITIAL_LANGUAGE_CODE
+	//Fully qualified account alias string
+	DATA_ACCOUNT_ALIAS
 )
 
 const (
