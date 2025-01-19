@@ -6,6 +6,10 @@ import (
 	apiconfig "git.grassecon.net/grassrootseconomics/sarafu-api/config"
 )
 
+var (
+	GetConns = viseconfig.GetConns
+)
+
 func init() {
 	env.LoadEnvVariables()
 }
@@ -17,7 +21,6 @@ const (
 	defaultHTTPPort uint = 7123
 )
 
-
 func LoadConfig() error {
 	err := viseconfig.LoadConfig()
 	if err != nil {
@@ -28,10 +31,6 @@ func LoadConfig() error {
 		return err
 	}
 	return nil
-}
-
-func DbConn() string {
-	return viseconfig.DbConn
 }
 
 func Language() string {

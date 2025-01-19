@@ -31,34 +31,31 @@ var (
 func main() {
 	config.LoadConfig()
 
-	var connStr string
+	var override config.Override
 	var authConnStr string
-	var resourceDir string
 	var size uint
 	var engineDebug bool
 	var stateDebug bool
 	var host string
 	var port uint
-	flag.StringVar(&connStr, "c", "", "connection string")
-	flag.StringVar(&authConnStr, "authdb", "", "auth connection string")
-	flag.StringVar(&resourceDir, "resourcedir", path.Join("services", "registration"), "resource dir")
+	//flag.StringVar(&authConnStr, "authdb", "", "auth connection string")
+	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(&override.ResourceConn, "resource", "?", "resource connection string")
+	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(&override.StateConn, "state", "?", "state store connection string")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&host, "h", config.HostSSH(), "socket host")
 	flag.UintVar(&port, "p", config.PortSSH(), "socket port")
 	flag.Parse()
 
-	if connStr == "" {
-		connStr = config.DbConn()
-	}
-	if authConnStr == "" {
-		authConnStr = connStr
-	}
-	connData, err := storage.ToConnData(connStr)
+	config.Apply(&override)
+	conns, err := config.GetConns()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
+		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
 		os.Exit(1)
 	}
+
 	authConnData, err := storage.ToConnData(authConnStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "auth connstr err: %v", err)
@@ -79,7 +76,7 @@ func main() {
 	logg.WarnCtxf(ctx, "!!!!! Do not expose to internet and only use with tunnel!")
 	logg.WarnCtxf(ctx, "!!!!! (See ssh -L <...>)")
 
-	logg.Infof("start command", "conn", connData, "authconn", authConnData, "resourcedir", resourceDir, "outputsize", size, "keyfile", sshKeyFile, "host", host, "port", port)
+	logg.Infof("start command", "conn", conns, "authconn", authConnData, "outputsize", size, "keyfile", sshKeyFile, "host", host, "port", port)
 
 	pfp := path.Join(scriptDir, "pp.csv")
 
@@ -117,8 +114,7 @@ func main() {
 		Cfg: cfg,
 		Debug: engineDebug,
 		FlagFile: pfp,
-		Conn: connData,
-		ResourceDir: resourceDir,
+		Conn: conns,
 		SrvKeyFile:  sshKeyFile,
 		Host:        host,
 		Port:        port,

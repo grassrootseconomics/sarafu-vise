@@ -112,10 +112,16 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	}
 
 	if setDbType == "postgres" {
-		setConnStr = config.DbConn
+		conns, err := config.GetConns()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Getconns error: %v", err)
+			os.Exit(1)
+		}
+		conn := conns[storage.STORETYPE_USER]
+		setConnStr = conn.String()
 		setConnStr, err = updateSearchPath(setConnStr, setDbSchema)
 		if err != nil {
-			fmt.Println("Error:", err)
+			fmt.Fprintf(os.Stderr, "Update search paths Error: %v\n", err)
 			os.Exit(1)
 		}
 	} else {
@@ -125,15 +131,23 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 			os.Exit(1)
 		}
 	}
-
 	conn, err := storage.ToConnData(setConnStr)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connstr parse err: %v", err)
 		os.Exit(1)
 	}
+	conns := storage.NewConns()
+	conns.Set(conn, storage.STORETYPE_STATE)
+	conns.Set(conn, storage.STORETYPE_USER)
+	
+	conn, err = storage.ToConnData(scriptDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "connstr parse err: %v", err)
+		os.Exit(1)
+	}
+	conns.Set(conn, storage.STORETYPE_RESOURCE)
 
-	resourceDir := scriptDir
-	menuStorageService := storage.NewMenuStorageService(conn, resourceDir)
+	menuStorageService := storage.NewMenuStorageService(conns)
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
