@@ -13,6 +13,7 @@ import (
 	testdataloader "github.com/peteole/testdata-loader"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"git.defalsify.org/vise.git/engine"
+	fsdb "git.defalsify.org/vise.git/db/fs"
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/visedriver/env"
@@ -139,15 +140,20 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	conns := storage.NewConns()
 	conns.Set(conn, storage.STORETYPE_STATE)
 	conns.Set(conn, storage.STORETYPE_USER)
-	
+
 	conn, err = storage.ToConnData(scriptDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "connstr parse err: %v", err)
 		os.Exit(1)
 	}
-	conns.Set(conn, storage.STORETYPE_RESOURCE)
-
+	resourceConn := fsdb.NewFsDb()
+	err = resourceConn.Connect(ctx, scriptDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "resource connect err: %v", err)
+		os.Exit(1)
+	}
 	menuStorageService := storage.NewMenuStorageService(conns)
+	menuStorageService = menuStorageService.WithDb(resourceConn, storage.STORETYPE_RESOURCE)
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
