@@ -195,12 +195,12 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	en := lhs.GetEngine()
 	en = en.WithFirst(hl.Init)
 	cleanFn := func() {
-		err := en.Finish()
+		err := en.Finish(ctx)
 		if err != nil {
 			logg.Errorf(err.Error())
 		}
 
-		err = menuStorageService.Close()
+		err = menuStorageService.Close(ctx)
 		if err != nil {
 			logg.Errorf(err.Error())
 		}

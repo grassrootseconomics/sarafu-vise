@@ -5,7 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
@@ -134,6 +136,18 @@ func main() {
 	if engineDebug {
 		en = en.WithDebug(nil)
 	}
+
+	cint := make(chan os.Signal)
+	cterm := make(chan os.Signal)
+	signal.Notify(cint, os.Interrupt, syscall.SIGINT)
+	signal.Notify(cterm, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		select {
+		case _ = <-cint:
+		case _ = <-cterm:
+		}
+		menuStorageService.Close(ctx)
+	}()
 
 	err = engine.Loop(ctx, en, os.Stdin, os.Stdout, nil)
 	if err != nil {

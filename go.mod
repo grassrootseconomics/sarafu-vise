@@ -3,11 +3,11 @@ module git.grassecon.net/grassrootseconomics/sarafu-vise
 go 1.23.4
 
 require (
-	git.defalsify.org/vise.git v0.2.3-0.20250118155735-c1256156ed8b
+	git.defalsify.org/vise.git v0.2.3-0.20250119084238-8ad1d92d2127
 	git.grassecon.net/grassrootseconomics/common v0.0.0-20250113174703-6afccefd1f05
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250115072214-bca7c5de969f
-	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250115003256-c0534ede1b63
-	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250113103030-f0b2056fd87d
+	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250119094010-c9b92191f3ad
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250119094241-c3a51127772d
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta

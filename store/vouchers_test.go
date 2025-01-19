@@ -27,7 +27,7 @@ func InitializeTestDb(t *testing.T) (context.Context, *UserDataStore) {
 	store := &UserDataStore{Db: db}
 
 	t.Cleanup(func() {
-		db.Close() // Ensure the DB is closed after each test
+		db.Close(ctx) // Ensure the DB is closed after each test
 	})
 
 	return ctx, store

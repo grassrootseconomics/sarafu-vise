@@ -194,7 +194,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 	// TODO: this is getting very hacky!
 	closer := func() {
-		err := menuStorageService.Close()
+		err := menuStorageService.Close(ctx)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "menu storage service cleanup fail", "err", err)
 		}
@@ -268,7 +268,7 @@ func(s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
 					return
 				}
 				defer func() {
-					err := en.Finish()
+					err := en.Finish(ctx)
 					if err != nil {
 						logg.ErrorCtxf(ctx, "engine won't stop", "err", err)
 					}

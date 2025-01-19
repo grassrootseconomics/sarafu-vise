@@ -101,7 +101,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer userdataStore.Close()
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -129,7 +128,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer stateStore.Close()
 
 	//accountService := services.New(ctx, menuStorageService, connData)
 
@@ -140,7 +138,10 @@ func main() {
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),
 		Handler: sh,
 	}
-	s.RegisterOnShutdown(sh.Shutdown)
+	shutdownFunc := func() {
+		sh.Shutdown(ctx)
+	}
+	s.RegisterOnShutdown(shutdownFunc)
 
 	cint := make(chan os.Signal)
 	cterm := make(chan os.Signal)

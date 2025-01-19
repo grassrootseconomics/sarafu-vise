@@ -116,7 +116,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer userdataStore.Close()
+	//defer userdataStore.Close(ctx)
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -139,7 +139,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer stateStore.Close()
+	//defer stateStore.Close(ctx)
 
 	rp := &asyncRequestParser{
 		sessionId: sessionId,
@@ -161,7 +161,7 @@ func main() {
 		case _ = <-cint:
 		case _ = <-cterm:
 		}
-		sh.Shutdown()
+		sh.Shutdown(ctx)
 	}()
 
 	for true {
@@ -177,7 +177,7 @@ func main() {
 			fmt.Errorf("error in output: %v", err)
 			os.Exit(1)
 		}
-		rqs, err = sh.Reset(rqs)
+		rqs, err = sh.Reset(ctx, rqs)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "error in reset: %v", "err", err)
 			fmt.Errorf("error in reset: %v", err)

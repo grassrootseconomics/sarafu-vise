@@ -93,7 +93,7 @@ func main() {
 		fmt.Printf(r)
 	}
 
-	err = store.Close()
+	err = store.Close(ctx)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)

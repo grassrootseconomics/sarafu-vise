@@ -102,7 +102,7 @@ func main() {
 	}
 	defer func() {
 		logg.TraceCtxf(ctx, "shutdown auth key store reached")
-		err = authKeyStore.Close()
+		err = authKeyStore.Close(ctx)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "keystore close error", "err", err)
 		}

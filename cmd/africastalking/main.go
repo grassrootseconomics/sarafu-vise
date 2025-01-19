@@ -101,7 +101,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "userdatadb: %v\n", err)
 		os.Exit(1)
 	}
-	defer userdataStore.Close()
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -133,7 +132,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "getstatestore: %v\n", err)
 		os.Exit(1)
 	}
-	defer stateStore.Close()
 
 	rp := &at.ATRequestParser{}
 	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
@@ -146,7 +144,10 @@ func main() {
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),
 		Handler: mux,
 	}
-	s.RegisterOnShutdown(sh.Shutdown)
+	shutdownFunc := func() {
+		sh.Shutdown(ctx)
+	}
+	s.RegisterOnShutdown(shutdownFunc)
 
 	cint := make(chan os.Signal)
 	cterm := make(chan os.Signal)
