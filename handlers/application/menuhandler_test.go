@@ -1223,13 +1223,20 @@ func TestVerifyCreatePin(t *testing.T) {
 		},
 	}
 
+	// Hash the correct PIN
+	hashedPIN, err := pin.HashPIN("1234")
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
+		t.Fatal(err)
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte("1234"))
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			// Call the method under test
 			res, err := h.VerifyCreatePin(ctx, "verify_create_pin", []byte(tt.input))
 
@@ -1908,13 +1915,13 @@ func TestConfirmPin(t *testing.T) {
 	tests := []struct {
 		name           string
 		input          []byte
-		temporarypin   []byte
+		temporarypin   string
 		expectedResult resource.Result
 	}{
 		{
 			name:         "Test with correct pin confirmation",
 			input:        []byte("1234"),
-			temporarypin: []byte("1234"),
+			temporarypin: "1234",
 			expectedResult: resource.Result{
 				FlagReset: []uint32{flag_pin_mismatch},
 			},
@@ -1922,14 +1929,21 @@ func TestConfirmPin(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Hash the PIN
+			hashedPIN, err := pin.HashPIN(tt.temporarypin)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
+				t.Fatal(err)
+			}
+
 			// Set up the expected behavior of the mock
-			err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.temporarypin))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			//Call the function under test
-			res, _ := h.ConfirmPinChange(ctx, "confirm_pin_change", tt.temporarypin)
+			res, _ := h.ConfirmPinChange(ctx, "confirm_pin_change", tt.input)
 
 			//Assert that the result set to content is what was expected
 			assert.Equal(t, res, tt.expectedResult, "Result should contain flags set according to user input")
