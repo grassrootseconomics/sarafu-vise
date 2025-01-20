@@ -467,7 +467,13 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 
 	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTmporaryPin))
 	if err != nil {
-		return res, nil
+		return res, err
+	}
+
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
+		return res, err
 	}
 
 	return res, nil
