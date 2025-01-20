@@ -5,13 +5,13 @@ import (
 )
 
 type Override struct {
-	DbConn string
-	StateConn string
-	ResourceConn string
-	UserConn string
+	DbConn *string
+	StateConn *string
+	ResourceConn *string
+	UserConn *string
 }
 
 func Apply(o *Override) error {
-	viseconfig.ApplyConn(&o.DbConn, &o.StateConn, &o.ResourceConn, &o.UserConn)
+	viseconfig.ApplyConn(o.DbConn, o.StateConn, o.ResourceConn, o.UserConn)
 	return nil
 }

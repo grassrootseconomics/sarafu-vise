@@ -46,10 +46,10 @@ func main() {
 	var langs args.LangVar
 
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
-	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
-	flag.StringVar(&override.ResourceConn, "resource", "?", "resource connection string")
-	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
-	flag.StringVar(&override.StateConn, "state", "?", "state store connection string")
+	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(override.ResourceConn, "resource", "?", "resource connection string")
+	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&host, "h", config.Host(), "http host")
 	flag.UintVar(&port, "p", config.Port(), "http port")

@@ -22,10 +22,8 @@ type Cmd struct {
 	exec func(ctx context.Context, ss storage.StorageService) error
 }
 
-//func NewCmd(conn storage.ConnData, sessionId string, flagParser *application.FlagManager) *Cmd {
 func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
 	return &Cmd{
-//		conn: conn,
 		sessionId: sessionId,
 		flagParser: flagParser,
 	}

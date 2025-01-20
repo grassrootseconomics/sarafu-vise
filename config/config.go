@@ -8,10 +8,15 @@ import (
 
 var (
 	GetConns = viseconfig.GetConns
+	EnvPath string
 )
 
-func init() {
-	env.LoadEnvVariables()
+func loadEnv() {
+	if EnvPath == "" {
+		env.LoadEnvVariables()
+	} else {
+		env.LoadEnvVariablesPath(EnvPath)
+	}
 }
 
 const (
@@ -22,6 +27,7 @@ const (
 )
 
 func LoadConfig() error {
+	loadEnv()
 	err := viseconfig.LoadConfig()
 	if err != nil {
 		return err

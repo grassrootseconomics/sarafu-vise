@@ -10,11 +10,13 @@ import (
 	"testing"
 
 	"github.com/gofrs/uuid"
+	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/visedriver/testutil/driver"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil"
 )
 
 var (
+	logg = logging.NewVanilla().WithDomain("menutraversaltest")
 	testData  = driver.ReadData()
 	sessionID string
 	src       = rand.NewSource(42)
@@ -22,9 +24,6 @@ var (
 )
 
 var groupTestFile = flag.String("test-file", "group_test.json", "The test file to use for running the group tests")
-var database = flag.String("db", "gdbm", "Specify the database (gdbm or postgres)")
-var connStr = flag.String("conn", ".test_state", "connection string")
-var dbSchema = flag.String("schema", "test", "Specify the database schema (default test)")
 
 func GenerateSessionId() string {
 	uu := uuid.NewGenWithOptions(uuid.WithRandomReader(g))
@@ -80,12 +79,7 @@ func extractSendAmount(response []byte) string {
 }
 
 func TestMain(m *testing.M) {
-	// Parse the flags
-	flag.Parse()
 	sessionID = GenerateSessionId()
-	// set the db
-	testutil.SetDatabase(*database, *connStr, *dbSchema)
-
 	// Cleanup the db after tests
 	defer testutil.CleanDatabase()
 
@@ -100,7 +94,8 @@ func TestAccountCreationSuccessful(t *testing.T) {
 	for _, session := range sessions {
 		groups := driver.FilterGroupsByName(session.Groups, "account_creation_successful")
 		for _, group := range groups {
-			for _, step := range group.Steps {
+			for i, step := range group.Steps {
+				logg.TraceCtxf(ctx, "executing step", "i", i, "step", step)
 				cont, err := en.Exec(ctx, []byte(step.Input))
 				if err != nil {
 					t.Fatalf("Test case '%s' failed at input '%s': %v", group.Name, step.Input, err)
@@ -142,7 +137,8 @@ func TestAccountRegistrationRejectTerms(t *testing.T) {
 	for _, session := range sessions {
 		groups := driver.FilterGroupsByName(session.Groups, "account_creation_reject_terms")
 		for _, group := range groups {
-			for _, step := range group.Steps {
+			for i, step := range group.Steps {
+				logg.TraceCtxf(ctx, "executing step", "i", i, "step", step)
 				cont, err := en.Exec(ctx, []byte(step.Input))
 				if err != nil {
 					t.Fatalf("Test case '%s' failed at input '%s': %v", group.Name, step.Input, err)
@@ -177,7 +173,8 @@ func TestMainMenuHelp(t *testing.T) {
 	for _, session := range sessions {
 		groups := driver.FilterGroupsByName(session.Groups, "main_menu_help")
 		for _, group := range groups {
-			for _, step := range group.Steps {
+			for i, step := range group.Steps {
+				logg.TraceCtxf(ctx, "executing step", "i", i, "step", step)
 				cont, err := en.Exec(ctx, []byte(step.Input))
 				if err != nil {
 					t.Fatalf("Test case '%s' failed at input '%s': %v", group.Name, step.Input, err)
