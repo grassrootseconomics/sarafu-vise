@@ -101,14 +101,12 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService 
 	return h, nil
 }
 
-// WithPersister sets persister instance to the handlers.
-// func (h *MenuHandlers) WithPersister(pe *persist.Persister) *MenuHandlers {
+// SetPersister sets persister instance to the handlers.
 func (h *MenuHandlers) SetPersister(pe *persist.Persister) {
 	if h.pe != nil {
 		panic("persister already set")
 	}
 	h.pe = pe
-	//return h
 }
 
 // Init initializes the handler for a new session.

@@ -60,7 +60,6 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	if err != nil {
 		return nil, err
 	}
-	//appHandlers = appHandlers.WithPersister(ls.Pe)
 	appHandlers.SetPersister(ls.Pe)
 	ls.DbRs.AddLocalFunc("set_account_flags", appHandlers.SetAccountFlags)
 	ls.DbRs.AddLocalFunc("set_language", appHandlers.SetLanguage)

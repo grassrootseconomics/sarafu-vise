@@ -265,7 +265,6 @@ func TestWithPersister(t *testing.T) {
 	h.SetPersister(p)
 
 	assert.Equal(t, p, h.pe, "The persister should be set correctly.")
-	//assert.Equal(t, h, result, "The returned handler should be the same instance.")
 }
 
 func TestWithPersister_PanicWhenAlreadySet(t *testing.T) {
