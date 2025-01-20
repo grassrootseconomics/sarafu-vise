@@ -21,7 +21,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 
-	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 )
@@ -116,7 +116,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := &httpremote.HTTPAccountService{}
+	accountService := services.New(ctx, menuStorageService, connData)
+	
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -129,6 +130,8 @@ func main() {
 		os.Exit(1)
 	}
 	defer stateStore.Close()
+
+	//accountService := services.New(ctx, menuStorageService, connData)
 
 	rp := &httprequest.DefaultRequestParser{}
 	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)

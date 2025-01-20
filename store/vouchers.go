@@ -6,8 +6,13 @@ import (
 	"math/big"
 	"strings"
 
+	"git.defalsify.org/vise.git/logging"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
+)
+
+var (
+	logg = logging.NewVanilla().WithDomain("vouchers").WithContextKey("SessionId")
 )
 
 // VoucherMetadata helps organize data fields

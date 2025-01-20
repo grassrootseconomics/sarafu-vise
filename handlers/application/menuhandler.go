@@ -37,9 +37,10 @@ var (
 	translationDir = path.Join(scriptDir, "locale")
 )
 
+// TODO: this is only in use in testing, should be moved to test domain and/or replaced by asm.FlagParser
 // FlagManager handles centralized flag management
 type FlagManager struct {
-	parser *asm.FlagParser
+	*asm.FlagParser
 }
 
 // NewFlagManager creates a new FlagManager instance
@@ -51,13 +52,17 @@ func NewFlagManager(csvPath string) (*FlagManager, error) {
 	}
 
 	return &FlagManager{
-		parser: parser,
+		FlagParser: parser,
 	}, nil
+}
+
+func (fm *FlagManager) SetDebug() {
+	fm.FlagParser = fm.FlagParser.WithDebug()
 }
 
 // GetFlag retrieves a flag value by its label
 func (fm *FlagManager) GetFlag(label string) (uint32, error) {
-	return fm.parser.GetFlag(label)
+	return fm.FlagParser.GetFlag(label)
 }
 
 type MenuHandlers struct {
@@ -65,8 +70,7 @@ type MenuHandlers struct {
 	st                   *state.State
 	ca                   cache.Memory
 	userdataStore        store.DataStore
-	adminstore           *store.AdminStore
-	flagManager          *asm.FlagParser
+	flagManager          *FlagManager
 	accountService       remote.AccountService
 	prefixDb             storedb.PrefixDb
 	profile              *profile.Profile
@@ -74,7 +78,7 @@ type MenuHandlers struct {
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *store.AdminStore, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}
@@ -89,7 +93,6 @@ func NewMenuHandlers(appFlags *asm.FlagParser, userdataStore db.Db, adminstore *
 	h := &MenuHandlers{
 		userdataStore:        userDb,
 		flagManager:          appFlags,
-		adminstore:           adminstore,
 		accountService:       accountService,
 		prefixDb:             prefixDb,
 		profile:              &profile.Profile{Max: 6},
@@ -130,15 +133,6 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if ok {
 		ctx = context.WithValue(ctx, "SessionId", sessionId)
-	}
-
-	flag_admin_privilege, _ := h.flagManager.GetFlag("flag_admin_privilege")
-	isAdmin, _ := h.adminstore.IsAdmin(sessionId)
-
-	if isAdmin {
-		r.FlagSet = append(r.FlagSet, flag_admin_privilege)
-	} else {
-		r.FlagReset = append(r.FlagReset, flag_admin_privilege)
 	}
 
 	if h.st == nil || h.ca == nil {

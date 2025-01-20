@@ -22,9 +22,8 @@ import (
 	
 	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
-
-	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 )
 
 var (
@@ -121,7 +120,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := &httpremote.HTTPAccountService{}
+	accountService := services.New(ctx, menuStorageService, connData)
+	
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "httpaccountservice: %v\n", err)
