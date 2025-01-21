@@ -253,6 +253,35 @@ func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []by
 	return res, nil
 }
 
+// CheckBlockedStatus resets the account blocked flag if the PIN attempts have been reset by an admin.
+func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+
+	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			return res, nil
+		}
+	}
+
+	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	
+	if pinAttemptsValue == 0 {
+		res.FlagReset = append(res.FlagReset, flag_account_blocked)
+		return res, nil
+	}
+
+	return res, nil
+}
+
 // ResetIncorrectPin resets the incorrect pin flag after a new PIN attempt.
 func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
@@ -467,7 +496,13 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 
 	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTmporaryPin))
 	if err != nil {
-		return res, nil
+		return res, err
+	}
+
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
+		return res, err
 	}
 
 	return res, nil
