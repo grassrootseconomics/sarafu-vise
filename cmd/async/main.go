@@ -44,9 +44,8 @@ func (p *asyncRequestParser) GetInput(r any) ([]byte, error) {
 func main() {
 	config.LoadConfig()
 
-	var connStr string
+	var override config.Override
 	var sessionId string
-	var resourceDir string
 	var size uint
 	var engineDebug bool
 	var host string
@@ -56,8 +55,11 @@ func main() {
 	var langs args.LangVar
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
-	flag.StringVar(&resourceDir, "resourcedir", path.Join("services", "registration"), "resource dir")
-	flag.StringVar(&connStr, "c", "", "connection string")
+	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(override.ResourceConn, "resource", "?", "resource connection string")
+	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
+
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&host, "h", config.Host(), "http host")
@@ -66,16 +68,14 @@ func main() {
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()
 
-	if connStr == "" {
-		connStr = config.DbConn()
-	}
-	connData, err := storage.ToConnData(connStr)
+	config.Apply(&override)
+	conns, err := config.GetConns()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
+		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
 		os.Exit(1)
 	}
 
-	logg.Infof("start command", "conn", connData, "resourcedir", resourceDir, "outputsize", size, "sessionId", sessionId)
+	logg.Infof("start command", "conn", conns, "outputsize", size, "sessionId", sessionId)
 
 	ctx := context.Background()
 
@@ -99,7 +99,7 @@ func main() {
 		cfg.EngineDebug = true
 	}
 
-	menuStorageService := storage.NewMenuStorageService(connData, resourceDir)
+	menuStorageService := storage.NewMenuStorageService(conns)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
@@ -116,7 +116,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer userdataStore.Close()
+	//defer userdataStore.Close(ctx)
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -126,7 +126,7 @@ func main() {
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userdataStore)
 
-	accountService := services.New(ctx, menuStorageService, connData)
+	accountService := services.New(ctx, menuStorageService)
 
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
@@ -139,7 +139,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer stateStore.Close()
+	//defer stateStore.Close(ctx)
 
 	rp := &asyncRequestParser{
 		sessionId: sessionId,
@@ -161,7 +161,7 @@ func main() {
 		case _ = <-cint:
 		case _ = <-cterm:
 		}
-		sh.Shutdown()
+		sh.Shutdown(ctx)
 	}()
 
 	for true {
@@ -177,7 +177,7 @@ func main() {
 			fmt.Errorf("error in output: %v", err)
 			os.Exit(1)
 		}
-		rqs, err = sh.Reset(rqs)
+		rqs, err = sh.Reset(ctx, rqs)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "error in reset: %v", "err", err)
 			fmt.Errorf("error in reset: %v", err)

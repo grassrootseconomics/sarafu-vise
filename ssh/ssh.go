@@ -75,8 +75,7 @@ type SshRunner struct {
 	Ctx context.Context
 	Cfg engine.Config
 	FlagFile string
-	Conn storage.ConnData
-	ResourceDir string
+	Conn storage.Conns
 	Debug bool
 	SrvKeyFile string
 	Host string
@@ -148,7 +147,7 @@ func(s *SshRunner) Stop() error {
 
 func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	ctx := s.Ctx
-	menuStorageService := storage.NewMenuStorageService(s.Conn, s.ResourceDir)
+	menuStorageService := storage.NewMenuStorageService(s.Conn)
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
@@ -180,7 +179,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 
 	// TODO: clear up why pointer here and by-value other cmds
-	accountService := services.New(ctx, menuStorageService, s.Conn)
+	accountService := services.New(ctx, menuStorageService)
 
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
@@ -194,7 +193,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 	// TODO: this is getting very hacky!
 	closer := func() {
-		err := menuStorageService.Close()
+		err := menuStorageService.Close(ctx)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "menu storage service cleanup fail", "err", err)
 		}
@@ -268,7 +267,7 @@ func(s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
 					return
 				}
 				defer func() {
-					err := en.Finish()
+					err := en.Finish(ctx)
 					if err != nil {
 						logg.ErrorCtxf(ctx, "engine won't stop", "err", err)
 					}

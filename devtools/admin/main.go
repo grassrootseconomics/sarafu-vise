@@ -24,21 +24,22 @@ func main() {
 	config.LoadConfig()
 
 	var sessionId string
-	var connStr string
+	var override config.Override
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
-	flag.StringVar(&connStr, "c", "", "connection string")
+	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(override.ResourceConn, "resource", "?", "resource connection string")
+	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
 	flag.Parse()
 
-
-	if connStr == "" {
-		connStr = config.DbConn()
-	}
-	connData, err := storage.ToConnData(connStr)
+	config.Apply(&override)
+	conns, err := config.GetConns()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v\n", err)
+		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
 		os.Exit(1)
 	}
+
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
@@ -49,16 +50,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	x := cmd.NewCmd(connData, sessionId, flagParser)
+	x := cmd.NewCmd(sessionId, flagParser)
 	err = x.Parse(flag.Args())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cmd parse fail: %v\n", err)
 		os.Exit(1)
 	}
 
-	logg.Infof("start command", "conn", connData, "subcmd", x)
+	logg.Infof("start command", "conn", conns, "subcmd", x)
 
-	menuStorageService := storage.NewMenuStorageService(connData, "")
+	menuStorageService := storage.NewMenuStorageService(conns)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "menu storage service error: %v\n", err)
 		os.Exit(1)

@@ -10,7 +10,6 @@ import (
 func TestDebugDbSubKeyInfo(t *testing.T) {
 	s := "foo"
 	b := []byte{0x20}
-	b = append(b, []byte(s)...)
 	b = append(b, []byte{0x00, 0x02}...)
 	r, err := ToKeyInfo(b, s)
 	if err != nil {
@@ -56,7 +55,6 @@ func TestDebugDbKeyInfo(t *testing.T) {
 func TestDebugDbKeyInfoRestore(t *testing.T) {
 	s := "bar"
 	b := []byte{visedb.DATATYPE_USERDATA}
-	b = append(b, []byte(s)...)
 	k := storedb.ToBytes(storedb.DATA_ACTIVE_SYM)
 	b = append(b, k...)
 

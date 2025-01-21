@@ -37,7 +37,7 @@ func (d *localEmitter) emit(ctx context.Context, msg apievent.Msg) error {
 	return err
 }
 
-func New(ctx context.Context, storageService storage.StorageService, conn storage.ConnData) remote.AccountService {
+func New(ctx context.Context, storageService storage.StorageService) remote.AccountService {
 	svc := devremote.NewDevAccountService(ctx, storageService)
 	svc = svc.WithAutoVoucher(ctx, "FOO", 42)
 	eu := event.NewEventsUpdater(svc, storageService)

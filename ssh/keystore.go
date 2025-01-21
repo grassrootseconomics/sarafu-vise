@@ -63,6 +63,6 @@ func(s *SshKeyStore) Get(ctx context.Context, pubKey ssh.PublicKey) (string, err
 	return string(v), nil
 }
 
-func(s *SshKeyStore) Close() error {
-	return s.store.Close()
+func(s *SshKeyStore) Close(ctx context.Context) error {
+	return s.store.Close(ctx)
 }
