@@ -1,7 +1,6 @@
 package application
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"path"
@@ -24,9 +23,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/common/person"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/common/pin"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -151,6 +148,16 @@ func (h *MenuHandlers) Exit() {
 	h.pe = nil
 }
 
+// retrieves language codes from the context that can be used for handling translations.
+func codeFromCtx(ctx context.Context) string {
+	var code string
+	if ctx.Value("Language") != nil {
+		lang := ctx.Value("Language").(lang.Language)
+		code = lang.Code
+	}
+	return code
+}
+
 // SetLanguage sets the language across the menu.
 func (h *MenuHandlers) SetLanguage(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
@@ -238,32 +245,74 @@ func (h *MenuHandlers) CreateAccount(ctx context.Context, sym string, input []by
 	return res, nil
 }
 
-// CheckBlockedNumPinMisMatch checks if the provided PIN matches a temporary PIN stored for a blocked number.
-func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	res := resource.Result{}
-	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+// ResetValidPin resets the flag_valid_pin flag.
+func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
+	res.FlagReset = append(res.FlagReset, flag_valid_pin)
+	return res, nil
+}
+
+// CheckBlockedStatus resets the account blocked flag if the PIN attempts have been reset by an admin.
+func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+
+	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	// Get blocked number from storage.
+
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			return res, nil
+		}
+	}
+
+	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	
+	if pinAttemptsValue == 0 {
+		res.FlagReset = append(res.FlagReset, flag_account_blocked)
+		return res, nil
+	}
+
+	return res, nil
+}
+
+// ResetIncorrectPin resets the incorrect pin flag after a new PIN attempt.
+func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
 	store := h.userdataStore
-	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
+
+	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
+	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
-		return res, err
+		if !db.IsNotFound(err) {
+			return res, err
+		}
 	}
-	// Get temporary PIN for the blocked number.
-	temporaryPin, err := store.ReadEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
-		return res, err
+	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	remainingPINAttempts := pin.AllowedPINAttempts - uint8(pinAttemptsValue)
+	if remainingPINAttempts == 0 {
+		res.FlagSet = append(res.FlagSet, flag_account_blocked)
+		return res, nil
 	}
-	if bytes.Equal(temporaryPin, input) {
-		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
-	} else {
-		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
+	if remainingPINAttempts < pin.AllowedPINAttempts {
+		res.Content = strconv.Itoa(int(remainingPINAttempts))
 	}
+
 	return res, nil
 }
 
@@ -307,8 +356,16 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 		return res, nil
 	}
 	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+	// Hash the PIN
+	hashedPIN, err := pin.HashPIN(string(accountPIN))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash the PIN", "error", err)
+		return res, err
+	}
+
 	store := h.userdataStore
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(accountPIN))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write temporaryAccountPIN entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
 		return res, err
@@ -327,21 +384,58 @@ func (h *MenuHandlers) SaveOthersTemporaryPin(ctx context.Context, sym string, i
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+
 	temporaryPin := string(input)
-	// First, we retrieve the blocked number associated with this session
+	// Retrieve the blocked number associated with this session
 	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
 
-	// Then we save the temporary PIN for that blocked number
-	err = store.WriteEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE, []byte(temporaryPin))
+	// Hash the temporary PIN
+	hashedPIN, err := pin.HashPIN(string(temporaryPin))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryPin, "error", err)
+		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
 		return res, err
 	}
 
+	// Save the hashed temporary PIN for that blocked number
+	err = store.WriteEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write hashed temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryPin, "error", err)
+		return res, err
+	}
+
+	return res, nil
+}
+
+// CheckBlockedNumPinMisMatch checks if the provided PIN matches a temporary PIN stored for a blocked number.
+func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	res := resource.Result{}
+	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	// Get blocked number from storage.
+	store := h.userdataStore
+	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
+		return res, err
+	}
+	// Get Hashed temporary PIN for the blocked number.
+	hashedTemporaryPin, err := store.ReadEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
+		return res, err
+	}
+	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
+	} else {
+		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
+	}
 	return res, nil
 }
 
@@ -355,30 +449,155 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
 
 	store := h.userdataStore
-	temporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
-	if bytes.Equal(temporaryPin, input) {
+
+	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 	} else {
 		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
 		return res, nil
 	}
 
-	// Hash the PIN
-	hashedPIN, err := pin.HashPIN(string(temporaryPin))
+	// save the hashed PIN as the new account PIN
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
+		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedTemporaryPin, "error", err)
 		return res, err
 	}
 
-	// save the hashed PIN as the new account PIN
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
+	return res, nil
+}
+
+// ResetOthersPin handles the PIN reset process for other users' accounts by:
+// 1. Retrieving the blocked phone number from the session
+// 2. Fetching the hashed temporary PIN associated with that number
+// 3. Updating the account PIN with the temporary PIN
+func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	blockedPhonenumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedPIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
+	}
+	hashedTmporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read hashedTmporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
+		return res, err
+	}
+
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTmporaryPin))
+	if err != nil {
+		return res, err
+	}
+
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
+		return res, err
+	}
+
+	return res, nil
+}
+
+// incrementIncorrectPINAttempts keeps track of the number of incorrect PIN attempts
+func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessionId string) error {
+	var pinAttemptsCount uint8
+	store := h.userdataStore
+
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	if err != nil {
+		if db.IsNotFound(err) {
+			//First time Wrong PIN attempt: initialize with a count of 1
+			pinAttemptsCount = 1
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", currentWrongPinAttempts, "error", err)
+				return err
+			}
+			return nil
+		}
+	}
+	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	pinAttemptsCount = uint8(pinAttemptsValue) + 1
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pinAttemptsCount, "error", err)
+		return err
+	}
+	return nil
+}
+
+// resetIncorrectPINAttempts resets the number of incorrect PIN attempts after a correct PIN entry
+func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId string) error {
+	store := h.userdataStore
+	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	currentWrongPinAttemptsCount, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
+	if currentWrongPinAttemptsCount <= uint64(pin.AllowedPINAttempts) {
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pin.AllowedPINAttempts, "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+// ResetUnregisteredNumber clears the unregistered number flag in the system,
+// indicating that a number's registration status should no longer be marked as unregistered.
+func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
+	res.FlagReset = append(res.FlagReset, flag_unregistered_number)
+	return res, nil
+}
+
+// ValidateBlockedNumber performs validation of phone numbers, specifically for blocked numbers in the system.
+// It checks phone number format and verifies registration status.
+func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+
+	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	blockedNumber := string(input)
+	_, err = store.ReadEntry(ctx, blockedNumber, storedb.DATA_PUBLIC_KEY)
+	if !phone.IsValidPhoneNumber(blockedNumber) {
+		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+		return res, nil
+	}
+	if err != nil {
+		if db.IsNotFound(err) {
+			logg.InfoCtxf(ctx, "Invalid or unregistered number")
+			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+			return res, nil
+		} else {
+			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
+			return res, err
+		}
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		return res, nil
 	}
 	return res, nil
 }
@@ -398,12 +617,12 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	temporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
-	if bytes.Equal(input, temporaryPin) {
+	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
 		res.FlagSet = []uint32{flag_valid_pin}
 		res.FlagReset = []uint32{flag_pin_mismatch}
 		res.FlagSet = append(res.FlagSet, flag_pin_set)
@@ -412,30 +631,13 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 		return res, nil
 	}
 
-	// Hash the PIN
-	hashedPIN, err := pin.HashPIN(string(temporaryPin))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
-		return res, err
-	}
-
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedPIN, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
 		return res, err
 	}
 
 	return res, nil
-}
-
-// retrieves language codes from the context that can be used for handling translations.
-func codeFromCtx(ctx context.Context) string {
-	var code string
-	if ctx.Value("Language") != nil {
-		lang := ctx.Value("Language").(lang.Language)
-		code = lang.Code
-	}
-	return code
 }
 
 // SaveFirstname updates the first name in the gdbm with the provided input.
@@ -517,6 +719,37 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 		}
 	}
 
+	return res, nil
+}
+
+// VerifyYob verifies the length of the given input.
+func (h *MenuHandlers) VerifyYob(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+
+	flag_incorrect_date_format, _ := h.flagManager.GetFlag("flag_incorrect_date_format")
+	date := string(input)
+	_, err = strconv.Atoi(date)
+	if err != nil {
+		// If conversion fails, input is not numeric
+		res.FlagSet = append(res.FlagSet, flag_incorrect_date_format)
+		return res, nil
+	}
+
+	if person.IsValidYOb(date) {
+		res.FlagReset = append(res.FlagReset, flag_incorrect_date_format)
+	} else {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_date_format)
+	}
+	return res, nil
+}
+
+// ResetIncorrectYob resets the incorrect date format flag after a new attempt.
+func (h *MenuHandlers) ResetIncorrectYob(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+
+	flag_incorrect_date_format, _ := h.flagManager.GetFlag("flag_incorrect_date_format")
+	res.FlagReset = append(res.FlagReset, flag_incorrect_date_format)
 	return res, nil
 }
 
@@ -688,11 +921,248 @@ func (h *MenuHandlers) ResetAllowUpdate(ctx context.Context, sym string, input [
 	return res, nil
 }
 
-// ResetAllowUpdate resets the allowupdate flag that allows a user to update  profile data.
-func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+// GetCurrentProfileInfo retrieves specific profile fields based on the current state of the USSD session.
+// Uses flag management system to track profile field status and handle menu navigation.
+func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	res.FlagReset = append(res.FlagReset, flag_valid_pin)
+	var profileInfo []byte
+	var defaultValue string
+	var err error
+
+	flag_firstname_set, _ := h.flagManager.GetFlag("flag_firstname_set")
+	flag_familyname_set, _ := h.flagManager.GetFlag("flag_familyname_set")
+	flag_yob_set, _ := h.flagManager.GetFlag("flag_yob_set")
+	flag_gender_set, _ := h.flagManager.GetFlag("flag_gender_set")
+	flag_location_set, _ := h.flagManager.GetFlag("flag_location_set")
+	flag_offerings_set, _ := h.flagManager.GetFlag("flag_offerings_set")
+	flag_back_set, _ := h.flagManager.GetFlag("flag_back_set")
+
+	res.FlagReset = append(res.FlagReset, flag_back_set)
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	language, ok := ctx.Value("Language").(lang.Language)
+	if !ok {
+		return res, fmt.Errorf("value for 'Language' is not of type lang.Language")
+	}
+	code := language.Code
+	if code == "swa" {
+		defaultValue = "Haipo"
+	} else {
+		defaultValue = "Not Provided"
+	}
+
+	sm, _ := h.st.Where()
+	parts := strings.SplitN(sm, "_", 2)
+	filename := parts[1]
+	dbKeyStr := "DATA_" + strings.ToUpper(filename)
+	dbKey, err := storedb.StringToDataTyp(dbKeyStr)
+
+	if err != nil {
+		return res, err
+	}
+	store := h.userdataStore
+
+	switch dbKey {
+	case storedb.DATA_FIRST_NAME:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read first name entry with", "key", "error", storedb.DATA_FIRST_NAME, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_firstname_set)
+		res.Content = string(profileInfo)
+	case storedb.DATA_FAMILY_NAME:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read family name entry with", "key", "error", storedb.DATA_FAMILY_NAME, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_familyname_set)
+		res.Content = string(profileInfo)
+
+	case storedb.DATA_GENDER:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read gender entry with", "key", "error", storedb.DATA_GENDER, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_gender_set)
+		res.Content = string(profileInfo)
+	case storedb.DATA_YOB:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read year of birth(yob) entry with", "key", "error", storedb.DATA_YOB, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_yob_set)
+		res.Content = string(profileInfo)
+	case storedb.DATA_LOCATION:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read location entry with", "key", "error", storedb.DATA_LOCATION, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_location_set)
+		res.Content = string(profileInfo)
+	case storedb.DATA_OFFERINGS:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read offerings entry with", "key", "error", storedb.DATA_OFFERINGS, err)
+			return res, err
+		}
+		res.FlagSet = append(res.FlagSet, flag_offerings_set)
+		res.Content = string(profileInfo)
+	default:
+		break
+	}
+
+	return res, nil
+}
+
+// GetProfileInfo provides a comprehensive view of a user's profile.
+func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var defaultValue string
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	language, ok := ctx.Value("Language").(lang.Language)
+	if !ok {
+		return res, fmt.Errorf("value for 'Language' is not of type lang.Language")
+	}
+	code := language.Code
+	if code == "swa" {
+		defaultValue = "Haipo"
+	} else {
+		defaultValue = "Not Provided"
+	}
+
+	// Helper function to handle nil byte slices and convert them to string
+	getEntryOrDefault := func(entry []byte, err error) string {
+		if err != nil || entry == nil {
+			return defaultValue
+		}
+		return string(entry)
+	}
+	store := h.userdataStore
+	// Retrieve user data as strings with fallback to defaultValue
+	firstName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME))
+	familyName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME))
+	yob := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_YOB))
+	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER))
+	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION))
+	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
+
+	// Construct the full name
+	name := person.ConstructName(firstName, familyName, defaultValue)
+
+	// Calculate age from year of birth
+	age := defaultValue
+	if yob != defaultValue {
+		if yobInt, err := strconv.Atoi(yob); err == nil {
+			age = strconv.Itoa(person.CalculateAgeWithYOB(yobInt))
+		} else {
+			return res, fmt.Errorf("invalid year of birth: %v", err)
+		}
+	}
+	switch language.Code {
+	case "eng":
+		res.Content = fmt.Sprintf(
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
+			name, gender, age, location, offerings,
+		)
+	case "swa":
+		res.Content = fmt.Sprintf(
+			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\n",
+			name, gender, age, location, offerings,
+		)
+	default:
+		res.Content = fmt.Sprintf(
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
+			name, gender, age, location, offerings,
+		)
+	}
+
+	return res, nil
+}
+
+// handles bulk updates of profile information.
+func (h *MenuHandlers) insertProfileItems(ctx context.Context, sessionId string, res *resource.Result) error {
+	var err error
+	userStore := h.userdataStore
+	profileFlagNames := []string{
+		"flag_firstname_set",
+		"flag_familyname_set",
+		"flag_yob_set",
+		"flag_gender_set",
+		"flag_location_set",
+		"flag_offerings_set",
+	}
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
+	}
+	for index, profileItem := range h.profile.ProfileItems {
+		// Ensure the profileItem is not "0"(is set)
+		if profileItem != "0" {
+			flag, _ := h.flagManager.GetFlag(profileFlagNames[index])
+			isProfileItemSet := h.st.MatchFlag(flag, true)
+			if !isProfileItemSet {
+				err = userStore.WriteEntry(ctx, sessionId, profileDataKeys[index], []byte(profileItem))
+				if err != nil {
+					logg.ErrorCtxf(ctx, "failed to write profile entry with", "key", profileDataKeys[index], "value", profileItem, "error", err)
+					return err
+				}
+				res.FlagSet = append(res.FlagSet, flag)
+			}
+		}
+	}
+	return nil
+}
+
+// UpdateAllProfileItems  is used to persist all the  new profile information and setup  the required profile flags.
+func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	err := h.insertProfileItems(ctx, sessionId, &res)
+	if err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
@@ -767,40 +1237,6 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	} else {
 		return res, nil
 	}
-	return res, nil
-}
-
-// ResetIncorrectPin resets the incorrect pin flag  after a new PIN attempt.
-func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	store := h.userdataStore
-
-	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
-	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
-
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
-
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
-	if err != nil {
-		if !db.IsNotFound(err) {
-			return res, err
-		}
-	}
-	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	remainingPINAttempts := pin.AllowedPINAttempts - uint8(pinAttemptsValue)
-	if remainingPINAttempts == 0 {
-		res.FlagSet = append(res.FlagSet, flag_account_blocked)
-		return res, nil
-	}
-	if remainingPINAttempts < pin.AllowedPINAttempts {
-		res.Content = strconv.Itoa(int(remainingPINAttempts))
-	}
-
 	return res, nil
 }
 
@@ -897,37 +1333,6 @@ func (h *MenuHandlers) ShowBlockedAccount(ctx context.Context, sym string, input
 	return res, nil
 }
 
-// VerifyYob verifies the length of the given input.
-func (h *MenuHandlers) VerifyYob(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
-
-	flag_incorrect_date_format, _ := h.flagManager.GetFlag("flag_incorrect_date_format")
-	date := string(input)
-	_, err = strconv.Atoi(date)
-	if err != nil {
-		// If conversion fails, input is not numeric
-		res.FlagSet = append(res.FlagSet, flag_incorrect_date_format)
-		return res, nil
-	}
-
-	if person.IsValidYOb(date) {
-		res.FlagReset = append(res.FlagReset, flag_incorrect_date_format)
-	} else {
-		res.FlagSet = append(res.FlagSet, flag_incorrect_date_format)
-	}
-	return res, nil
-}
-
-// ResetIncorrectYob resets the incorrect date format flag after a new attempt.
-func (h *MenuHandlers) ResetIncorrectYob(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-
-	flag_incorrect_date_format, _ := h.flagManager.GetFlag("flag_incorrect_date_format")
-	res.FlagReset = append(res.FlagReset, flag_incorrect_date_format)
-	return res, nil
-}
-
 // CheckBalance retrieves the balance of the active voucher and sets
 // the balance as the result content.
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
@@ -990,87 +1395,6 @@ func (h *MenuHandlers) FetchCommunityBalance(ctx context.Context, sym string, in
 	//TODO:
 	//Check if the address is a community account,if then,get the actual balance
 	res.Content = l.Get("Community Balance: 0.00")
-	return res, nil
-}
-
-// ResetOthersPin handles the PIN reset process for other users' accounts by:
-// 1. Retrieving the blocked phone number from the session
-// 2. Fetching the temporary PIN associated with that number
-// 3. Updating the account PIN with the temporary PIN
-func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	blockedPhonenumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
-		return res, err
-	}
-	temporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
-		return res, err
-	}
-
-	// Hash the PIN
-	hashedPIN, err := pin.HashPIN(string(temporaryPin))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
-		return res, err
-	}
-
-	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedPIN))
-	if err != nil {
-		return res, nil
-	}
-
-	return res, nil
-}
-
-// ResetUnregisteredNumber clears the unregistered number flag in the system,
-// indicating that a number's registration status should no longer be marked as unregistered.
-func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
-	res.FlagReset = append(res.FlagReset, flag_unregistered_number)
-	return res, nil
-}
-
-// ValidateBlockedNumber performs validation of phone numbers, specifically for blocked numbers in the system.
-// It checks phone number format and verifies registration status.
-func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
-
-	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	blockedNumber := string(input)
-	_, err = store.ReadEntry(ctx, blockedNumber, storedb.DATA_PUBLIC_KEY)
-	if !phone.IsValidPhoneNumber(blockedNumber) {
-		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-		return res, nil
-	}
-	if err != nil {
-		if db.IsNotFound(err) {
-			logg.InfoCtxf(ctx, "Invalid or unregistered number")
-			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-			return res, nil
-		} else {
-			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
-			return res, err
-		}
-	}
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
-	if err != nil {
-		return res, nil
-	}
 	return res, nil
 }
 
@@ -1450,199 +1774,6 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	)
 
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
-	return res, nil
-}
-
-// GetCurrentProfileInfo retrieves specific profile fields based on the current state of the USSD session.
-// Uses flag management system to track profile field status and handle menu navigation.
-func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var profileInfo []byte
-	var defaultValue string
-	var err error
-
-	flag_firstname_set, _ := h.flagManager.GetFlag("flag_firstname_set")
-	flag_familyname_set, _ := h.flagManager.GetFlag("flag_familyname_set")
-	flag_yob_set, _ := h.flagManager.GetFlag("flag_yob_set")
-	flag_gender_set, _ := h.flagManager.GetFlag("flag_gender_set")
-	flag_location_set, _ := h.flagManager.GetFlag("flag_location_set")
-	flag_offerings_set, _ := h.flagManager.GetFlag("flag_offerings_set")
-	flag_back_set, _ := h.flagManager.GetFlag("flag_back_set")
-
-	res.FlagReset = append(res.FlagReset, flag_back_set)
-
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	language, ok := ctx.Value("Language").(lang.Language)
-	if !ok {
-		return res, fmt.Errorf("value for 'Language' is not of type lang.Language")
-	}
-	code := language.Code
-	if code == "swa" {
-		defaultValue = "Haipo"
-	} else {
-		defaultValue = "Not Provided"
-	}
-
-	sm, _ := h.st.Where()
-	parts := strings.SplitN(sm, "_", 2)
-	filename := parts[1]
-	dbKeyStr := "DATA_" + strings.ToUpper(filename)
-	dbKey, err := storedb.StringToDataTyp(dbKeyStr)
-
-	if err != nil {
-		return res, err
-	}
-	store := h.userdataStore
-
-	switch dbKey {
-	case storedb.DATA_FIRST_NAME:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read first name entry with", "key", "error", storedb.DATA_FIRST_NAME, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_firstname_set)
-		res.Content = string(profileInfo)
-	case storedb.DATA_FAMILY_NAME:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read family name entry with", "key", "error", storedb.DATA_FAMILY_NAME, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_familyname_set)
-		res.Content = string(profileInfo)
-
-	case storedb.DATA_GENDER:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read gender entry with", "key", "error", storedb.DATA_GENDER, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_gender_set)
-		res.Content = string(profileInfo)
-	case storedb.DATA_YOB:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read year of birth(yob) entry with", "key", "error", storedb.DATA_YOB, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_yob_set)
-		res.Content = string(profileInfo)
-	case storedb.DATA_LOCATION:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read location entry with", "key", "error", storedb.DATA_LOCATION, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_location_set)
-		res.Content = string(profileInfo)
-	case storedb.DATA_OFFERINGS:
-		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
-		if err != nil {
-			if db.IsNotFound(err) {
-				res.Content = defaultValue
-				break
-			}
-			logg.ErrorCtxf(ctx, "Failed to read offerings entry with", "key", "error", storedb.DATA_OFFERINGS, err)
-			return res, err
-		}
-		res.FlagSet = append(res.FlagSet, flag_offerings_set)
-		res.Content = string(profileInfo)
-	default:
-		break
-	}
-
-	return res, nil
-}
-
-// GetProfileInfo provides a comprehensive view of a user's profile.
-func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var defaultValue string
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	language, ok := ctx.Value("Language").(lang.Language)
-	if !ok {
-		return res, fmt.Errorf("value for 'Language' is not of type lang.Language")
-	}
-	code := language.Code
-	if code == "swa" {
-		defaultValue = "Haipo"
-	} else {
-		defaultValue = "Not Provided"
-	}
-
-	// Helper function to handle nil byte slices and convert them to string
-	getEntryOrDefault := func(entry []byte, err error) string {
-		if err != nil || entry == nil {
-			return defaultValue
-		}
-		return string(entry)
-	}
-	store := h.userdataStore
-	// Retrieve user data as strings with fallback to defaultValue
-	firstName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME))
-	familyName := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME))
-	yob := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_YOB))
-	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER))
-	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION))
-	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
-
-	// Construct the full name
-	name := person.ConstructName(firstName, familyName, defaultValue)
-
-	// Calculate age from year of birth
-	age := defaultValue
-	if yob != defaultValue {
-		if yobInt, err := strconv.Atoi(yob); err == nil {
-			age = strconv.Itoa(person.CalculateAgeWithYOB(yobInt))
-		} else {
-			return res, fmt.Errorf("invalid year of birth: %v", err)
-		}
-	}
-	switch language.Code {
-	case "eng":
-		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
-		)
-	case "swa":
-		res.Content = fmt.Sprintf(
-			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\n",
-			name, gender, age, location, offerings,
-		)
-	default:
-		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
-		)
-	}
-
 	return res, nil
 }
 
@@ -2092,112 +2223,6 @@ func (h *MenuHandlers) ViewTransactionStatement(ctx context.Context, sym string,
 	res.Content = statement
 
 	return res, nil
-}
-
-// handles bulk updates of profile information.
-func (h *MenuHandlers) insertProfileItems(ctx context.Context, sessionId string, res *resource.Result) error {
-	var err error
-	userStore := h.userdataStore
-	profileFlagNames := []string{
-		"flag_firstname_set",
-		"flag_familyname_set",
-		"flag_yob_set",
-		"flag_gender_set",
-		"flag_location_set",
-		"flag_offerings_set",
-	}
-	profileDataKeys := []storedb.DataTyp{
-		storedb.DATA_FIRST_NAME,
-		storedb.DATA_FAMILY_NAME,
-		storedb.DATA_GENDER,
-		storedb.DATA_YOB,
-		storedb.DATA_LOCATION,
-		storedb.DATA_OFFERINGS,
-	}
-	for index, profileItem := range h.profile.ProfileItems {
-		// Ensure the profileItem is not "0"(is set)
-		if profileItem != "0" {
-			flag, _ := h.flagManager.GetFlag(profileFlagNames[index])
-			isProfileItemSet := h.st.MatchFlag(flag, true)
-			if !isProfileItemSet {
-				err = userStore.WriteEntry(ctx, sessionId, profileDataKeys[index], []byte(profileItem))
-				if err != nil {
-					logg.ErrorCtxf(ctx, "failed to write profile entry with", "key", profileDataKeys[index], "value", profileItem, "error", err)
-					return err
-				}
-				res.FlagSet = append(res.FlagSet, flag)
-			}
-		}
-	}
-	return nil
-}
-
-// UpdateAllProfileItems  is used to persist all the  new profile information and setup  the required profile flags.
-func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	err := h.insertProfileItems(ctx, sessionId, &res)
-	if err != nil {
-		return res, err
-	}
-	err = h.constructAccountAlias(ctx)
-	if err != nil {
-		return res, err
-	}
-	return res, nil
-}
-
-// incrementIncorrectPINAttempts keeps track of the number of incorrect PIN attempts
-func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessionId string) error {
-	var pinAttemptsCount uint8
-	store := h.userdataStore
-
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
-	if err != nil {
-		if db.IsNotFound(err) {
-			//First time Wrong PIN attempt: initialize with a count of 1
-			pinAttemptsCount = 1
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", currentWrongPinAttempts, "error", err)
-				return err
-			}
-			return nil
-		}
-	}
-	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	pinAttemptsCount = uint8(pinAttemptsValue) + 1
-
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(strconv.Itoa(int(pinAttemptsCount))))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pinAttemptsCount, "error", err)
-		return err
-	}
-	return nil
-}
-
-// resetIncorrectPINAttempts resets the number of incorrect PIN attempts after a correct PIN entry
-func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId string) error {
-	store := h.userdataStore
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	currentWrongPinAttemptsCount, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	if currentWrongPinAttemptsCount <= uint64(pin.AllowedPINAttempts) {
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
-		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pin.AllowedPINAttempts, "error", err)
-			return err
-		}
-	}
-	return nil
 }
 
 func (h *MenuHandlers) persistInitialLanguageCode(ctx context.Context, sessionId string, code string) error {
