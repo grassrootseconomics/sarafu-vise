@@ -1,14 +1,14 @@
 package config
 
 import (
-	"git.grassecon.net/grassrootseconomics/visedriver/env"
-	viseconfig "git.grassecon.net/grassrootseconomics/visedriver/config"
 	apiconfig "git.grassecon.net/grassrootseconomics/sarafu-api/config"
+	viseconfig "git.grassecon.net/grassrootseconomics/visedriver/config"
+	"git.grassecon.net/grassrootseconomics/visedriver/env"
 )
 
 var (
 	GetConns = viseconfig.GetConns
-	EnvPath string
+	EnvPath  string
 )
 
 func loadEnv() {
@@ -20,10 +20,10 @@ func loadEnv() {
 }
 
 const (
-	defaultSSHHost string = "127.0.0.1"
-	defaultSSHPort uint = 7122
+	defaultSSHHost  string = "127.0.0.1"
+	defaultSSHPort  uint   = 7122
 	defaultHTTPHost string = "127.0.0.1"
-	defaultHTTPPort uint = 7123
+	defaultHTTPPort uint   = 7123
 )
 
 func LoadConfig() error {

@@ -1,10 +1,11 @@
+//go:build testgdbmdb
 // +build testgdbmdb
 
 package testutil
 
 import (
-	"os"
 	"net/url"
+	"os"
 )
 
 const (

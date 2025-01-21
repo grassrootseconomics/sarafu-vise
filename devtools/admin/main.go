@@ -10,14 +10,14 @@ import (
 	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/internal/cmd"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/internal/cmd"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 var (
-	logg = logging.NewVanilla().WithContextKey("SessionId")
-	scriptDir     = path.Join("services", "registration")
+	logg      = logging.NewVanilla().WithContextKey("SessionId")
+	scriptDir = path.Join("services", "registration")
 )
 
 func main() {

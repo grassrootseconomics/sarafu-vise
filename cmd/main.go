@@ -10,14 +10,14 @@ import (
 	"syscall"
 
 	"git.defalsify.org/vise.git/engine"
+	"git.defalsify.org/vise.git/lang"
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/lang"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 var (
@@ -86,7 +86,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "menu storage service error: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	if gettextDir != "" {
 		menuStorageService = menuStorageService.WithGettext(gettextDir, langs.Langs())
 	}

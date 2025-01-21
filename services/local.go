@@ -1,16 +1,17 @@
+//go:build !online
 // +build !online
 
 package services
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	devremote "git.grassecon.net/grassrootseconomics/sarafu-api/dev"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/event"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 type localEmitter struct {

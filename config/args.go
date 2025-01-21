@@ -5,10 +5,10 @@ import (
 )
 
 type Override struct {
-	DbConn *string
-	StateConn *string
+	DbConn       *string
+	StateConn    *string
 	ResourceConn *string
-	UserConn *string
+	UserConn     *string
 }
 
 func NewOverride() *Override {
@@ -17,10 +17,10 @@ func NewOverride() *Override {
 	var c string
 	var d string
 	o := &Override{
-		DbConn: &a,
-		StateConn: &b,
+		DbConn:       &a,
+		StateConn:    &b,
 		ResourceConn: &c,
-		UserConn: &d,
+		UserConn:     &d,
 	}
 	return o
 }

@@ -111,13 +111,13 @@ func main() {
 	signal.Notify(cterm, os.Interrupt, syscall.SIGTERM)
 
 	runner := &ssh.SshRunner{
-		Cfg: cfg,
-		Debug: engineDebug,
-		FlagFile: pfp,
-		Conn: conns,
-		SrvKeyFile:  sshKeyFile,
-		Host:        host,
-		Port:        port,
+		Cfg:        cfg,
+		Debug:      engineDebug,
+		FlagFile:   pfp,
+		Conn:       conns,
+		SrvKeyFile: sshKeyFile,
+		Host:       host,
+		Port:       port,
 	}
 	go func() {
 		select {

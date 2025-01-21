@@ -8,18 +8,17 @@ import (
 	"path"
 	"strings"
 
-	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/lang"
+	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
 )
 
 const (
-	
 	changeHeadSrc = `LOAD reset_account_authorized 0
 LOAD reset_incorrect 0
 CATCH incorrect_pin flag_incorrect_pin 1
 CATCH pin_entry flag_account_authorized 0
-` 
+`
 
 	selectSrc = `LOAD set_language 6
 RELOAD set_language
@@ -29,8 +28,8 @@ MOVE language_changed
 )
 
 var (
-	logg = logging.NewVanilla()
-	mouts string
+	logg   = logging.NewVanilla()
+	mouts  string
 	incmps string
 )
 
@@ -63,7 +62,7 @@ func main() {
 	}
 	logg.Tracef("using languages", "lang", config.Languages)
 
-	for i, v := range(config.Languages) {
+	for i, v := range config.Languages {
 		ln, err := lang.LanguageFromCode(v)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error parsing language: %s\n", v)
@@ -76,7 +75,7 @@ func main() {
 		incmps += fmt.Sprintf("INCMP %s %v\n", v, n)
 
 		p := path.Join(srcDir, v)
-		w, err := os.OpenFile(p, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
+		w, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed open language set template output: %v\n", err)
 			os.Exit(1)
@@ -93,7 +92,7 @@ func main() {
 	src += "INCMP . *\n"
 
 	p := path.Join(srcDir, "select_language.vis")
-	w, err := os.OpenFile(p, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
+	w, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed open select language vis output: %v\n", err)
 		os.Exit(1)
@@ -107,7 +106,7 @@ func main() {
 
 	src = changeHeadSrc + src
 	p = path.Join(srcDir, "change_language.vis")
-	w, err = os.OpenFile(p, os.O_WRONLY | os.O_CREATE | os.O_EXCL, 0600)
+	w, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed open select language vis output: %v\n", err)
 		os.Exit(1)

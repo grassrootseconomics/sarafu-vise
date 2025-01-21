@@ -14,12 +14,12 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/visedriver/request"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+	"git.grassecon.net/grassrootseconomics/visedriver/request"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 var (

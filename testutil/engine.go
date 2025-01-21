@@ -9,24 +9,24 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/resource"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil/testtag"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // CleanDatabase removes all test data from the database
 func CleanDatabase() {
-	for _, v := range([]int8{
+	for _, v := range []int8{
 		storage.STORETYPE_STATE,
 		storage.STORETYPE_USER,
-	}) {
+	} {
 		conn := conns[v]
 		logg.Infof("cleaning test database", "typ", v, "db", conn)
 		if conn.DbType() == storage.DBTYPE_POSTGRES {

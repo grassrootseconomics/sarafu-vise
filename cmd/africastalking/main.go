@@ -12,18 +12,18 @@ import (
 	"syscall"
 
 	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/lang"
+	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
-	
-	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+	at "git.grassecon.net/grassrootseconomics/visedriver-africastalking/africastalking"
 )
 
 var (
@@ -118,7 +118,7 @@ func main() {
 	}
 
 	accountService := services.New(ctx, menuStorageService)
-	
+
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "httpaccountservice: %v\n", err)

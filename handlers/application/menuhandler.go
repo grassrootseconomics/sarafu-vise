@@ -273,7 +273,7 @@ func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input
 	}
 
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	
+
 	if pinAttemptsValue == 0 {
 		res.FlagReset = append(res.FlagReset, flag_account_blocked)
 		return res, nil

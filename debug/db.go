@@ -1,11 +1,11 @@
 package debug
 
 import (
-	"fmt"
 	"encoding/binary"
+	"fmt"
 
-	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	visedb "git.defalsify.org/vise.git/db"
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
 
 var (
@@ -13,10 +13,10 @@ var (
 )
 
 type KeyInfo struct {
-	SessionId string
-	Typ uint8
-	SubTyp storedb.DataTyp
-	Label string
+	SessionId   string
+	Typ         uint8
+	SubTyp      storedb.DataTyp
+	Label       string
 	Description string
 }
 
@@ -53,12 +53,11 @@ func ToKeyInfo(k []byte, sessionId string) (KeyInfo, error) {
 		k = k[2:]
 	}
 
-
 	return o, nil
 }
 
 func subTypToString(v storedb.DataTyp) string {
-	return dbTypStr[v + visedb.DATATYPE_USERDATA + 1]
+	return dbTypStr[v+visedb.DATATYPE_USERDATA+1]
 }
 
 func typToString(v uint8) string {

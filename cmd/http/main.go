@@ -17,13 +17,13 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	httprequest "git.grassecon.net/grassrootseconomics/visedriver/request/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
+	httprequest "git.grassecon.net/grassrootseconomics/visedriver/request/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 )
 
 var (
@@ -116,7 +116,7 @@ func main() {
 	}
 
 	accountService := services.New(ctx, menuStorageService)
-	
+
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())

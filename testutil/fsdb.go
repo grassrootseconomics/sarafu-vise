@@ -1,10 +1,10 @@
+//go:build testfsdb
 // +build testfsdb
 
 package testutil
 
 import (
 	"os"
-
 )
 
 const (

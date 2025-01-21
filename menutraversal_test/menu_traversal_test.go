@@ -9,14 +9,14 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/gofrs/uuid"
 	"git.defalsify.org/vise.git/logging"
-	"git.grassecon.net/grassrootseconomics/visedriver/testutil/driver"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil"
+	"git.grassecon.net/grassrootseconomics/visedriver/testutil/driver"
+	"github.com/gofrs/uuid"
 )
 
 var (
-	logg = logging.NewVanilla().WithDomain("menutraversaltest")
+	logg      = logging.NewVanilla().WithDomain("menutraversaltest")
 	testData  = driver.ReadData()
 	sessionID string
 	src       = rand.NewSource(42)
