@@ -32,7 +32,7 @@ func (k KeyInfo) String() string {
 
 func ToKeyInfo(k []byte, sessionId string) (KeyInfo, error) {
 	o := KeyInfo{}
-	
+
 	o.SessionId = sessionId
 	o.Typ = uint8(k[0])
 	k = k[1:]
@@ -53,7 +53,7 @@ func ToKeyInfo(k []byte, sessionId string) (KeyInfo, error) {
 		k = k[2:]
 	}
 
-	
+
 	return o, nil
 }
 
