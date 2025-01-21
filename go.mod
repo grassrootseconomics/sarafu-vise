@@ -4,10 +4,10 @@ go 1.23.4
 
 require (
 	git.defalsify.org/vise.git v0.2.3-0.20250120121301-10739fb4a8c9
-	git.grassecon.net/grassrootseconomics/common v0.0.0-20250113174703-6afccefd1f05
-	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250115072214-bca7c5de969f
-	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250120123120-90ecec17987c
-	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250119111003-681d58fad95b
+	git.grassecon.net/grassrootseconomics/common v0.0.0-20250121134736-ba8cbbccea7d
+	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250121135150-e0b539809805
+	git.grassecon.net/grassrootseconomics/visedriver v0.8.0-beta.10.0.20250121134912-f7d31e4e8162
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250121135340-ca97e23e8c84
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta

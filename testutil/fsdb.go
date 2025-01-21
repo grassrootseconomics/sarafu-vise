@@ -8,14 +8,14 @@ import (
 )
 
 func init() {
-	d, err := os.MkdirTemp("", "sarafu-vise-menutraversal-state-")
+	stateDir, err := os.MkdirTemp("", "sarafu-vise-menutraversal-state-")
 	if err != nil {
 		panic(err)
 	}
-	override.StateConn = &d
-	d, err = os.MkdirTemp("", "sarafu-vise-menutraversal-user-")
+	override.StateConn = &stateDir
+	userDir, err := os.MkdirTemp("", "sarafu-vise-menutraversal-user-")
 	if err != nil {
 		panic(err)
 	}
-	override.UserConn = &d
+	override.UserConn = &userDir
 }
