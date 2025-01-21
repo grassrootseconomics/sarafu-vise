@@ -44,7 +44,7 @@ func (p *asyncRequestParser) GetInput(r any) ([]byte, error) {
 func main() {
 	config.LoadConfig()
 
-	var override config.Override
+	override := config.NewOverride()
 	var sessionId string
 	var size uint
 	var engineDebug bool
@@ -68,7 +68,7 @@ func main() {
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()
 
-	config.Apply(&override)
+	config.Apply(override)
 	conns, err := config.GetConns()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
