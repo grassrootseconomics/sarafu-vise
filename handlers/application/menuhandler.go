@@ -24,7 +24,6 @@ import (
 	"git.grassecon.net/grassrootseconomics/common/person"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/common/pin"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/dev"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
@@ -2257,12 +2256,7 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 	}
-	if _, ok := h.accountService.(*dev.DevAccountService); ok {
-		//If using local dev api,append sarafu.local to the assigned available alias
-		alias = aliasResult.Alias + ".sarafu.local"
-	} else {
-		alias = aliasResult.Alias + ".sarafu.eth"
-	}
+	alias = aliasResult.Alias
 	//Store the alias
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
 	if err != nil {
