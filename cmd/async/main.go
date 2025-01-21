@@ -43,7 +43,7 @@ func (p *asyncRequestParser) GetInput(r any) ([]byte, error) {
 
 func main() {
 	config.LoadConfig()
-	
+
 	var override config.Override
 	var sessionId string
 	var size uint
