@@ -18,7 +18,7 @@ var (
 	resourceDb db.Db
 	baseDir    = testdataloader.GetBasePath()
 	scriptDir  = path.Join(baseDir, "services", "registration")
-	override   config.Override
+	override   = config.NewOverride()
 )
 
 func init() {

@@ -2,6 +2,7 @@ package config
 
 import (
 	viseconfig "git.grassecon.net/grassrootseconomics/visedriver/config"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 func NewOverride() *viseconfig.Override {
@@ -12,8 +13,11 @@ func NewOverride() *viseconfig.Override {
 	o := &viseconfig.Override{
 		DbConn:       &a,
 		StateConn:    &b,
+		StateConnMode: storage.DBMODE_TEXT,
 		ResourceConn: &c,
+		ResourceConnMode: storage.DBMODE_TEXT,
 		UserConn:     &d,
+		UserConnMode: storage.DBMODE_BINARY,
 	}
 	return o
 }

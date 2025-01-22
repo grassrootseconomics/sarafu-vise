@@ -32,7 +32,7 @@ func CleanDatabase() {
 		if conn.DbType() == storage.DBTYPE_POSTGRES {
 			ctx := context.Background()
 			// Update the connection string with the new search path
-			updatedConnStr := conn.String()
+			updatedConnStr := conn.Raw()
 
 			dbConn, err := pgxpool.New(ctx, updatedConnStr)
 			if err != nil {
@@ -62,7 +62,7 @@ func CleanDatabase() {
 
 func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	config.LoadConfig()
-	err := config.Apply(&override)
+	err := config.Apply(override)
 	if err != nil {
 		panic(fmt.Errorf("args override fail: %v\n", err))
 	}

@@ -31,14 +31,13 @@ var (
 func main() {
 	config.LoadConfig()
 
-	var override config.Override
+	override := config.NewOverride()
 	var authConnStr string
 	var size uint
 	var engineDebug bool
 	var stateDebug bool
 	var host string
 	var port uint
-	//flag.StringVar(&authConnStr, "authdb", "", "auth connection string")
 	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
 	flag.StringVar(override.ResourceConn, "resource", "?", "resource connection string")
 	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
@@ -49,7 +48,7 @@ func main() {
 	flag.UintVar(&port, "p", config.PortSSH(), "socket port")
 	flag.Parse()
 
-	config.Apply(&override)
+	config.Apply(override)
 	conns, err := config.GetConns()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
