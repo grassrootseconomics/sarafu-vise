@@ -11,13 +11,13 @@ func NewOverride() *viseconfig.Override {
 	var c string
 	var d string
 	o := &viseconfig.Override{
-		DbConn:       &a,
-		StateConn:    &b,
-		StateConnMode: storage.DBMODE_TEXT,
-		ResourceConn: &c,
+		DbConn:           &a,
+		StateConn:        &b,
+		StateConnMode:    storage.DBMODE_TEXT,
+		ResourceConn:     &c,
 		ResourceConnMode: storage.DBMODE_TEXT,
-		UserConn:     &d,
-		UserConnMode: storage.DBMODE_BINARY,
+		UserConn:         &d,
+		UserConnMode:     storage.DBMODE_BINARY,
 	}
 	return o
 }
