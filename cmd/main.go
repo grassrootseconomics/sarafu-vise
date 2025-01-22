@@ -141,11 +141,14 @@ func main() {
 	signal.Notify(cint, os.Interrupt, syscall.SIGINT)
 	signal.Notify(cterm, os.Interrupt, syscall.SIGTERM)
 	go func() {
+		var s os.Signal
 		select {
-		case _ = <-cint:
-		case _ = <-cterm:
+		case s = <-cterm:
+		case s = <-cint:
 		}
-		menuStorageService.Close(ctx)
+		logg.InfoCtxf(ctx, "stopping on signal", "sig", s)
+		en.Finish(ctx)
+		os.Exit(0)
 	}()
 
 	err = engine.Loop(ctx, en, os.Stdin, os.Stdout, nil)
