@@ -44,11 +44,13 @@ func main() {
 	var err error
 	var gettextDir string
 	var langs args.LangVar
+	var resourceDir string
 
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
-	flag.StringVar(override.ResourceConn, "resource", "?", "resource connection string")
 	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(override.ResourceConn, "resource", "?", "resource data directory")
+	flag.StringVar(&resourceDir, "resource-dir", "", "resource data directory. If set, overrides --resource to create a non-binary fsdb for the given path.")
 	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&host, "h", config.Host(), "http host")
@@ -57,6 +59,10 @@ func main() {
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()
 
+	if resourceDir != "" {
+		*override.ResourceConn = resourceDir
+		override.ResourceConnMode = storage.DBMODE_TEXT
+	}
 	config.Apply(override)
 	conns, err := config.GetConns()
 	if err != nil {

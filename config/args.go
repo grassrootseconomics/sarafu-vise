@@ -4,19 +4,12 @@ import (
 	viseconfig "git.grassecon.net/grassrootseconomics/visedriver/config"
 )
 
-type Override struct {
-	DbConn       *string
-	StateConn    *string
-	ResourceConn *string
-	UserConn     *string
-}
-
-func NewOverride() *Override {
+func NewOverride() *viseconfig.Override {
 	var a string
 	var b string
 	var c string
 	var d string
-	o := &Override{
+	o := &viseconfig.Override{
 		DbConn:       &a,
 		StateConn:    &b,
 		ResourceConn: &c,
@@ -25,7 +18,7 @@ func NewOverride() *Override {
 	return o
 }
 
-func Apply(o *Override) error {
-	viseconfig.ApplyConn(o.DbConn, o.StateConn, o.ResourceConn, o.UserConn)
+func Apply(o *viseconfig.Override) error {
+	viseconfig.ApplyConn(o)
 	return nil
 }
