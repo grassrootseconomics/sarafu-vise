@@ -2507,14 +2507,19 @@ func TestGetTransactionsList(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	dateBlock, err := time.Parse(time.RFC3339, "2024-10-03T07:23:12Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
 			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
-			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "2",
+			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 		{
 			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
-			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "2",
+			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 	}
 
@@ -2538,7 +2543,7 @@ func TestGetTransactionsList(t *testing.T) {
 		}
 	}
 
-	expectedTransactionList := []byte("1: Sent 10 SRF " + time.Now().Format("2006-01-02") + "\n2: Received 20 SRF " + time.Now().Format("2006-01-02"))
+	expectedTransactionList := []byte("1: Sent 10 SRF 2024-10-03\n2: Received 20 SRF 2024-10-03")
 
 	res, err := h.GetTransactionsList(ctx, "", []byte(""))
 
@@ -2547,5 +2552,69 @@ func TestGetTransactionsList(t *testing.T) {
 }
 
 func TestViewTransactionStatement(t *testing.T) {
+	ctx, userStore := InitializeTestStore(t)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
 
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		prefixDb:      spdb,
+		flagManager:   fm,
+	}
+
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dateBlock, err := time.Parse(time.RFC3339, "2024-10-03T07:23:12Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+	}
+
+	data := store.ProcessTransfers(mockTXResponse)
+
+	// Store all transaction data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_TX_SENDERS:    data.Senders,
+		storedb.DATA_TX_RECIPIENTS: data.Recipients,
+		storedb.DATA_TX_VALUES:     data.TransferValues,
+		storedb.DATA_TX_ADDRESSES:  data.Addresses,
+		storedb.DATA_TX_HASHES:     data.TxHashes,
+		storedb.DATA_TX_DATES:      data.Dates,
+		storedb.DATA_TX_SYMBOLS:    data.Symbols,
+		storedb.DATA_TX_DECIMALS:   data.Decimals,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedTransactionData := []byte("Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM")
+
+	res, err := h.ViewTransactionStatement(ctx, "view_transaction_statement", []byte("1"))
+
+	assert.NoError(t, err)
+	assert.Equal(t, res.Content, string(expectedTransactionData))
 }
