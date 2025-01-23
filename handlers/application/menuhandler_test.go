@@ -2328,13 +2328,15 @@ func TestPersistLanguageCode(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := h.persistLanguageCode(ctx, test.code)
-		if err != nil {
-			t.Logf(err.Error())
-		}
-		code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+		t.Run(test.name, func(t *testing.T) {
+			err := h.persistLanguageCode(ctx, test.code)
+			if err != nil {
+				t.Logf(err.Error())
+			}
+			code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
 
-		assert.Equal(t, test.expectedLanguageCode, string(code))
+			assert.Equal(t, test.expectedLanguageCode, string(code))
+		})
 	}
 }
 
