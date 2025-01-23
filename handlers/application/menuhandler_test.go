@@ -2336,5 +2336,56 @@ func TestPersistLanguageCode(t *testing.T) {
 
 		assert.Equal(t, test.expectedLanguageCode, string(code))
 	}
+}
 
+func TestCheckBlockedStatus(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+	flag_account_blocked, err := fm.GetFlag("flag_account_blocked")
+	if err != nil {
+		t.Logf(err.Error())
+	}
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+	}
+
+	tests := []struct {
+		name                    string
+		currentWrongPinAttempts string
+		expectedResult          resource.Result
+	}{
+		{
+			name:                    "Currently blocked account",
+			currentWrongPinAttempts: "4",
+			expectedResult:          resource.Result{},
+		},
+		{
+			name:                    "Account with 0 wrong PIN attempts",
+			currentWrongPinAttempts: "0",
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_account_blocked},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(tt.currentWrongPinAttempts)); err != nil {
+				t.Fatal(err)
+			}
+
+			res, err := h.CheckBlockedStatus(ctx, "", []byte(""))
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
 }
