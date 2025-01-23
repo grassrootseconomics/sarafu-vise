@@ -11,6 +11,6 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
-func New(ctx context.Context, storageService storage.StorageService, conn storage.ConnData) remote.AccountService {
+func New(ctx context.Context, storageService storage.StorageService) remote.AccountService {
 	return &httpremote.HTTPAccountService{}
 }
