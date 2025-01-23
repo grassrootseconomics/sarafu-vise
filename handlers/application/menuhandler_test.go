@@ -2391,3 +2391,40 @@ func TestCheckBlockedStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestPersistInitialLanguageCode(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+
+	h := &MenuHandlers{
+		userdataStore: store,
+	}
+
+	tests := []struct {
+		name      string
+		code      string
+		sessionId string
+	}{
+		{
+			name:      "Persist initial Language (English)",
+			code:      "eng",
+			sessionId: "session123",
+		},
+		{
+			name:      "Persist initial Language (Swahili)",
+			code:      "swa",
+			sessionId: "session456",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := h.persistInitialLanguageCode(ctx, tt.sessionId, tt.code)
+			if err != nil {
+				t.Logf(err.Error())
+			}
+			code, err := store.ReadEntry(ctx, tt.sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
+
+			assert.Equal(t, tt.code, string(code))
+		})
+	}
+}
