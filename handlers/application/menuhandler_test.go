@@ -2563,6 +2563,7 @@ func TestViewTransactionStatement(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
+	flag_incorrect_statement, _ := fm.GetFlag("flag_incorrect_statement")
 
 	h := &MenuHandlers{
 		userdataStore: userStore,
@@ -2611,10 +2612,63 @@ func TestViewTransactionStatement(t *testing.T) {
 		}
 	}
 
-	expectedTransactionData := []byte("Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM")
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedError  error
+		expectedResult resource.Result
+	}{
+		{
+			name:           "Valid input - index 1",
+			input:          []byte("1"),
+			expectedError:  nil,
+			expectedResult: resource.Result{
+				Content: "Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM",
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:           "Valid input - index 2",
+			input:          []byte("2"),
+			expectedError:  nil,
+			expectedResult: resource.Result{
+				Content: "Received 20 SRF\nFrom: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0xq34wresfdb44\nDate: 2024-10-03 07:23:12 AM",
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:           "Invalid input - index 0",
+			input:          []byte("0"),
+			expectedError:  nil,
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:           "Invalid input - index 12",
+			input:          []byte("12"),
+			expectedError:  fmt.Errorf("invalid input: index must be between 1 and 10"),
+			expectedResult: resource.Result{},
+		},
+		{
+			name:           "Invalid input - non-numeric",
+			input:          []byte("abc"),
+			expectedError:  fmt.Errorf("invalid input: must be a number between 1 and 10"),
+			expectedResult: resource.Result{},
+		},
+	}
 
-	res, err := h.ViewTransactionStatement(ctx, "view_transaction_statement", []byte("1"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.ViewTransactionStatement(ctx, "view_transaction_statement", tt.input)
 
-	assert.NoError(t, err)
-	assert.Equal(t, res.Content, string(expectedTransactionData))
+			if tt.expectedError != nil {
+				assert.EqualError(t, err, tt.expectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
 }
