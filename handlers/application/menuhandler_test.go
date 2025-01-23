@@ -2487,7 +2487,63 @@ func TestCheckTransactions(t *testing.T) {
 }
 
 func TestGetTransactionsList(t *testing.T) {
+	sessionId := "session123"
+	publicKey := "0X13242618721"
 
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	// Initialize MenuHandlers
+	h := &MenuHandlers{
+		userdataStore:        userStore,
+		prefixDb:             spdb,
+		ReplaceSeparatorFunc: mockReplaceSeparator,
+	}
+
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+	}
+
+	data := store.ProcessTransfers(mockTXResponse)
+
+	// Store all transaction data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_TX_SENDERS:    data.Senders,
+		storedb.DATA_TX_RECIPIENTS: data.Recipients,
+		storedb.DATA_TX_VALUES:     data.TransferValues,
+		storedb.DATA_TX_ADDRESSES:  data.Addresses,
+		storedb.DATA_TX_HASHES:     data.TxHashes,
+		storedb.DATA_TX_DATES:      data.Dates,
+		storedb.DATA_TX_SYMBOLS:    data.Symbols,
+		storedb.DATA_TX_DECIMALS:   data.Decimals,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedTransactionList := []byte("1: Sent 10 SRF " + time.Now().Format("2006-01-02") + "\n2: Received 20 SRF " + time.Now().Format("2006-01-02"))
+
+	res, err := h.GetTransactionsList(ctx, "", []byte(""))
+
+	assert.NoError(t, err)
+	assert.Equal(t, res.Content, string(expectedTransactionList))
 }
 
 func TestViewTransactionStatement(t *testing.T) {
