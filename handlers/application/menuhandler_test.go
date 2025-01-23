@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"git.defalsify.org/vise.git/cache"
 	"git.defalsify.org/vise.git/lang"
@@ -2427,4 +2428,68 @@ func TestPersistInitialLanguageCode(t *testing.T) {
 			assert.Equal(t, tt.code, string(code))
 		})
 	}
+}
+
+func TestCheckTransactions(t *testing.T) {
+	mockAccountService := new(mocks.MockAccountService)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx, store := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+
+	h := &MenuHandlers{
+		userdataStore:  store,
+		accountService: mockAccountService,
+		prefixDb:       spdb,
+		flagManager:    fm,
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
+		},
+	}
+
+	expectedSenders := []byte("0X13242618721\n0x41c188d63Qa")
+
+	mockAccountService.On("FetchTransactions", string(publicKey)).Return(mockTXResponse, nil)
+
+	_, err = h.CheckTransactions(ctx, "check_transactions", []byte(""))
+	assert.NoError(t, err)
+
+	// Read tranfers senders data from the store
+	senderData, err := spdb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_SENDERS))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert that the data is stored correctly
+	assert.Equal(t, expectedSenders, senderData)
+
+	mockAccountService.AssertExpectations(t)
+}
+
+func TestGetTransactionsList(t *testing.T) {
+
+}
+
+func TestViewTransactionStatement(t *testing.T) {
+
 }
