@@ -1082,6 +1082,11 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER))
 	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION))
 	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
+	alias := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS))
+
+	if alias != defaultValue {
+		alias = strings.Split(alias, ".")[0]
+	}
 
 	// Construct the full name
 	name := person.ConstructName(firstName, familyName, defaultValue)
@@ -1098,18 +1103,18 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	switch language.Code {
 	case "eng":
 		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	case "swa":
 		res.Content = fmt.Sprintf(
-			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\n",
-			name, gender, age, location, offerings,
+			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\nLakabu yako: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	default:
 		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	}
 
