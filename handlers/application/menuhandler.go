@@ -1165,6 +1165,10 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 	if err != nil {
 		return res, err
 	}
+	err = h.constructAccountAlias(ctx)
+	if err != nil {
+		return res, err
+	}
 	return res, nil
 }
 
