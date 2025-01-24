@@ -1679,7 +1679,7 @@ func TestValidateRecipient(t *testing.T) {
 		},
 		{
 			name:           "Test with alias recepient",
-			input:          []byte("alias123"),
+			input:          []byte("alias123.sarafu.local"),
 			expectedResult: resource.Result{},
 		},
 	}
