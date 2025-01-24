@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	"git.defalsify.org/vise.git/db"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
-	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
 
-// execute all 
+// execute all
 func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore, tokenAddress string) error {
 	err := eu.updateTokenList(ctx, identity, userStore)
 	if err != nil {
@@ -47,7 +47,6 @@ func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Iden
 	return nil
 }
 
-
 // set default token to given symbol.
 func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore, activeSym string) error {
 	pfxDb := toPrefixDb(userStore, identity.SessionId)
@@ -58,7 +57,6 @@ func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identi
 	}
 	return store.UpdateVoucherData(ctx, userStore, identity.SessionId, tokenData)
 }
-
 
 // handle token transfer.
 //
@@ -189,7 +187,7 @@ func (eu *EventsUpdater) updateTokenTransferList(ctx context.Context, identity i
 		return err
 	}
 
-	for i, tx := range(txs) {
+	for i, tx := range txs {
 		r = append(r, eu.formatFunc(apievent.EventTokenTransferTag, i, tx))
 	}
 

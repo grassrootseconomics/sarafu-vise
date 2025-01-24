@@ -3,8 +3,8 @@ package store
 import (
 	"testing"
 
-	"github.com/alecthomas/assert/v2"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/alecthomas/assert/v2"
 )
 
 func TestParseAndScaleAmount(t *testing.T) {

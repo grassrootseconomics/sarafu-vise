@@ -10,7 +10,7 @@ type LangVar struct {
 	v []lang.Language
 }
 
-func(lv *LangVar) Set(s string) error {
+func (lv *LangVar) Set(s string) error {
 	v, err := lang.LanguageFromCode(s)
 	if err != nil {
 		return err
@@ -19,16 +19,14 @@ func(lv *LangVar) Set(s string) error {
 	return err
 }
 
-func(lv *LangVar) String() string {
+func (lv *LangVar) String() string {
 	var s []string
-	for _, v := range(lv.v) {
+	for _, v := range lv.v {
 		s = append(s, v.Code)
 	}
 	return strings.Join(s, ",")
 }
 
-func(lv *LangVar) Langs() []lang.Language {
+func (lv *LangVar) Langs() []lang.Language {
 	return lv.v
 }
-
-

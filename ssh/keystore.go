@@ -29,7 +29,7 @@ func NewSshKeyStore(ctx context.Context, dbDir string) (*SshKeyStore, error) {
 	return keyStore, nil
 }
 
-func(s *SshKeyStore) AddFromFile(ctx context.Context, fp string, sessionId string) error {
+func (s *SshKeyStore) AddFromFile(ctx context.Context, fp string, sessionId string) error {
 	_, err := os.Stat(fp)
 	if err != nil {
 		return fmt.Errorf("cannot open ssh server public key file: %v\n", err)
@@ -51,7 +51,7 @@ func(s *SshKeyStore) AddFromFile(ctx context.Context, fp string, sessionId strin
 	return s.store.Put(ctx, k, []byte(sessionId))
 }
 
-func(s *SshKeyStore) Get(ctx context.Context, pubKey ssh.PublicKey) (string, error) {
+func (s *SshKeyStore) Get(ctx context.Context, pubKey ssh.PublicKey) (string, error) {
 	s.store.SetLanguage(nil)
 	s.store.SetSession("")
 	s.store.SetPrefix(storage.DATATYPE_EXTEND)
@@ -63,6 +63,6 @@ func(s *SshKeyStore) Get(ctx context.Context, pubKey ssh.PublicKey) (string, err
 	return string(v), nil
 }
 
-func(s *SshKeyStore) Close() error {
-	return s.store.Close()
+func (s *SshKeyStore) Close(ctx context.Context) error {
+	return s.store.Close(ctx)
 }

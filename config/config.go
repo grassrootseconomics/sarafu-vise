@@ -8,19 +8,29 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/env"
 )
 
-func init() {
-	env.LoadEnvVariables()
+var (
+	GetConns = viseconfig.GetConns
+	EnvPath  string
+)
+
+func loadEnv() {
+	if EnvPath == "" {
+		env.LoadEnvVariables()
+	} else {
+		env.LoadEnvVariablesPath(EnvPath)
+	}
 }
 
 const (
 	defaultSSHHost  string = "127.0.0.1"
 	defaultSSHPort  uint   = 7122
 	defaultHTTPHost string = "127.0.0.1"
-	defaultHTTPPort uint   = 7123
+	defaultHTTPPort uint     = 7123
 	defaultDomain          = "sarafu.local"
 )
 
 func LoadConfig() error {
+	loadEnv()
 	err := viseconfig.LoadConfig()
 	if err != nil {
 		return err
@@ -42,9 +52,6 @@ func SearchDomains() []string {
 	return ParsedDomains
 }
 
-func DbConn() string {
-	return viseconfig.DbConn
-}
 
 func Language() string {
 	return viseconfig.DefaultLanguage

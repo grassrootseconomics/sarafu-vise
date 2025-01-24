@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/logging"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	"git.defalsify.org/vise.git/persist"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 var (
@@ -17,9 +17,9 @@ var (
 )
 
 type EventsUpdater struct {
-	api remote.AccountService
+	api        remote.AccountService
 	formatFunc func(string, int, any) string
-	store storage.StorageService 
+	store      storage.StorageService
 }
 
 func NewEventsUpdater(api remote.AccountService, store storage.StorageService) *EventsUpdater {

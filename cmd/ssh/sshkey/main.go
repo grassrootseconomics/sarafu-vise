@@ -34,7 +34,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-	defer store.Close()
+	defer store.Close(ctx)
 
 	err = store.AddFromFile(ctx, sshKeyFile, sessionId)
 	if err != nil {

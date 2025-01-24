@@ -12,7 +12,7 @@ func (p *Profile) InsertOrShift(index int, value string) {
 		for len(p.ProfileItems) < index {
 			p.ProfileItems = append(p.ProfileItems, "0")
 		}
-		p.ProfileItems = append(p.ProfileItems, "0") 
+		p.ProfileItems = append(p.ProfileItems, "0")
 		p.ProfileItems[index] = value
 	}
 }

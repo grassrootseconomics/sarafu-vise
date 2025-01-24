@@ -2,8 +2,8 @@ package ssh
 
 import (
 	"context"
-	"encoding/hex"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -16,9 +16,9 @@ import (
 	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
-	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
 var (
@@ -26,32 +26,32 @@ var (
 )
 
 type auther struct {
-	Ctx context.Context
+	Ctx      context.Context
 	keyStore *SshKeyStore
-	auth map[string]string
+	auth     map[string]string
 }
 
 func NewAuther(ctx context.Context, keyStore *SshKeyStore) *auther {
 	return &auther{
-		Ctx: ctx,
+		Ctx:      ctx,
 		keyStore: keyStore,
-		auth: make(map[string]string),
+		auth:     make(map[string]string),
 	}
 }
 
-func(a *auther) Check(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
+func (a *auther) Check(conn ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
 	logg.TraceCtxf(a.Ctx, "looking for publickey", "pubkey", fmt.Sprintf("%x", pubKey))
 	va, err := a.keyStore.Get(a.Ctx, pubKey)
 	if err != nil {
 		return nil, err
 	}
 	ka := hex.EncodeToString(conn.SessionID())
-	a.auth[ka] = va 
+	a.auth[ka] = va
 	fmt.Fprintf(os.Stderr, "connect: %s -> %s\n", ka, va)
 	return nil, nil
 }
 
-func(a *auther) FromConn(c *ssh.ServerConn) (string, error) {
+func (a *auther) FromConn(c *ssh.ServerConn) (string, error) {
 	if c == nil {
 		return "", errors.New("nil server conn")
 	}
@@ -61,8 +61,7 @@ func(a *auther) FromConn(c *ssh.ServerConn) (string, error) {
 	return a.Get(c.Conn.SessionID())
 }
 
-
-func(a *auther) Get(k []byte) (string, error) {
+func (a *auther) Get(k []byte) (string, error) {
 	ka := hex.EncodeToString(k)
 	v, ok := a.auth[ka]
 	if !ok {
@@ -72,20 +71,19 @@ func(a *auther) Get(k []byte) (string, error) {
 }
 
 type SshRunner struct {
-	Ctx context.Context
-	Cfg engine.Config
-	FlagFile string
-	Conn storage.ConnData
-	ResourceDir string
-	Debug bool
+	Ctx        context.Context
+	Cfg        engine.Config
+	FlagFile   string
+	Conn       storage.Conns
+	Debug      bool
 	SrvKeyFile string
-	Host string
-	Port uint
-	wg sync.WaitGroup
-	lst net.Listener
+	Host       string
+	Port       uint
+	wg         sync.WaitGroup
+	lst        net.Listener
 }
 
-func(s *SshRunner) serve(ctx context.Context, sessionId string, ch ssh.NewChannel, en engine.Engine) error {
+func (s *SshRunner) serve(ctx context.Context, sessionId string, ch ssh.NewChannel, en engine.Engine) error {
 	if ch == nil {
 		return errors.New("nil channel")
 	}
@@ -102,7 +100,7 @@ func(s *SshRunner) serve(ctx context.Context, sessionId string, ch ssh.NewChanne
 	go func(reqIn <-chan *ssh.Request) {
 		defer s.wg.Done()
 		for req := range reqIn {
-			req.Reply(req.Type == "shell", nil)	
+			req.Reply(req.Type == "shell", nil)
 		}
 		_ = requests
 	}(requests)
@@ -142,13 +140,13 @@ func(s *SshRunner) serve(ctx context.Context, sessionId string, ch ssh.NewChanne
 	return nil
 }
 
-func(s *SshRunner) Stop() error {
+func (s *SshRunner) Stop() error {
 	return s.lst.Close()
 }
 
-func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
+func (s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	ctx := s.Ctx
-	menuStorageService := storage.NewMenuStorageService(s.Conn, s.ResourceDir)
+	menuStorageService := storage.NewMenuStorageService(s.Conn)
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
@@ -180,7 +178,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 
 	// TODO: clear up why pointer here and by-value other cmds
-	accountService := services.New(ctx, menuStorageService, s.Conn)
+	accountService := services.New(ctx, menuStorageService)
 
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
@@ -194,7 +192,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	}
 	// TODO: this is getting very hacky!
 	closer := func() {
-		err := menuStorageService.Close()
+		err := menuStorageService.Close(ctx)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "menu storage service cleanup fail", "err", err)
 		}
@@ -203,7 +201,7 @@ func(s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 }
 
 // adapted example from crypto/ssh package, NewServerConn doc
-func(s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
+func (s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
 	s.Ctx = ctx
 	running := true
 
@@ -256,7 +254,7 @@ func(s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
 					ssh.DiscardRequests(rC)
 					s.wg.Done()
 				}()
-				
+
 				sessionId, err := auth.FromConn(srvConn)
 				if err != nil {
 					logg.ErrorCtxf(ctx, "Cannot find authentication")
@@ -268,7 +266,7 @@ func(s *SshRunner) Run(ctx context.Context, keyStore *SshKeyStore) {
 					return
 				}
 				defer func() {
-					err := en.Finish()
+					err := en.Finish(ctx)
 					if err != nil {
 						logg.ErrorCtxf(ctx, "engine won't stop", "err", err)
 					}

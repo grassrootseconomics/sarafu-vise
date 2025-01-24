@@ -17,13 +17,13 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
-	httprequest "git.grassecon.net/grassrootseconomics/visedriver/request/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
+	httprequest "git.grassecon.net/grassrootseconomics/visedriver/request/http"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 )
 
 var (
@@ -35,8 +35,7 @@ var (
 func main() {
 	config.LoadConfig()
 
-	var connStr string
-	var resourceDir string
+	override := config.NewOverride()
 	var size uint
 	var engineDebug bool
 	var host string
@@ -44,9 +43,14 @@ func main() {
 	var err error
 	var gettextDir string
 	var langs args.LangVar
+	var resourceDir string
 
-	flag.StringVar(&resourceDir, "resourcedir", path.Join("services", "registration"), "resource dir")
-	flag.StringVar(&connStr, "c", "", "connection string")
+	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(override.ResourceConn, "resource", "?", "resource data directory")
+	flag.StringVar(&resourceDir, "resource-dir", "", "resource data directory. If set, overrides --resource to create a non-binary fsdb for the given path.")
+	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
+
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&host, "h", config.Host(), "http host")
@@ -55,16 +59,18 @@ func main() {
 	flag.Var(&langs, "language", "add symbol resolution for language")
 	flag.Parse()
 
-	if connStr == "" {
-		connStr = config.DbConn()
+	if resourceDir != "" {
+		*override.ResourceConn = resourceDir
+		override.ResourceConnMode = storage.DBMODE_TEXT
 	}
-	connData, err := storage.ToConnData(connStr)
+	config.Apply(override)
+	conns, err := config.GetConns()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "connstr err: %v", err)
+		fmt.Fprintf(os.Stderr, "conn specification error: %v\n", err)
 		os.Exit(1)
 	}
 
-	logg.Infof("start command", "conn", connData, "resourcedir", resourceDir, "outputsize", size)
+	logg.Infof("start command", "conn", conns, "outputsize", size)
 
 	ctx := context.Background()
 
@@ -88,7 +94,7 @@ func main() {
 		cfg.EngineDebug = true
 	}
 
-	menuStorageService := storage.NewMenuStorageService(connData, resourceDir)
+	menuStorageService := storage.NewMenuStorageService(conns)
 
 	rs, err := menuStorageService.GetResource(ctx)
 	if err != nil {
@@ -101,7 +107,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer userdataStore.Close()
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -116,8 +121,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	accountService := services.New(ctx, menuStorageService, connData)
-	
+	accountService := services.New(ctx, menuStorageService)
+
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -129,7 +134,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	defer stateStore.Close()
 
 	//accountService := services.New(ctx, menuStorageService, connData)
 
@@ -140,7 +144,10 @@ func main() {
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),
 		Handler: sh,
 	}
-	s.RegisterOnShutdown(sh.Shutdown)
+	shutdownFunc := func() {
+		sh.Shutdown(ctx)
+	}
+	s.RegisterOnShutdown(shutdownFunc)
 
 	cint := make(chan os.Signal)
 	cterm := make(chan os.Signal)
