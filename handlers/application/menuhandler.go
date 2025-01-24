@@ -2268,14 +2268,23 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	}
 	firstName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
 	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 	familyName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
 	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 	pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
