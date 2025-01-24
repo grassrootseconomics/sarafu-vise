@@ -38,10 +38,10 @@ func main() {
 	var langs args.LangVar
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
-	flag.StringVar(override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
-	flag.StringVar(override.ResourceConn, "resource", "?", "resource data directory")
-	flag.StringVar(override.UserConn, "userdata", "?", "userdata store connection string")
-	flag.StringVar(override.StateConn, "state", "?", "state store connection string")
+	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
+	flag.StringVar(&override.ResourceConn, "resource", "?", "resource data directory")
+	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
+	flag.StringVar(&override.StateConn, "state", "?", "state store connection string")
 	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
 	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.StringVar(&gettextDir, "gettext", "", "use gettext translations from given directory")
