@@ -2028,7 +2028,7 @@ func TestSetDefaultVoucher(t *testing.T) {
 		{
 			name: "Test set default voucher when no active voucher is set",
 			vouchersResp: []dataserviceapi.TokenHoldings{
-				dataserviceapi.TokenHoldings{
+				{
 					ContractAddress: "0x123",
 					TokenSymbol:     "TOKEN1",
 					TokenDecimals:   "18",
@@ -2276,7 +2276,6 @@ func TestCountIncorrectPINAttempts(t *testing.T) {
 	pinAttemptsCount := uint8(pinAttemptsValue)
 	expectedAttempts := attempts + 1
 	assert.Equal(t, pinAttemptsCount, expectedAttempts)
-
 }
 
 func TestResetIncorrectPINAttempts(t *testing.T) {
@@ -2299,7 +2298,6 @@ func TestResetIncorrectPINAttempts(t *testing.T) {
 		t.Logf(err.Error())
 	}
 	assert.Equal(t, "0", string(incorrectAttempts))
-
 }
 
 func TestPersistLanguageCode(t *testing.T) {
@@ -2619,27 +2617,27 @@ func TestViewTransactionStatement(t *testing.T) {
 		expectedResult resource.Result
 	}{
 		{
-			name:           "Valid input - index 1",
-			input:          []byte("1"),
-			expectedError:  nil,
+			name:          "Valid input - index 1",
+			input:         []byte("1"),
+			expectedError: nil,
 			expectedResult: resource.Result{
-				Content: "Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM",
+				Content:   "Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM",
 				FlagReset: []uint32{flag_incorrect_statement},
 			},
 		},
 		{
-			name:           "Valid input - index 2",
-			input:          []byte("2"),
-			expectedError:  nil,
+			name:          "Valid input - index 2",
+			input:         []byte("2"),
+			expectedError: nil,
 			expectedResult: resource.Result{
-				Content: "Received 20 SRF\nFrom: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0xq34wresfdb44\nDate: 2024-10-03 07:23:12 AM",
+				Content:   "Received 20 SRF\nFrom: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0xq34wresfdb44\nDate: 2024-10-03 07:23:12 AM",
 				FlagReset: []uint32{flag_incorrect_statement},
 			},
 		},
 		{
-			name:           "Invalid input - index 0",
-			input:          []byte("0"),
-			expectedError:  nil,
+			name:          "Invalid input - index 0",
+			input:         []byte("0"),
+			expectedError: nil,
 			expectedResult: resource.Result{
 				FlagReset: []uint32{flag_incorrect_statement},
 			},
