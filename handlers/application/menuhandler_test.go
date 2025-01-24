@@ -1797,37 +1797,37 @@ func TestGetProfile(t *testing.T) {
 	}{
 		{
 			name:         "Test with full profile information in eng",
-			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
-			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB, storedb.DATA_ACCOUNT_ALIAS},
+			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976", "DoeJohn"},
 			languageCode: "eng",
 			result: resource.Result{
 				Content: fmt.Sprintf(
-					"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-					"John Doee", "Male", "49", "Kilifi", "Bananas",
+					"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+					"John Doee", "Male", "49", "Kilifi", "Bananas", "DoeJohn",
 				),
 			},
 		},
 		{
 			name:         "Test with with profile information in swa",
-			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
-			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB, storedb.DATA_ACCOUNT_ALIAS},
+			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976", "DoeJohn"},
 			languageCode: "swa",
 			result: resource.Result{
 				Content: fmt.Sprintf(
-					"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\n",
-					"John Doee", "Male", "49", "Kilifi", "Bananas",
+					"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\nLakabu yako: %s\n",
+					"John Doee", "Male", "49", "Kilifi", "Bananas", "DoeJohn",
 				),
 			},
 		},
 		{
 			name:         "Test with with profile information with language that is not yet supported",
-			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB},
-			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976"},
+			keys:         []storedb.DataTyp{storedb.DATA_FAMILY_NAME, storedb.DATA_FIRST_NAME, storedb.DATA_GENDER, storedb.DATA_OFFERINGS, storedb.DATA_LOCATION, storedb.DATA_YOB, storedb.DATA_ACCOUNT_ALIAS},
+			profileInfo:  []string{"Doee", "John", "Male", "Bananas", "Kilifi", "1976", "DoeJohn"},
 			languageCode: "nor",
 			result: resource.Result{
 				Content: fmt.Sprintf(
-					"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-					"John Doee", "Male", "49", "Kilifi", "Bananas",
+					"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+					"John Doee", "Male", "49", "Kilifi", "Bananas", "DoeJohn",
 				),
 			},
 		},
