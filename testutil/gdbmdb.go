@@ -21,7 +21,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	override.StateConn = &stateDir
+	override.StateConn = stateDir
 	userDir, err := os.MkdirTemp("", "sarafu-vise-menutraversal-gdbm-user-")
 	if err != nil {
 		panic(err)
@@ -30,5 +30,5 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	override.UserConn = &userDir
+	override.UserConn = userDir
 }
