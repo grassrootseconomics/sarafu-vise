@@ -23,6 +23,18 @@ func NewOverride() *viseconfig.Override {
 }
 
 func Apply(o *viseconfig.Override) error {
+	if *o.DbConn == "?" {
+		o.DbConn = nil
+	}
+	if *o.ResourceConn == "?" {
+		o.ResourceConn = nil
+	}
+	if *o.UserConn == "?" {
+		o.UserConn = nil
+	}
+	if *o.StateConn == "?" {
+		o.StateConn = nil
+	}
 	viseconfig.ApplyConn(o)
 	return nil
 }
