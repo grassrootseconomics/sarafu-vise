@@ -23,7 +23,9 @@ import (
 	"git.grassecon.net/grassrootseconomics/common/person"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/common/pin"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -662,6 +664,10 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
 			return res, err
 		}
+		err := h.constructAccountAlias(ctx)
+		if err != nil {
+			return res, err
+		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 	} else {
 		if firstNameSet {
@@ -1076,6 +1082,11 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	gender := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER))
 	location := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION))
 	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
+	alias := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS))
+
+	if alias != defaultValue {
+		alias = strings.Split(alias, ".")[0]
+	}
 
 	// Construct the full name
 	name := person.ConstructName(firstName, familyName, defaultValue)
@@ -1092,18 +1103,18 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	switch language.Code {
 	case "eng":
 		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	case "swa":
 		res.Content = fmt.Sprintf(
-			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\n",
-			name, gender, age, location, offerings,
+			"Jina: %s\nJinsia: %s\nUmri: %s\nEneo: %s\nUnauza: %s\nLakabu yako: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	default:
 		res.Content = fmt.Sprintf(
-			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\n",
-			name, gender, age, location, offerings,
+			"Name: %s\nGender: %s\nAge: %s\nLocation: %s\nYou provide: %s\nYour alias: %s\n",
+			name, gender, age, location, offerings, alias,
 		)
 	}
 
@@ -1156,6 +1167,10 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 		return res, fmt.Errorf("missing session")
 	}
 	err := h.insertProfileItems(ctx, sessionId, &res)
+	if err != nil {
+		return res, err
+	}
+	err = h.constructAccountAlias(ctx)
 	if err != nil {
 		return res, err
 	}
@@ -1399,16 +1414,16 @@ func (h *MenuHandlers) FetchCommunityBalance(ctx context.Context, sym string, in
 // TODO: split up functino
 func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	var AliasAddressResult string
+	var AliasAddress *models.AliasAddress
 	store := h.userdataStore
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	recipient := string(input)
 
@@ -1468,21 +1483,32 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 			}
 
 		case "alias":
-			// Call the API to validate and retrieve the address for the alias
-			r, aliasErr := h.accountService.CheckAliasAddress(ctx, recipient)
-			if aliasErr != nil {
-				res.FlagSet = append(res.FlagSet, flag_api_error)
-				res.Content = recipient
-
-				logg.ErrorCtxf(ctx, "failed on CheckAliasAddress", "error", aliasErr)
-				return res, err
+			if strings.Contains(recipient, ".") {
+				AliasAddress, err = h.accountService.CheckAliasAddress(ctx, recipient)
+				if err == nil {
+					AliasAddressResult = AliasAddress.Address
+				}
+			} else {
+				//Perform a search for each search domain,break on first match
+				for _, domain := range config.SearchDomains() {
+					fqdn := fmt.Sprintf("%s.%s", recipient, domain)
+					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
+					if err == nil {
+						AliasAddressResult = AliasAddress.Address
+						continue
+					}
+				}
 			}
-
-			// Alias validation succeeded, save the Ethereum address
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(r.Address))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", r.Address, "error", err)
-				return res, err
+			if AliasAddressResult == "" {
+				res.Content = recipient
+				res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
+				return res, nil
+			} else {
+				err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(AliasAddressResult))
+				if err != nil {
+					logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", AliasAddressResult, "error", err)
+					return res, err
+				}
 			}
 		}
 	}
@@ -2015,7 +2041,6 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// get the active address
@@ -2241,4 +2266,47 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 		return err
 	}
 	return h.persistInitialLanguageCode(ctx, sessionId, code)
+}
+
+func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
+	var alias string
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return fmt.Errorf("missing session")
+	}
+	firstName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
+	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	familyName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
+	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		if db.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
+	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
+	if err != nil {
+		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
+	}
+	alias = aliasResult.Alias
+	//Store the alias
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_ACCOUNT_ALIAS, "value", alias, "error", err)
+		return err
+	}
+	return nil
 }
