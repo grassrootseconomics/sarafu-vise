@@ -2693,3 +2693,69 @@ func TestRetrieveBlockedNumber(t *testing.T) {
 
 	assert.Equal(t, blockedNumber, res.Content)
 }
+
+func TestMaxAmount(t *testing.T) {
+	sessionId := "session123"
+	activeBal := "500"
+
+	tests := []struct {
+		name           string
+		sessionId      string
+		activeBal      string
+		expectedError  bool
+		expectedResult resource.Result
+	}{
+		{
+			name:           "Valid session ID and active balance",
+			sessionId:      sessionId,
+			activeBal:      activeBal,
+			expectedError:  false,
+			expectedResult: resource.Result{Content: activeBal},
+		},
+		{
+			name:           "Missing Session ID",
+			sessionId:      "",
+			activeBal:      activeBal,
+			expectedError:  true,
+			expectedResult: resource.Result{},
+		},
+		{
+			name:           "Failed to Read Active Balance",
+			sessionId:      sessionId,
+			activeBal:      "", // failure to read active balance
+			expectedError:  true,
+			expectedResult: resource.Result{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, userStore := InitializeTestStore(t)
+			if tt.sessionId != "" {
+				ctx = context.WithValue(ctx, "SessionId", tt.sessionId)
+			}
+
+			h := &MenuHandlers{
+				userdataStore: userStore,
+			}
+
+			// Write active balance to the store only if it's not empty
+			if tt.activeBal != "" {
+				err := userStore.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			res, err := h.MaxAmount(ctx, "max_amount", []byte(""))
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
