@@ -2898,3 +2898,34 @@ func TestValidateBlockedNumber(t *testing.T) {
 		})
 	}
 }
+
+func TestSaveOthersTemporaryPin(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.SaveOthersTemporaryPin(ctx, "save_others_temporary_pin", []byte(testPin))
+
+	assert.NoError(t, err)
+
+	othersHashedPin, err := userStore.ReadEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !pin.VerifyPIN(string(othersHashedPin), string(testPin)) {
+		t.Fatal(err)
+	}
+}
