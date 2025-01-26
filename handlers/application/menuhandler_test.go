@@ -2826,3 +2826,75 @@ func TestShowBlockedAccount(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateBlockedNumber(t *testing.T) {
+	sessionId := "session123"
+	validNumber := "+254712345678"
+	invalidNumber := "12343"              // Invalid phone number
+	unregisteredNumber := "+254734567890" // Valid but unregistered number
+	publicKey := "0X13242618721"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_unregistered_number, _ := fm.GetFlag("flag_unregistered_number")
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		flagManager:   fm,
+	}
+
+	err = userStore.WriteEntry(ctx, validNumber, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedResult resource.Result
+	}{
+		{
+			name:           "Valid and registered number",
+			input:          []byte(validNumber),
+			expectedResult: resource.Result{},
+		},
+		{
+			name:  "Invalid Phone Number",
+			input: []byte(invalidNumber),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_unregistered_number},
+			},
+		},
+		{
+			name:  "Unregistered Phone Number",
+			input: []byte(unregisteredNumber),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_unregistered_number},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.ValidateBlockedNumber(ctx, "validate_blocked_number", tt.input)
+
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.expectedResult, res)
+
+			if tt.name == "Valid and registered number" {
+				blockedNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				assert.Equal(t, validNumber, string(blockedNumber))
+			}
+		})
+	}
+}
