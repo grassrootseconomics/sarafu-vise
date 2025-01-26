@@ -2759,3 +2759,70 @@ func TestMaxAmount(t *testing.T) {
 		})
 	}
 }
+
+func TestQuitWithHelp(t *testing.T) {
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
+
+	sessionId := "session123"
+
+	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		flagManager: fm,
+	}
+	tests := []struct {
+		name           string
+		input          []byte
+		status         string
+		expectedResult resource.Result
+	}{
+		{
+			name: "Test quit with help message",
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_account_authorized},
+				Content:   "For more help, please call: 0757628885",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, _ := h.QuitWithHelp(ctx, "quit_with_help", tt.input)
+			//Assert that the aflag_account_authorized has been reset to the result
+			assert.Equal(t, res, tt.expectedResult, "Expected result should be equal to the actual result")
+		})
+	}
+}
+
+func TestShowBlockedAccount(t *testing.T) {
+	sessionId := "session123"
+	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
+
+	h := &MenuHandlers{}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		status         string
+		expectedResult resource.Result
+	}{
+		{
+			name: "Test quit with Show Blocked Account",
+			expectedResult: resource.Result{
+				Content: "Your account has been locked. For help on how to unblock your account, contact support at: 0757628885",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, _ := h.ShowBlockedAccount(ctx, "show_blocked_account", tt.input)
+			//Assert that the result is as expected
+			assert.Equal(t, res, tt.expectedResult, "Expected result should be equal to the actual result")
+		})
+	}
+}
