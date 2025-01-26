@@ -2670,3 +2670,26 @@ func TestViewTransactionStatement(t *testing.T) {
 		})
 	}
 }
+
+func TestRetrieveBlockedNumber(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "0712345678"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := h.RetrieveBlockedNumber(ctx, "retrieve_blocked_number", []byte(""))
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, blockedNumber, res.Content)
+}
