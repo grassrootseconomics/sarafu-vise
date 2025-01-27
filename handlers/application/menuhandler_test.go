@@ -3006,7 +3006,6 @@ func TestCheckBlockedNumPinMisMatch(t *testing.T) {
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-
 	hashedPIN, err := pin.HashPIN(testPin)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
@@ -3061,6 +3060,129 @@ func TestCheckBlockedNumPinMisMatch(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestGetCurrentProfileInfo(t *testing.T) {
+	sessionId := "session123"
+	ctx, store := InitializeTestStore(t)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_firstname_set, _ := fm.GetFlag("flag_firstname_set")
+	flag_familyname_set, _ := fm.GetFlag("flag_familyname_set")
+	flag_yob_set, _ := fm.GetFlag("flag_yob_set")
+	flag_gender_set, _ := fm.GetFlag("flag_gender_set")
+	flag_location_set, _ := fm.GetFlag("flag_location_set")
+	flag_offerings_set, _ := fm.GetFlag("flag_offerings_set")
+	flag_back_set, _ := fm.GetFlag("flag_back_set")
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+		st:            state.NewState(16),
+	}
+
+	tests := []struct {
+		name     string
+		execPath string
+		dbKey    storedb.DataTyp
+		value    string
+		expected resource.Result
+	}{
+		{
+			name:     "Test fetching first name",
+			execPath: "edit_first_name",
+			dbKey:    storedb.DATA_FIRST_NAME,
+			value:    "John",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_firstname_set},
+				Content:   "John",
+			},
+		},
+		{
+			name:     "Test fetching family name",
+			execPath: "edit_family_name",
+			dbKey:    storedb.DATA_FAMILY_NAME,
+			value:    "Doe",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_familyname_set},
+				Content:   "Doe",
+			},
+		},
+		{
+			name:     "Test fetching year of birth",
+			execPath: "edit_yob",
+			dbKey:    storedb.DATA_YOB,
+			value:    "1980",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_yob_set},
+				Content:   "1980",
+			},
+		},
+		{
+			name:     "Test fetching gender",
+			execPath: "edit_gender",
+			dbKey:    storedb.DATA_GENDER,
+			value:    "Male",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_gender_set},
+				Content:   "Male",
+			},
+		},
+		{
+			name:     "Test fetching location",
+			execPath: "edit_location",
+			dbKey:    storedb.DATA_LOCATION,
+			value:    "Nairobi",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_location_set},
+				Content:   "Nairobi",
+			},
+		},
+		{
+			name:     "Test fetching offerings",
+			execPath: "edit_offerings",
+			dbKey:    storedb.DATA_OFFERINGS,
+			value:    "Fruits",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_offerings_set},
+				Content:   "Fruits",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx = context.WithValue(ctx, "SessionId", sessionId)
+			ctx = context.WithValue(ctx, "Language", lang.Language{
+				Code: "eng",
+			})
+			// Set ExecPath to include tt.execPath
+			h.st.ExecPath = []string{tt.execPath}
+
+			if tt.value != "" {
+				err := store.WriteEntry(ctx, sessionId, tt.dbKey, []byte(tt.value))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			res, err := h.GetCurrentProfileInfo(ctx, tt.execPath, []byte(""))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tt.expected, res, "Result should match the expected output")
 		})
 	}
 }
