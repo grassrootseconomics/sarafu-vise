@@ -140,7 +140,7 @@
                 },
                 {
                     "input": "1235",
-                    "expectedContent": "Incorrect PIN. You have: 2 remaining attempt(s).\n1:Retry\n9:Quit"
+                    "expectedContent": "Incorrect PIN. You have: {attempts} remaining attempt(s).\n1:Retry\n9:Quit"
                 },
                 {
                     "input": "1",
@@ -436,6 +436,47 @@
                 {
                     "input": "0",
                     "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
+            "name": "menu_block_account_via_view_profile",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "3",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "My profile\n1:Edit name\n2:Edit family name\n3:Edit gender\n4:Edit year of birth\n5:Edit location\n6:Edit offerings\n7:View profile\n0:Back"
+                },
+                {
+                    "input": "7",
+                    "expectedContent": "Please enter your PIN:"
+                },
+                {
+                    "input": "1254",
+                    "expectedContent": "Incorrect PIN. You have: {attempts} remaining attempt(s).\n1:Retry\n9:Quit"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Please enter your PIN:"
+                },
+                {
+                    "input": "1254",
+                    "expectedContent": "Incorrect PIN. You have: {attempts} remaining attempt(s).\n1:Retry\n9:Quit"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Please enter your PIN:"
+                },
+                {
+                    "input": "1254",
+                    "expectedContent": "Your account has been locked. For help on how to unblock your account, contact support at: 0757628885"
                 }
             ]
         }
