@@ -1,0 +1,16 @@
+/**
+!/args
+!/cmd/africastalking
+!/cmd/ssh
+!/config
+!/debug
+!/handlers
+!/internal
+!/profile
+!/services
+!/ssh
+!/store
+!/LICENSE
+!/README.md
+!/go.*
+!/.env.example
