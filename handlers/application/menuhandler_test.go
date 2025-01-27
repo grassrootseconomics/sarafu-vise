@@ -2911,21 +2911,89 @@ func TestSaveOthersTemporaryPin(t *testing.T) {
 		userdataStore: userStore,
 	}
 
-	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name          string
+		sessionId     string
+		blockedNumber string
+		testPin       string
+		setup         func() error // Setup function for each test case
+		expectedError bool
+		verifyResult  func(t *testing.T) // Function to verify the result
+	}{
+		{
+			name:          "Missing Session ID",
+			sessionId:     "", // Empty session ID
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup:         nil,
+			expectedError: true,
+			verifyResult:  nil,
+		},
+		{
+			name:          "Failed to Read Blocked Number",
+			sessionId:     sessionId,
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup: func() error {
+				// Do not write the blocked number to simulate a read failure
+				return nil
+			},
+			expectedError: true,
+			verifyResult:  nil,
+		},
+
+		{
+			name:          "Successfully save hashed PIN",
+			sessionId:     sessionId,
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup: func() error {
+				// Write the blocked number to the store
+				return userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+			},
+			expectedError: false,
+			verifyResult: func(t *testing.T) {
+				// Read the stored hashed PIN
+				othersHashedPin, err := userStore.ReadEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Verify that the stored hashed PIN matches the original PIN
+				if !pin.VerifyPIN(string(othersHashedPin), testPin) {
+					t.Fatal("stored hashed PIN does not match the original PIN")
+				}
+			},
+		},
 	}
 
-	_, err = h.SaveOthersTemporaryPin(ctx, "save_others_temporary_pin", []byte(testPin))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up the context with the session ID
+			ctx := context.WithValue(context.Background(), "SessionId", tt.sessionId)
 
-	assert.NoError(t, err)
+			// Run the setup function if provided
+			if tt.setup != nil {
+				err := tt.setup()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 
-	othersHashedPin, err := userStore.ReadEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		t.Fatal(err)
-	}
+			// Call the function under test
+			_, err := h.SaveOthersTemporaryPin(ctx, "save_others_temporary_pin", []byte(tt.testPin))
 
-	if !pin.VerifyPIN(string(othersHashedPin), string(testPin)) {
-		t.Fatal(err)
+			// Assert the error
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Verify the result if a verification function is provided
+			if tt.verifyResult != nil {
+				tt.verifyResult(t)
+			}
+		})
 	}
 }
