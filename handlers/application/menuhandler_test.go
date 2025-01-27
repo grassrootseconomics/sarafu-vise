@@ -2997,3 +2997,70 @@ func TestSaveOthersTemporaryPin(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckBlockedNumPinMisMatch(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+
+	hashedPIN, err := pin.HashPIN(testPin)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
+		t.Fatal(err)
+	}
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		flagManager:   fm,
+	}
+
+	// Write initial data to the store
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = userStore.WriteEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedResult resource.Result
+	}{
+		{
+			name:  "Successful PIN match",
+			input: []byte(testPin),
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_pin_mismatch},
+			},
+		},
+		{
+			name:  "PIN mismatch",
+			input: []byte("1345"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_pin_mismatch},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.CheckBlockedNumPinMisMatch(ctx, "sym", tt.input)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
