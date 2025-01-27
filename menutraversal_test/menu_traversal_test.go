@@ -67,6 +67,16 @@ func extractMaxAmount(response []byte) string {
 	return ""
 }
 
+func extractRemainingAttempts(response []byte) string {
+	// Regex to match "You have: <number> remaining attempt(s)"
+	re := regexp.MustCompile(`(?m)You have:\s+(\d+)\s+remaining attempt\(s\)`)
+	match := re.FindSubmatch(response)
+	if match != nil {
+		return string(match[1]) // "<number>" of remaining attempts
+	}
+	return ""
+}
+
 // Extracts the send amount value from the engine response.
 func extractSendAmount(response []byte) string {
 	// Regex to match the pattern "will receive X.XX SYM from"
@@ -365,9 +375,11 @@ func TestGroups(t *testing.T) {
 			}
 			b := w.Bytes()
 			balance := extractBalance(b)
+			attempts := extractRemainingAttempts(b)
 
 			expectedContent := []byte(tt.ExpectedContent)
 			expectedContent = bytes.Replace(expectedContent, []byte("{balance}"), []byte(balance), -1)
+			expectedContent = bytes.Replace(expectedContent, []byte("{attempts}"), []byte(attempts), -1)
 
 			tt.ExpectedContent = string(expectedContent)
 
