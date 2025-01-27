@@ -3186,3 +3186,36 @@ func TestGetCurrentProfileInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestResetOthersPin(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	hashedPIN, err := pin.HashPIN(testPin)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
+		t.Fatal(err)
+	}
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	// Write initial data to the store
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = userStore.WriteEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.ResetOthersPin(ctx, "reset_others_pin", []byte(""))
+
+	assert.NoError(t, err)
+}
