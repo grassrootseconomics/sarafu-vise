@@ -75,6 +75,39 @@
             ]
         },
         {
+            "name": "menu_my_account_reset_others_pin_with_no_privileges",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "3",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "5",
+                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
+                },
+                {
+                    "input": "2",
+                    "expectedContent": "You do not have privileges to perform this action\n\n9:Quit\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
             "name": "menu_my_account_check_my_balance",
             "steps": [
                 {
