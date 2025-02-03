@@ -129,6 +129,7 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 	if len(input) == 0 {
 		// move to the top node
 		h.st.Code = []byte{}
+		h.st.ExecPath = []string{}
 	}
 
 	sessionId, ok := ctx.Value("SessionId").(string)
