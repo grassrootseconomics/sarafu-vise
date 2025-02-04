@@ -326,12 +326,16 @@ func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	pinInput := string(input)
-	// Validate that the PIN is a 4-digit number.
-	if pin.IsValidPIN(pinInput) {
-		res.FlagSet = append(res.FlagSet, flag_valid_pin)
+	if !h.st.Back() {
+		pinInput := string(input)
+		// Validate that the PIN is a 4-digit number.
+		if pin.IsValidPIN(pinInput) {
+			res.FlagSet = append(res.FlagSet, flag_valid_pin)
+		} else {
+			res.FlagReset = append(res.FlagReset, flag_valid_pin)
+		}
 	} else {
-		res.FlagReset = append(res.FlagReset, flag_valid_pin)
+		res.FlagSet = append(res.FlagSet, flag_valid_pin)
 	}
 
 	return res, nil
@@ -420,6 +424,11 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+	if h.st.Back() {
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
+		return res, nil
+	}
+
 	// Get blocked number from storage.
 	store := h.userdataStore
 	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
@@ -449,6 +458,11 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		return res, fmt.Errorf("missing session")
 	}
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+
+	if h.st.Back() {
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
+		return res, nil
+	}
 
 	store := h.userdataStore
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
@@ -580,6 +594,11 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
+	}
+
+	if h.st.Back() {
+		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
+		return res, nil
 	}
 	blockedNumber := string(input)
 	_, err = store.ReadEntry(ctx, blockedNumber, storedb.DATA_PUBLIC_KEY)
@@ -1219,7 +1238,9 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
 		return res, err
 	}
-	if len(input) == 4 {
+	str := string(input)
+	_, err = strconv.Atoi(str)
+	if len(input) == 4 && err == nil {
 		if pin.VerifyPIN(string(AccountPin), string(input)) {
 			if h.st.MatchFlag(flag_account_authorized, false) {
 				res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
@@ -1237,7 +1258,7 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 				}
 			}
 		} else {
-			err := h.incrementIncorrectPINAttempts(ctx, sessionId)
+			err = h.incrementIncorrectPINAttempts(ctx, sessionId)
 			if err != nil {
 				return res, err
 			}
@@ -1254,11 +1275,13 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 // Setback sets the flag_back_set flag when the navigation is back.
 func (h *MenuHandlers) SetBack(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	flag_back_set, _ := h.flagManager.GetFlag("flag_back_set")
 	//TODO:
 	//Add check if the navigation is lateral nav instead of checking the input.
 	if string(input) == "0" {
-		flag_back_set, _ := h.flagManager.GetFlag("flag_back_set")
 		res.FlagSet = append(res.FlagSet, flag_back_set)
+	} else {
+		res.FlagReset = append(res.FlagReset, flag_back_set)
 	}
 	return res, nil
 }
