@@ -3401,3 +3401,88 @@ func TestInsertProfileItems(t *testing.T) {
 		assert.Equal(t, profileItems[i], string(storedValue))
 	}
 }
+
+func TestUpdateAllProfileItems(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	mockState := state.NewState(128)
+	mockAccountService := new(mocks.MockAccountService)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	flag_firstname_set, _ := fm.GetFlag("flag_firstname_set")
+	flag_familyname_set, _ := fm.GetFlag("flag_familyname_set")
+	flag_yob_set, _ := fm.GetFlag("flag_yob_set")
+	flag_gender_set, _ := fm.GetFlag("flag_gender_set")
+	flag_location_set, _ := fm.GetFlag("flag_location_set")
+	flag_offerings_set, _ := fm.GetFlag("flag_offerings_set")
+
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
+	}
+
+	profileItems := []string{"John", "Doe", "Male", "1990", "Nairobi", "Software"}
+
+	expectedResult := resource.Result{
+		FlagSet: []uint32{
+			flag_firstname_set,
+			flag_familyname_set,
+			flag_yob_set,
+			flag_gender_set,
+			flag_location_set,
+			flag_offerings_set,
+		},
+	}
+
+	h := &MenuHandlers{
+		userdataStore:  store,
+		flagManager:    fm,
+		st:             mockState,
+		accountService: mockAccountService,
+		profile: &profile.Profile{
+			ProfileItems: profileItems,
+			Max:          6,
+		},
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	require.NoError(t, err)
+
+	aliasInput := fmt.Sprintf("%s%s", profileItems[0], profileItems[1])
+
+	// Mock the account alias response
+	mockAccountService.On(
+		"RequestAlias",
+		publicKey,
+		aliasInput,
+	).Return(&models.RequestAliasResult{Alias: "JohnDoe"}, nil)
+
+	// Call the function under test
+	res, err := h.UpdateAllProfileItems(ctx, "symbol", nil)
+	assert.NoError(t, err)
+
+	// Loop through profileDataKeys to validate stored values
+	for i, key := range profileDataKeys {
+		storedValue, err := store.ReadEntry(ctx, sessionId, key)
+		require.NoError(t, err)
+		assert.Equal(t, profileItems[i], string(storedValue))
+	}
+
+	// Validate alias storage
+	storedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	assert.NoError(t, err)
+	assert.Equal(t, "JohnDoe", string(storedAlias))
+	assert.Equal(t, expectedResult, res)
+}
