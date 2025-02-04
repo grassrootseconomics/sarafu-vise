@@ -17,7 +17,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+//	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
@@ -177,20 +177,8 @@ func (s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 		return nil, nil, err
 	}
 
-	// TODO: clear up why pointer here and by-value other cmds
-	accountService := services.New(ctx, menuStorageService)
-
-	hl, err := lhs.GetHandler(accountService)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	en := lhs.GetEngine()
-	en = en.WithFirst(hl.Init)
-	if s.Debug {
-		en = en.WithDebug(nil)
-	}
 	// TODO: this is getting very hacky!
+	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	closer := func() {
 		err := menuStorageService.Close(ctx)
 		if err != nil {

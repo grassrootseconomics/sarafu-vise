@@ -133,6 +133,7 @@ func main() {
 
 	rp := &at.ATRequestParser{}
 	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	bsh = bsh.WithEngineFunc(lhs.GetEngine)
 	sh := at.NewATRequestHandler(bsh)
 
 	mux := http.NewServeMux()

@@ -133,6 +133,7 @@ func main() {
 
 	rp := &httprequest.DefaultRequestParser{}
 	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	bsh = bsh.WithEngineFunc(lhs.GetEngine)
 	sh := httprequest.NewHTTPRequestHandler(bsh)
 	s := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, strconv.Itoa(int(port))),

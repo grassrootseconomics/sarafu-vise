@@ -145,6 +145,8 @@ func main() {
 		sessionId: sessionId,
 	}
 	sh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh = sh.WithEngineFunc(lhs.GetEngine)
+
 	cfg.SessionId = sessionId
 	rqs := request.RequestSession{
 		Ctx:    ctx,
