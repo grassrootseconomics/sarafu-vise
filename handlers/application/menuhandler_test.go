@@ -1857,12 +1857,14 @@ func TestVerifyNewPin(t *testing.T) {
 	sessionId := "session123"
 
 	fm, _ := NewFlagManager(flagsPath)
+	mockState := state.NewState(16)
 
 	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
 	mockAccountService := new(mocks.MockAccountService)
 	h := &MenuHandlers{
 		flagManager:    fm,
 		accountService: mockAccountService,
+		st:             mockState,
 	}
 	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
 
@@ -1900,6 +1902,7 @@ func TestVerifyNewPin(t *testing.T) {
 func TestConfirmPin(t *testing.T) {
 	sessionId := "session123"
 
+	mockState := state.NewState(16)
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
@@ -1910,6 +1913,7 @@ func TestConfirmPin(t *testing.T) {
 		userdataStore:  store,
 		flagManager:    fm,
 		accountService: mockAccountService,
+		st:             mockState,
 	}
 
 	tests := []struct {
