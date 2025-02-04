@@ -19,6 +19,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 
@@ -3355,5 +3356,48 @@ func TestConstructAccountAlias(t *testing.T) {
 			// Ensure mock expectations were met
 			mockAccountService.AssertExpectations(t)
 		})
+	}
+}
+
+func TestInsertProfileItems(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	mockState := state.NewState(128)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
+	}
+
+	profileItems := []string{"John", "Doe", "Male", "1990", "Nairobi", "Software"}
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+		st:            mockState,
+		profile: &profile.Profile{
+			ProfileItems: profileItems,
+			Max:          6,
+		},
+	}
+
+	res := &resource.Result{}
+	err = h.insertProfileItems(ctx, sessionId, res)
+	require.NoError(t, err)
+
+	// Loop through profileDataKeys to validate stored values
+	for i, key := range profileDataKeys {
+		storedValue, err := store.ReadEntry(ctx, sessionId, key)
+		require.NoError(t, err)
+		assert.Equal(t, profileItems[i], string(storedValue))
 	}
 }
