@@ -10,6 +10,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
@@ -24,7 +25,7 @@ type LocalHandlerService struct {
 	UserdataStore *db.Db
 	Cfg           engine.Config
 	Rs            resource.Resource
-	first	resource.EntryFunc
+	first         resource.EntryFunc
 }
 
 func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResource *resource.DbResource, cfg engine.Config, rs resource.Resource) (*LocalHandlerService, error) {
@@ -125,7 +126,8 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 }
 
 func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource, pr *persist.Persister) engine.Engine {
-	en := engine.NewEngine(cfg, rs)
+	se := sarafu_engine.NewSarafuEngine(cfg, rs)
+	en := se.Engine.(*engine.DefaultEngine)
 	if ls.first != nil {
 		en = en.WithFirst(ls.first)
 	}
@@ -133,5 +135,6 @@ func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource
 	if cfg.EngineDebug {
 		en = en.WithDebug(nil)
 	}
-	return en
+
+	return se
 }
