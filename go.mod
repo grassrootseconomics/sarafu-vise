@@ -3,7 +3,7 @@ module git.grassecon.net/grassrootseconomics/sarafu-vise
 go 1.23.4
 
 require (
-	git.defalsify.org/vise.git v0.2.3-0.20250204132233-2bffe532f21e
+	git.defalsify.org/vise.git v0.2.3-0.20250205092758-ea6bfa050eeb
 	git.grassecon.net/grassrootseconomics/common v0.0.0-20250121134736-ba8cbbccea7d
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.0.0-20250123142805-2181388f5bf1
 	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.1.0.20250204132347-1eb0b1555244

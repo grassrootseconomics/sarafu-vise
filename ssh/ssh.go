@@ -17,7 +17,7 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
-//	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
