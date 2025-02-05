@@ -125,7 +125,6 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 
 	h.st = h.pe.GetState()
 	h.ca = h.pe.GetMemory()
-``
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if ok {
 		ctx = context.WithValue(ctx, "SessionId", sessionId)
