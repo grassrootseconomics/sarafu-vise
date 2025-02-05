@@ -1,6 +1,3 @@
-LOAD confirm_pin_change 0
-RELOAD confirm_pin_change
-CATCH pin_reset_mismatch  flag_pin_mismatch 1
 MOUT back 0
 MOUT quit 9
 HALT

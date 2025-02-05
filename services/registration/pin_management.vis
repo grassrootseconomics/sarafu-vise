@@ -1,8 +1,15 @@
+LOAD confirm_pin_change 7
+LOAD set_back 6
+LOAD authorize_account 5
+LOAD reset_allow_update 4
+LOAD verify_new_pin 2
+LOAD save_temporary_pin 1
+LOAD reset_incorrect  0
 MOUT change_pin 1
 MOUT reset_pin 2
 MOUT back 0
 HALT
-INCMP my_account 0
+INCMP _ 0
 INCMP old_pin  1
 INCMP enter_other_number 2
 INCMP . *

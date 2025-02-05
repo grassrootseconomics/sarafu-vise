@@ -1,6 +1,3 @@
-LOAD validate_blocked_number 6
-RELOAD validate_blocked_number
-CATCH unregistered_number flag_unregistered_number 1
 LOAD retrieve_blocked_number 0
 RELOAD retrieve_blocked_number
 MAP retrieve_blocked_number
