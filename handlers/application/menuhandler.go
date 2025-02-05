@@ -125,12 +125,7 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 
 	h.st = h.pe.GetState()
 	h.ca = h.pe.GetMemory()
-
-	if len(input) == 0 {
-		// move to the top node
-		h.st.Code = []byte{}
-	}
-
+``
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if ok {
 		ctx = context.WithValue(ctx, "SessionId", sessionId)
