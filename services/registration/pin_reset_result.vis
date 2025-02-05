@@ -4,5 +4,5 @@ LOAD reset_others_pin 6
 MOUT back 0
 MOUT quit 9
 HALT
-INCMP pin_management 0
+INCMP ^ 0
 INCMP quit  9

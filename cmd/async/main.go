@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 
 	"git.defalsify.org/vise.git/engine"
@@ -186,11 +189,19 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("")
-		_, err = fmt.Scanln(&rqs.Input)
+		in := bufio.NewReader(os.Stdin)
+		//_, err = fmt.Scanln(&rqs.Input)
+		s, err := in.ReadString('\n')
 		if err != nil {
+			if err == io.EOF {
+				break
+			}
 			logg.ErrorCtxf(ctx, "error in input", "err", err)
 			fmt.Errorf("error in input: %v", err)
 			os.Exit(1)
 		}
+		rqs.Input = []byte{}
+		s = strings.TrimSpace(s)
+		rqs.Input = []byte(s)
 	}
 }
