@@ -131,9 +131,6 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 }
 
 func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource, pr *persist.Persister) engine.Engine {
-	//logg.Tracef("creating new engine")
-	//se := sarafu_engine.NewSarafuEngine(cfg, rs)
-	//en := se.Engine.(*engine.DefaultEngine)
 	en := engine.NewEngine(cfg, rs)
 	if ls.first != nil {
 		en = en.WithFirst(ls.first)
@@ -142,6 +139,5 @@ func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource
 	if cfg.EngineDebug {
 		en = en.WithDebug(nil)
 	}
-	//return se
 	return en
 }
