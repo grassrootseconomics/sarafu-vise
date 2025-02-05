@@ -2,10 +2,14 @@ package engine
 
 import (
 	"context"
-	"fmt"
 
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/logging"
+)
+
+var (
+	logg = logging.NewVanilla().WithDomain("sarafu-vise.engine")
 )
 
 type SarafuEngine struct {
@@ -19,13 +23,13 @@ func NewSarafuEngine(cfg engine.Config, rs resource.Resource) *SarafuEngine {
 }
 
 func (se *SarafuEngine) Exec(ctx context.Context, input []byte) (bool, error) {
-	if len(input) == 0 {
-		e, ok := se.Engine.(*engine.DefaultEngine)
-		if !ok {
-			return false, fmt.Errorf("")
-		}
-
-		e.Reset(ctx, true)
-	}
+	logg.TraceCtxf(ctx, "sarafu engine exec", "input", input)
+//	if len(input) == 0 {
+//		e := se.Engine.(*engine.DefaultEngine)
+//		v, err := e.Reset(ctx, true)
+//		if err != nil {
+//			return v, err
+//		}
+//	}
 	return se.Engine.Exec(ctx, input)
 }

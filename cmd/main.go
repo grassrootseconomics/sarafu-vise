@@ -80,6 +80,7 @@ func main() {
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
 		EngineDebug: engineDebug,
+		ResetOnEmptyInput: true,
 	}
 
 	menuStorageService := storage.NewMenuStorageService(conns)

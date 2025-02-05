@@ -8,10 +8,15 @@ import (
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
+//	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
+)
+
+var (
+	logg = logging.NewVanilla().WithDomain("sarafu-vise.engine")
 )
 
 type HandlerService interface {
@@ -126,8 +131,10 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 }
 
 func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource, pr *persist.Persister) engine.Engine {
-	se := sarafu_engine.NewSarafuEngine(cfg, rs)
-	en := se.Engine.(*engine.DefaultEngine)
+	//logg.Tracef("creating new engine")
+	//se := sarafu_engine.NewSarafuEngine(cfg, rs)
+	//en := se.Engine.(*engine.DefaultEngine)
+	en := engine.NewEngine(cfg, rs)
 	if ls.first != nil {
 		en = en.WithFirst(ls.first)
 	}
@@ -135,6 +142,6 @@ func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource
 	if cfg.EngineDebug {
 		en = en.WithDebug(nil)
 	}
-
-	return se
+	//return se
+	return en
 }

@@ -81,6 +81,7 @@ func main() {
 		OutputSize:    uint32(size),
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
+		ResetOnEmptyInput: true,
 	}
 
 	if engineDebug {

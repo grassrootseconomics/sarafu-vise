@@ -96,6 +96,7 @@ func main() {
 		OutputSize:    uint32(size),
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
+		ResetOnEmptyInput: true,
 	}
 
 	if engineDebug {
@@ -130,7 +131,6 @@ func main() {
 	lhs.SetDataStore(&userdataStore)
 
 	accountService := services.New(ctx, menuStorageService)
-
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -190,10 +190,10 @@ func main() {
 		}
 		fmt.Println("")
 		in := bufio.NewReader(os.Stdin)
-		//_, err = fmt.Scanln(&rqs.Input)
 		s, err := in.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
+				logg.DebugCtxf(ctx, "have EOF, bailing")
 				break
 			}
 			logg.ErrorCtxf(ctx, "error in input", "err", err)
