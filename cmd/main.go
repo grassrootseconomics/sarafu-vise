@@ -16,6 +16,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
@@ -123,6 +124,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	accountService := services.New(ctx, menuStorageService)
+	_, err = lhs.GetHandler(accountService)
+	if err != nil {
+	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+	       os.Exit(1)
+	}
 	en := lhs.GetEngine(cfg, rs, pe)
 
 	cint := make(chan os.Signal)
