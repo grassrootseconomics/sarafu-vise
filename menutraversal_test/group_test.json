@@ -54,7 +54,7 @@
                 },
                 {
                     "input": "1235",
-                    "expectedContent": "Incorrect PIN. You have: 2 remaining attempt(s).\n1:Retry\n9:Quit"
+                    "expectedContent": "Incorrect PIN. You have: {attempts} remaining attempt(s).\n1:Retry\n9:Quit"
                 },
                 {
                     "input": "1",
@@ -67,6 +67,47 @@
                 {
                     "input": "1",
                     "expectedContent": "Your language change request was successful.\n0:Back\n9:Quit"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
+            "name": "menu_my_account_reset_others_pin_with_unregistered_number",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "3",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "5",
+                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
+                },
+                {
+                    "input": "2",
+                    "expectedContent": "Enter other's phone number:\n0:Back"
+                },
+                {
+                    "input": "0700000000",
+                    "expectedContent": "The number you have entered is either not registered with Sarafu or is invalid.\n1:Retry\n9:Quit"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Enter other's phone number:\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
                 },
                 {
                     "input": "0",
@@ -95,14 +136,6 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
-                },
-                {
-                    "input": "0",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
-                },
-                {
-                    "input": "0",
                     "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
                 }
             ]
@@ -128,7 +161,7 @@
                 },
                 {
                     "input": "1235",
-                    "expectedContent": "Incorrect PIN. You have: 2 remaining attempt(s).\n1:Retry\n9:Quit"
+                    "expectedContent": "Incorrect PIN. You have: {attempts} remaining attempt(s).\n1:Retry\n9:Quit"
                 },
                 {
                     "input": "1",
