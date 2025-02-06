@@ -1596,6 +1596,8 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 				AliasAddress, err = h.accountService.CheckAliasAddress(ctx, recipient)
 				if err == nil {
 					AliasAddressResult = AliasAddress.Address
+				} else {
+					logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
 				}
 			} else {
 				//Perform a search for each search domain,break on first match
@@ -1605,6 +1607,8 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 					if err == nil {
 						AliasAddressResult = AliasAddress.Address
 						continue
+					} else {
+						logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
 					}
 				}
 			}
@@ -2422,6 +2426,7 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
 	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", aliasInput, "error_alias_request", err)
 		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 	}
 	alias = aliasResult.Alias
