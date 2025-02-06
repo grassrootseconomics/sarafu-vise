@@ -1,3 +1,5 @@
+LOAD clear_temporary_value 2
+RELOAD clear_temporary_value
 LOAD set_default_voucher 8
 RELOAD set_default_voucher
 LOAD check_vouchers 10
