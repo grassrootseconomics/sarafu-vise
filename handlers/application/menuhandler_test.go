@@ -2823,6 +2823,7 @@ func TestValidateBlockedNumber(t *testing.T) {
 	invalidNumber := "12343"              // Invalid phone number
 	unregisteredNumber := "+254734567890" // Valid but unregistered number
 	publicKey := "0X13242618721"
+	mockState := state.NewState(128)
 
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
@@ -2835,6 +2836,7 @@ func TestValidateBlockedNumber(t *testing.T) {
 
 	h := &MenuHandlers{
 		userdataStore: userStore,
+		st:            mockState,
 		flagManager:   fm,
 	}
 
@@ -2992,6 +2994,7 @@ func TestCheckBlockedNumPinMisMatch(t *testing.T) {
 	sessionId := "session123"
 	blockedNumber := "+254712345678"
 	testPin := "1234"
+	mockState := state.NewState(128)
 
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
@@ -3010,6 +3013,7 @@ func TestCheckBlockedNumPinMisMatch(t *testing.T) {
 
 	h := &MenuHandlers{
 		userdataStore: userStore,
+		st:            mockState,
 		flagManager:   fm,
 	}
 
