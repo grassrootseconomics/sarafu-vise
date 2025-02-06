@@ -8,7 +8,7 @@ RELOAD save_others_temporary_pin
 MOUT back 0
 HALT 
 INCMP _ 0
-LOAD check_pin_mismatch 0
+LOAD check_pin_mismatch 6
 RELOAD check_pin_mismatch
 CATCH others_pin_mismatch flag_pin_mismatch 1
 INCMP pin_entry *

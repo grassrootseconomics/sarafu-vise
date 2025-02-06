@@ -8,9 +8,15 @@ import (
 	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
+//	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
+)
+
+var (
+	logg = logging.NewVanilla().WithDomain("sarafu-vise.engine")
 )
 
 type HandlerService interface {
@@ -24,6 +30,7 @@ type LocalHandlerService struct {
 	UserdataStore *db.Db
 	Cfg           engine.Config
 	Rs            resource.Resource
+	first         resource.EntryFunc
 }
 
 func NewLocalHandlerService(ctx context.Context, fp string, debug bool, dbResource *resource.DbResource, cfg engine.Config, rs resource.Resource) (*LocalHandlerService, error) {
@@ -117,13 +124,19 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("update_all_profile_items", appHandlers.UpdateAllProfileItems)
 	ls.DbRs.AddLocalFunc("set_back", appHandlers.SetBack)
 	ls.DbRs.AddLocalFunc("show_blocked_account", appHandlers.ShowBlockedAccount)
+	ls.first = appHandlers.Init
 
 	return appHandlers, nil
 }
 
-// TODO: enable setting of sessionId on engine init time
-func (ls *LocalHandlerService) GetEngine() *engine.DefaultEngine {
-	en := engine.NewEngine(ls.Cfg, ls.Rs)
-	en = en.WithPersister(ls.Pe)
+func (ls *LocalHandlerService) GetEngine(cfg engine.Config, rs resource.Resource, pr *persist.Persister) engine.Engine {
+	en := engine.NewEngine(cfg, rs)
+	if ls.first != nil {
+		en = en.WithFirst(ls.first)
+	}
+	en = en.WithPersister(pr)
+	if cfg.EngineDebug {
+		en = en.WithDebug(nil)
+	}
 	return en
 }

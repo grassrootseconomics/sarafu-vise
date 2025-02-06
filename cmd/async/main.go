@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path"
+	"strings"
 	"syscall"
 
 	"git.defalsify.org/vise.git/engine"
@@ -93,6 +96,7 @@ func main() {
 		OutputSize:    uint32(size),
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
+		ResetOnEmptyInput: true,
 	}
 
 	if engineDebug {
@@ -127,7 +131,6 @@ func main() {
 	lhs.SetDataStore(&userdataStore)
 
 	accountService := services.New(ctx, menuStorageService)
-
 	hl, err := lhs.GetHandler(accountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -145,6 +148,8 @@ func main() {
 		sessionId: sessionId,
 	}
 	sh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	sh = sh.WithEngineFunc(lhs.GetEngine)
+
 	cfg.SessionId = sessionId
 	rqs := request.RequestSession{
 		Ctx:    ctx,
@@ -184,11 +189,19 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println("")
-		_, err = fmt.Scanln(&rqs.Input)
+		in := bufio.NewReader(os.Stdin)
+		s, err := in.ReadString('\n')
 		if err != nil {
+			if err == io.EOF {
+				logg.DebugCtxf(ctx, "have EOF, bailing")
+				break
+			}
 			logg.ErrorCtxf(ctx, "error in input", "err", err)
 			fmt.Errorf("error in input: %v", err)
 			os.Exit(1)
 		}
+		rqs.Input = []byte{}
+		s = strings.TrimSpace(s)
+		rqs.Input = []byte(s)
 	}
 }

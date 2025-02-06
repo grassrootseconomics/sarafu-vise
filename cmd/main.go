@@ -79,6 +79,8 @@ func main() {
 		OutputSize:    uint32(size),
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
+		EngineDebug: engineDebug,
+		ResetOnEmptyInput: true,
 	}
 
 	menuStorageService := storage.NewMenuStorageService(conns)
@@ -124,17 +126,12 @@ func main() {
 	}
 
 	accountService := services.New(ctx, menuStorageService)
-	hl, err := lhs.GetHandler(accountService)
+	_, err = lhs.GetHandler(accountService)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
-		os.Exit(1)
+	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+	       os.Exit(1)
 	}
-
-	en := lhs.GetEngine()
-	en = en.WithFirst(hl.Init)
-	if engineDebug {
-		en = en.WithDebug(nil)
-	}
+	en := lhs.GetEngine(cfg, rs, pe)
 
 	cint := make(chan os.Signal)
 	cterm := make(chan os.Signal)

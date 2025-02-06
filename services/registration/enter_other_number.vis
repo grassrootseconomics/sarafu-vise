@@ -4,4 +4,7 @@ RELOAD reset_account_authorized
 MOUT back 0
 HALT
 INCMP _ 0
+LOAD validate_blocked_number 6
+RELOAD validate_blocked_number
+CATCH unregistered_number flag_unregistered_number 1
 INCMP enter_others_new_pin *
