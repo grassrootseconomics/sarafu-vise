@@ -177,20 +177,14 @@ func (s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 		return nil, nil, err
 	}
 
-	// TODO: clear up why pointer here and by-value other cmds
-	accountService := services.New(ctx, menuStorageService)
-
-	hl, err := lhs.GetHandler(accountService)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	en := lhs.GetEngine()
-	en = en.WithFirst(hl.Init)
-	if s.Debug {
-		en = en.WithDebug(nil)
-	}
 	// TODO: this is getting very hacky!
+	accountService := services.New(ctx, menuStorageService)
+	_, err = lhs.GetHandler(accountService)
+	if err != nil {
+	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+	       os.Exit(1)
+	}
+	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	closer := func() {
 		err := menuStorageService.Close(ctx)
 		if err != nil {

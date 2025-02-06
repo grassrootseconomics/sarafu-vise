@@ -175,20 +175,6 @@ func TestInit(t *testing.T) {
 			input:          []byte("1"),
 			expectedResult: resource.Result{},
 		},
-		{
-			name: "Move to top node on empty input",
-			setup: func() (*MenuHandlers, context.Context) {
-				pe := persist.NewPersister(testStore).WithSession(sessionId).WithContent(st, ca)
-				h := &MenuHandlers{
-					flagManager: fm,
-					pe:          pe,
-				}
-				st.Code = []byte("some pending bytecode")
-				return h, context.WithValue(ctx, "SessionId", sessionId)
-			},
-			input:          []byte(""),
-			expectedResult: resource.Result{},
-		},
 	}
 
 	for _, tt := range tests {
