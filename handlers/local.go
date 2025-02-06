@@ -11,7 +11,6 @@ import (
 	"git.defalsify.org/vise.git/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-	//	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
