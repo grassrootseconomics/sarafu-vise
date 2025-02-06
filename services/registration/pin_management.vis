@@ -1,4 +1,3 @@
-LOAD confirm_pin_change 7
 LOAD set_back 6
 LOAD authorize_account 5
 LOAD reset_allow_update 4

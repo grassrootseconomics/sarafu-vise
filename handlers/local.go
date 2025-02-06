@@ -6,12 +6,11 @@ import (
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/engine"
+	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
-//	sarafu_engine "git.grassecon.net/grassrootseconomics/sarafu-vise/engine"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 )
 
@@ -125,6 +124,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("update_all_profile_items", appHandlers.UpdateAllProfileItems)
 	ls.DbRs.AddLocalFunc("set_back", appHandlers.SetBack)
 	ls.DbRs.AddLocalFunc("show_blocked_account", appHandlers.ShowBlockedAccount)
+	ls.DbRs.AddLocalFunc("clear_temporary_value", appHandlers.ClearTemporaryValue)
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil
