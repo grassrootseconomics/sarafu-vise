@@ -479,6 +479,13 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		return res, err
 	}
 
+	// clear the temporary value as it has been used
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+		return res, err
+	}
+
 	return res, nil
 }
 
@@ -512,6 +519,13 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
+		return res, err
+	}
+
+	// clear the temporary value as it has been used
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
 		return res, err
 	}
 
@@ -681,6 +695,12 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 		if err != nil {
 			return res, err
 		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+			return res, err
+		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 	} else {
 		if firstNameSet {
@@ -719,6 +739,12 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write familyName entry with", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName, "error", err)
+			return res, err
+		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_familyname_set)
@@ -791,6 +817,12 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 			logg.ErrorCtxf(ctx, "failed to write yob entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryYob, "error", err)
 			return res, err
 		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+			return res, err
+		}
 		res.FlagSet = append(res.FlagSet, flag_yob_set)
 	} else {
 		if yobSet {
@@ -828,6 +860,12 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write location entry with", "key", storedb.DATA_LOCATION, "value", temporaryLocation, "error", err)
+			return res, err
+		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_location_set)
@@ -871,6 +909,12 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 			logg.ErrorCtxf(ctx, "failed to write gender entry with", "key", storedb.DATA_GENDER, "value", gender, "error", err)
 			return res, err
 		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+			return res, err
+		}
 		res.FlagSet = append(res.FlagSet, flag_gender_set)
 	} else {
 		if genderSet {
@@ -910,6 +954,12 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_OFFERINGS, []byte(temporaryOfferings))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write offerings entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
+			return res, err
+		}
+		// clear the temporary value as it has been used
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
@@ -1584,6 +1634,12 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 	// res.Content = l.Get("Your invitation to %s to join Sarafu Network has been sent.",  string(recipient))
 
 	res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
+	// clear the temporary value as it has been used
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+		return res, err
+	}
 	return res, nil
 }
 
