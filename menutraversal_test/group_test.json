@@ -94,7 +94,7 @@
                     "expectedContent": "Enter other's phone number:\n0:Back"
                 },
                 {
-                    "input": "0700000000",
+                    "input": "0700000001",
                     "expectedContent": "The number you have entered is either not registered with Sarafu or is invalid.\n1:Retry\n9:Quit"
                 },
                 {
@@ -108,6 +108,55 @@
                 {
                     "input": "0",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
+            "name": "menu_my_account_reset_others_pin_with_registered_number",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "3",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "5",
+                    "expectedContent": "PIN Management\n1:Change PIN\n2:Reset other's PIN\n0:Back"
+                },
+                {
+                    "input": "2",
+                    "expectedContent": "Enter other's phone number:\n0:Back"
+                },
+                {
+                    "input": "0700000000",
+                    "expectedContent": "Please enter new PIN for: {secondary_session_id}\n0:Back"
+                },
+                {
+                    "input": "11111",
+                    "expectedContent": "The PIN you have entered is invalid.Please try a 4 digit number instead.\n1:Retry\n9:Quit"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Please enter new PIN for: {secondary_session_id}\n0:Back"
+                },
+                {
+                    "input": "1111",
+                    "expectedContent": "Please confirm new PIN for: {secondary_session_id}\n0:Back"
+                },
+                {
+                    "input": "1111",
+                    "expectedContent": "Please enter your PIN:"
+                },
+                {
+                    "input": "1234",
+                    "expectedContent": "PIN reset request for {secondary_session_id} was successful\n0:Back\n9:Quit"
                 },
                 {
                     "input": "0",
