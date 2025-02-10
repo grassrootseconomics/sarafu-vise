@@ -5,7 +5,7 @@ import (
 )
 
 func TestCreateEngine(t *testing.T) {
-	o, clean, eventC := TestEngine("foo")
+	o, clean, eventC, _, _ := TestEngine("foo")
 	defer clean()
 	defer func() {
 		<-eventC

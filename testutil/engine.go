@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"git.defalsify.org/vise.git/asm"
 	"git.defalsify.org/vise.git/engine"
+	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
@@ -60,7 +62,7 @@ func CleanDatabase() {
 	}
 }
 
-func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
+func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Persister, *asm.FlagParser) {
 	config.LoadConfig()
 	err := config.Apply(override)
 	if err != nil {
@@ -74,6 +76,12 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 	logg.InfoCtxf(ctx, "loaded engine setup", "conns", conns)
 	pfp := path.Join(scriptDir, "pp.csv")
+
+	parser := asm.NewFlagParser()
+	_, err = parser.Load(pfp)
+	if err != nil {
+		os.Exit(1)
+	}
 
 	var eventChannel = make(chan bool)
 
@@ -157,5 +165,5 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool) {
 		}
 		logg.Infof("testengine storage closed")
 	}
-	return en, cleanFn, eventChannel
+	return en, cleanFn, eventChannel, pe, parser
 }
