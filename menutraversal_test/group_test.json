@@ -1,6 +1,64 @@
 {
     "groups": [
         {
+            "name": "main_my_vouchers_select_voucher_using_index",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "2",
+                    "expectedContent": "My vouchers\n1:Select voucher\n2:Voucher details\n0:Back"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Enter PIN to confirm selection:\nSymbol: SRF\nBalance: 2.745987\n0:Back\n9:Quit"
+                },
+                {
+                    "input": "1234",
+                    "expectedContent": "Success! SRF is now your active voucher.\n0:Back\n9:Quit"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
+            "name": "main_my_vouchers_select_voucher_using_symbol",
+            "steps": [
+                {
+                    "input": "",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                },
+                {
+                    "input": "2",
+                    "expectedContent": "My vouchers\n1:Select voucher\n2:Voucher details\n0:Back"
+                },
+                {
+                    "input": "1",
+                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                },
+                {
+                    "input": "SRF",
+                    "expectedContent": "Enter PIN to confirm selection:\nSymbol: SRF\nBalance: 2.745987\n0:Back\n9:Quit"
+                },
+                {
+                    "input": "1234",
+                    "expectedContent": "Success! SRF is now your active voucher.\n0:Back\n9:Quit"
+                },
+                {
+                    "input": "0",
+                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                }
+            ]
+        },
+        {
             "name": "my_account_change_pin",
             "steps": [
                 {
