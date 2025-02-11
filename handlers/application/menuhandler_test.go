@@ -2082,7 +2082,18 @@ func TestCheckVouchers(t *testing.T) {
 		{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
 	}
 
+	// store the default voucher data
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte("SRF"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedSym := []byte("1:SRF\n2:MILO")
+	expectedUpdatedAddress := []byte("0xd4c288865Ce")
 
 	mockAccountService.On("FetchVouchers", string(publicKey)).Return(mockVouchersResponse, nil)
 
@@ -2095,8 +2106,16 @@ func TestCheckVouchers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Read active contract address from the store
+	updatedAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// assert that the data is stored correctly
 	assert.Equal(t, expectedSym, voucherData)
+	// assert that the address is updated
+	assert.Equal(t, expectedUpdatedAddress, updatedAddress)
 
 	mockAccountService.AssertExpectations(t)
 }
