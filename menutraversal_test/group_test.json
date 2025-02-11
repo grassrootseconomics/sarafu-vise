@@ -16,6 +16,10 @@
                     "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
                 },
                 {
+                    "input": "",
+                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                },
+                {
                     "input": "1",
                     "expectedContent": "Enter PIN to confirm selection:\nSymbol: SRF\nBalance: 2.745987\n0:Back\n9:Quit"
                 },
@@ -104,6 +108,10 @@
                 },
                 {
                     "input": "3",
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                },
+                {
+                    "input": "",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
                 },
                 {
@@ -448,6 +456,10 @@
                 },
                 {
                     "input": "3",
+                    "expectedContent": "Select gender: \n1:Male\n2:Female\n3:Unspecified\n0:Back"
+                },
+                {
+                    "input": "",
                     "expectedContent": "Select gender: \n1:Male\n2:Female\n3:Unspecified\n0:Back"
                 },
                 {
