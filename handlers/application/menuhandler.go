@@ -2305,6 +2305,7 @@ func (h *MenuHandlers) ViewTransactionStatement(ctx context.Context, sym string,
 	return res, nil
 }
 
+// persistInitialLanguageCode receives an initial language code and persists it to the store
 func (h *MenuHandlers) persistInitialLanguageCode(ctx context.Context, sessionId string, code string) error {
 	store := h.userdataStore
 	_, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
@@ -2337,6 +2338,8 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 	return h.persistInitialLanguageCode(ctx, sessionId, code)
 }
 
+// constructAccountAlias retrieves and alias based on the first and family name
+// and writes the result in DATA_ACCOUNT_ALIAS
 func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	var alias string
 	store := h.userdataStore
@@ -2381,6 +2384,8 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	return nil
 }
 
+// ClearTemporaryValue empties the DATA_TEMPORARY_VALUE at the main menu to prevent
+// previously stored data from being accessed
 func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
