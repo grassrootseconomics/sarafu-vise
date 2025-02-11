@@ -3499,3 +3499,32 @@ func TestUpdateAllProfileItems(t *testing.T) {
 	assert.Equal(t, "JohnDoe", string(storedAlias))
 	assert.Equal(t, expectedResult, res)
 }
+
+func TestClearTemporaryValue(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: store,
+	}
+
+	// Write initial data to the store
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte("SomePreviousDATA34$"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.ClearTemporaryValue(ctx, "clear_temporary_value", []byte(""))
+
+	assert.NoError(t, err)
+	// Read current temp value from the store
+	currentTempValue, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert that the temp value is empty
+	assert.Equal(t, currentTempValue, []byte(""))
+}
