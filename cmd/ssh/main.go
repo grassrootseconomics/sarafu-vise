@@ -84,6 +84,7 @@ func main() {
 		Root:       "root",
 		OutputSize: uint32(size),
 		FlagCount:  uint32(128),
+		ResetOnEmptyInput: true,
 	}
 	if stateDebug {
 		cfg.StateDebug = true

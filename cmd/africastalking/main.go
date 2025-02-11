@@ -81,6 +81,7 @@ func main() {
 		OutputSize:    uint32(size),
 		FlagCount:     uint32(128),
 		MenuSeparator: menuSeparator,
+		ResetOnEmptyInput: true,
 	}
 
 	if engineDebug {
@@ -133,6 +134,7 @@ func main() {
 
 	rp := &at.ATRequestParser{}
 	bsh := request.NewBaseRequestHandler(cfg, rs, stateStore, userdataStore, rp, hl)
+	bsh = bsh.WithEngineFunc(lhs.GetEngine)
 	sh := at.NewATRequestHandler(bsh)
 
 	mux := http.NewServeMux()

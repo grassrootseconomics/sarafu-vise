@@ -145,14 +145,14 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 		panic("Unknown account service type")
 	}
 
-	hl, err := lhs.GetHandler(testtag.AccountService)
+	// TODO: triggers withfirst assignment
+	_, err = lhs.GetHandler(testtag.AccountService)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 
-	en := lhs.GetEngine()
-	en = en.WithFirst(hl.Init)
+	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	cleanFn := func() {
 		err := en.Finish(ctx)
 		if err != nil {

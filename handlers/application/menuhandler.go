@@ -125,12 +125,6 @@ func (h *MenuHandlers) Init(ctx context.Context, sym string, input []byte) (reso
 
 	h.st = h.pe.GetState()
 	h.ca = h.pe.GetMemory()
-
-	if len(input) == 0 {
-		// move to the top node
-		h.st.Code = []byte{}
-	}
-
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if ok {
 		ctx = context.WithValue(ctx, "SessionId", sessionId)
@@ -442,6 +436,11 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
+	if len(hashedTemporaryPin) == 0 {
+		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
+	}
+
 	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 	} else {
@@ -469,6 +468,10 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
+	}
+	if len(hashedTemporaryPin) == 0 {
+		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
 	}
 
 	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
@@ -504,13 +507,17 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
-	hashedTmporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
+	hashedTemporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTmporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
+	if len(hashedTemporaryPin) == 0 {
+		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
+	}
 
-	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTmporaryPin))
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
 	if err != nil {
 		return res, err
 	}
@@ -643,6 +650,11 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
+	if len(hashedTemporaryPin) == 0 {
+		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
+	}
+
 	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
 		res.FlagSet = []uint32{flag_valid_pin}
 		res.FlagReset = []uint32{flag_pin_mismatch}
@@ -678,6 +690,10 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 	firstNameSet := h.st.MatchFlag(flag_firstname_set, true)
 	if allowUpdate {
 		temporaryFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryFirstName) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryFirstName is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
@@ -722,6 +738,10 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 
 	if allowUpdate {
 		temporaryFamilyName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryFamilyName) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryFamilyName is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write familyName entry with", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName, "error", err)
@@ -792,6 +812,10 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 
 	if allowUpdate {
 		temporaryYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryYob) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryYob is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_YOB, []byte(temporaryYob))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write yob entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryYob, "error", err)
@@ -831,6 +855,10 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 
 	if allowUpdate {
 		temporaryLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryLocation) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryLocation is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write location entry with", "key", storedb.DATA_LOCATION, "value", temporaryLocation, "error", err)
@@ -872,6 +900,10 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 
 	if allowUpdate {
 		temporaryGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryGender) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryGender is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_GENDER, []byte(temporaryGender))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write gender entry with", "key", storedb.DATA_GENDER, "value", gender, "error", err)
@@ -913,6 +945,10 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 
 	if allowUpdate {
 		temporaryOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+		if len(temporaryOfferings) == 0 {
+			logg.ErrorCtxf(ctx, "temporaryOfferings is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+			return res, fmt.Errorf("Data error encountered")
+		}
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_OFFERINGS, []byte(temporaryOfferings))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write offerings entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", offerings, "error", err)
@@ -1510,6 +1546,8 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 				AliasAddress, err = h.accountService.CheckAliasAddress(ctx, recipient)
 				if err == nil {
 					AliasAddressResult = AliasAddress.Address
+				} else {
+					logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
 				}
 			} else {
 				//Perform a search for each search domain,break on first match
@@ -1519,6 +1557,8 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 					if err == nil {
 						AliasAddressResult = AliasAddress.Address
 						continue
+					} else {
+						logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
 					}
 				}
 			}
@@ -1583,6 +1623,10 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 	l.AddDomain("default")
 
 	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if len(recipient) == 0 {
+		logg.ErrorCtxf(ctx, "recipient is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
+	}
 
 	// TODO
 	// send an invitation SMS
@@ -1701,6 +1745,10 @@ func (h *MenuHandlers) GetRecipient(ctx context.Context, sym string, input []byt
 	}
 	store := h.userdataStore
 	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if len(recipient) == 0 {
+		logg.ErrorCtxf(ctx, "recipient is empty", "key", storedb.DATA_TEMPORARY_VALUE)
+		return res, fmt.Errorf("Data error encountered")
+	}
 
 	res.Content = string(recipient)
 
@@ -2322,6 +2370,7 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
 	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", aliasInput, "error_alias_request", err)
 		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 	}
 	alias = aliasResult.Alias
@@ -2332,4 +2381,21 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	userStore := h.userdataStore
+
+	// clear the temporary value at the start
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(""))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to clear DATA_TEMPORARY_VALUE entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", "empty", "error", err)
+		return res, err
+	}
+	return res, nil
 }
