@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	logg      = logging.NewVanilla().WithDomain("menutraversaltest")
-	testData  = driver.ReadData()
-	sessionID string
-	src       = rand.NewSource(42)
-	g         = rand.New(src)
+	logg               = logging.NewVanilla().WithDomain("menutraversaltest")
+	testData           = driver.ReadData()
+	sessionID          string
+	src                = rand.NewSource(42)
+	g                  = rand.New(src)
+	secondarySessionId = "0700000000"
 )
 
 var groupTestFile = flag.String("test-file", "group_test.json", "The test file to use for running the group tests")
@@ -67,6 +68,16 @@ func extractMaxAmount(response []byte) string {
 	return ""
 }
 
+func extractRemainingAttempts(response []byte) string {
+	// Regex to match "You have: <number> remaining attempt(s)"
+	re := regexp.MustCompile(`(?m)You have:\s+(\d+)\s+remaining attempt\(s\)`)
+	match := re.FindSubmatch(response)
+	if match != nil {
+		return string(match[1]) // "<number>" of remaining attempts
+	}
+	return ""
+}
+
 // Extracts the send amount value from the engine response.
 func extractSendAmount(response []byte) string {
 	// Regex to match the pattern "will receive X.XX SYM from"
@@ -87,7 +98,43 @@ func TestMain(m *testing.M) {
 }
 
 func TestAccountCreationSuccessful(t *testing.T) {
-	en, fn, eventChannel := testutil.TestEngine(sessionID)
+	en, fn, eventChannel, _, _ := testutil.TestEngine(sessionID)
+	defer fn()
+	ctx := context.Background()
+	sessions := testData
+	for _, session := range sessions {
+		groups := driver.FilterGroupsByName(session.Groups, "account_creation_successful")
+		for _, group := range groups {
+			for i, step := range group.Steps {
+				logg.TraceCtxf(ctx, "executing step", "i", i, "step", step)
+				cont, err := en.Exec(ctx, []byte(step.Input))
+				if err != nil {
+					t.Fatalf("Test case '%s' failed at input '%s': %v", group.Name, step.Input, err)
+				}
+				if !cont {
+					break
+				}
+				w := bytes.NewBuffer(nil)
+				_, err = en.Flush(ctx, w)
+				if err != nil {
+					t.Fatalf("Test case '%s' failed during Flush: %v", group.Name, err)
+				}
+				b := w.Bytes()
+				match, err := step.MatchesExpectedContent(b)
+				if err != nil {
+					t.Fatalf("Error compiling regex for step '%s': %v", step.Input, err)
+				}
+				if !match {
+					t.Fatalf("expected:\n\t%s\ngot:\n\t%s\n", step.ExpectedContent, b)
+				}
+			}
+		}
+	}
+	<-eventChannel
+}
+
+func TestSecondaryAccount(t *testing.T) {
+	en, fn, eventChannel, _, _ := testutil.TestEngine(secondarySessionId)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -130,7 +177,7 @@ func TestAccountRegistrationRejectTerms(t *testing.T) {
 		t.Fail()
 	}
 	edgeCaseSessionID := v.String()
-	en, fn, _ := testutil.TestEngine(edgeCaseSessionID)
+	en, fn, _, _, _ := testutil.TestEngine(edgeCaseSessionID)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -166,7 +213,7 @@ func TestAccountRegistrationRejectTerms(t *testing.T) {
 }
 
 func TestMainMenuHelp(t *testing.T) {
-	en, fn, _ := testutil.TestEngine(sessionID)
+	en, fn, _, _, _ := testutil.TestEngine(sessionID)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -208,7 +255,7 @@ func TestMainMenuHelp(t *testing.T) {
 }
 
 func TestMainMenuQuit(t *testing.T) {
-	en, fn, _ := testutil.TestEngine(sessionID)
+	en, fn, _, _, _ := testutil.TestEngine(sessionID)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -249,7 +296,7 @@ func TestMainMenuQuit(t *testing.T) {
 }
 
 func TestMyAccount_MyAddress(t *testing.T) {
-	en, fn, _ := testutil.TestEngine(sessionID)
+	en, fn, _, _, _ := testutil.TestEngine(sessionID)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -293,7 +340,7 @@ func TestMyAccount_MyAddress(t *testing.T) {
 }
 
 func TestMainMenuSend(t *testing.T) {
-	en, fn, _ := testutil.TestEngine(sessionID)
+	en, fn, _, _, _ := testutil.TestEngine(sessionID)
 	defer fn()
 	ctx := context.Background()
 	sessions := testData
@@ -344,9 +391,12 @@ func TestGroups(t *testing.T) {
 	if err != nil {
 		log.Fatalf("Failed to load test groups: %v", err)
 	}
-	en, fn, _ := testutil.TestEngine(sessionID)
+	en, fn, _, pe, flagParser := testutil.TestEngine(sessionID)
 	defer fn()
 	ctx := context.Background()
+
+	flag_admin_privilege, _ := flagParser.GetFlag("flag_admin_privilege")
+
 	// Create test cases from loaded groups
 	tests := driver.CreateTestCases(groups)
 	for _, tt := range tests {
@@ -365,9 +415,21 @@ func TestGroups(t *testing.T) {
 			}
 			b := w.Bytes()
 			balance := extractBalance(b)
+			attempts := extractRemainingAttempts(b)
+
+			st := pe.GetState()
+
+			if st != nil {
+				st.SetFlag(flag_admin_privilege)
+				if tt.Name == "menu_my_account_reset_others_pin_with_no_privileges" {
+					st.ResetFlag(flag_admin_privilege)
+				}
+			}
 
 			expectedContent := []byte(tt.ExpectedContent)
 			expectedContent = bytes.Replace(expectedContent, []byte("{balance}"), []byte(balance), -1)
+			expectedContent = bytes.Replace(expectedContent, []byte("{attempts}"), []byte(attempts), -1)
+			expectedContent = bytes.Replace(expectedContent, []byte("{secondary_session_id}"), []byte(secondarySessionId), -1)
 
 			tt.ExpectedContent = string(expectedContent)
 
