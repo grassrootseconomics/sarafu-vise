@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"git.defalsify.org/vise.git/cache"
 	"git.defalsify.org/vise.git/lang"
@@ -18,6 +19,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 
@@ -251,7 +253,6 @@ func TestWithPersister(t *testing.T) {
 	h.SetPersister(p)
 
 	assert.Equal(t, p, h.pe, "The persister should be set correctly.")
-	//assert.Equal(t, h, result, "The returned handler should be the same instance.")
 }
 
 func TestWithPersister_PanicWhenAlreadySet(t *testing.T) {
@@ -2017,7 +2018,7 @@ func TestSetDefaultVoucher(t *testing.T) {
 		{
 			name: "Test set default voucher when no active voucher is set",
 			vouchersResp: []dataserviceapi.TokenHoldings{
-				dataserviceapi.TokenHoldings{
+				{
 					ContractAddress: "0x123",
 					TokenSymbol:     "TOKEN1",
 					TokenDecimals:   "18",
@@ -2081,7 +2082,18 @@ func TestCheckVouchers(t *testing.T) {
 		{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
 	}
 
+	// store the default voucher data
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte("SRF"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedSym := []byte("1:SRF\n2:MILO")
+	expectedUpdatedAddress := []byte("0xd4c288865Ce")
 
 	mockAccountService.On("FetchVouchers", string(publicKey)).Return(mockVouchersResponse, nil)
 
@@ -2094,8 +2106,16 @@ func TestCheckVouchers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Read active contract address from the store
+	updatedAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// assert that the data is stored correctly
 	assert.Equal(t, expectedSym, voucherData)
+	// assert that the address is updated
+	assert.Equal(t, expectedUpdatedAddress, updatedAddress)
 
 	mockAccountService.AssertExpectations(t)
 }
@@ -2265,7 +2285,6 @@ func TestCountIncorrectPINAttempts(t *testing.T) {
 	pinAttemptsCount := uint8(pinAttemptsValue)
 	expectedAttempts := attempts + 1
 	assert.Equal(t, pinAttemptsCount, expectedAttempts)
-
 }
 
 func TestResetIncorrectPINAttempts(t *testing.T) {
@@ -2288,7 +2307,6 @@ func TestResetIncorrectPINAttempts(t *testing.T) {
 		t.Logf(err.Error())
 	}
 	assert.Equal(t, "0", string(incorrectAttempts))
-
 }
 
 func TestPersistLanguageCode(t *testing.T) {
@@ -2318,13 +2336,1195 @@ func TestPersistLanguageCode(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := h.persistLanguageCode(ctx, test.code)
-		if err != nil {
-			t.Logf(err.Error())
-		}
-		code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+		t.Run(test.name, func(t *testing.T) {
+			err := h.persistLanguageCode(ctx, test.code)
+			if err != nil {
+				t.Logf(err.Error())
+			}
+			code, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
 
-		assert.Equal(t, test.expectedLanguageCode, string(code))
+			assert.Equal(t, test.expectedLanguageCode, string(code))
+		})
+	}
+}
+
+func TestCheckBlockedStatus(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+	flag_account_blocked, err := fm.GetFlag("flag_account_blocked")
+	if err != nil {
+		t.Logf(err.Error())
 	}
 
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+	}
+
+	tests := []struct {
+		name                    string
+		currentWrongPinAttempts string
+		expectedResult          resource.Result
+	}{
+		{
+			name:                    "Currently blocked account",
+			currentWrongPinAttempts: "4",
+			expectedResult:          resource.Result{},
+		},
+		{
+			name:                    "Account with 0 wrong PIN attempts",
+			currentWrongPinAttempts: "0",
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_account_blocked},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(tt.currentWrongPinAttempts)); err != nil {
+				t.Fatal(err)
+			}
+
+			res, err := h.CheckBlockedStatus(ctx, "", []byte(""))
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestPersistInitialLanguageCode(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+
+	h := &MenuHandlers{
+		userdataStore: store,
+	}
+
+	tests := []struct {
+		name      string
+		code      string
+		sessionId string
+	}{
+		{
+			name:      "Persist initial Language (English)",
+			code:      "eng",
+			sessionId: "session123",
+		},
+		{
+			name:      "Persist initial Language (Swahili)",
+			code:      "swa",
+			sessionId: "session456",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := h.persistInitialLanguageCode(ctx, tt.sessionId, tt.code)
+			if err != nil {
+				t.Logf(err.Error())
+			}
+			code, err := store.ReadEntry(ctx, tt.sessionId, storedb.DATA_INITIAL_LANGUAGE_CODE)
+
+			assert.Equal(t, tt.code, string(code))
+		})
+	}
+}
+
+func TestCheckTransactions(t *testing.T) {
+	mockAccountService := new(mocks.MockAccountService)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx, store := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+
+	h := &MenuHandlers{
+		userdataStore:  store,
+		accountService: mockAccountService,
+		prefixDb:       spdb,
+		flagManager:    fm,
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
+		},
+	}
+
+	expectedSenders := []byte("0X13242618721\n0x41c188d63Qa")
+
+	mockAccountService.On("FetchTransactions", string(publicKey)).Return(mockTXResponse, nil)
+
+	_, err = h.CheckTransactions(ctx, "check_transactions", []byte(""))
+	assert.NoError(t, err)
+
+	// Read tranfers senders data from the store
+	senderData, err := spdb.Get(ctx, storedb.ToBytes(storedb.DATA_TX_SENDERS))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert that the data is stored correctly
+	assert.Equal(t, expectedSenders, senderData)
+
+	mockAccountService.AssertExpectations(t)
+}
+
+func TestGetTransactionsList(t *testing.T) {
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	// Initialize MenuHandlers
+	h := &MenuHandlers{
+		userdataStore:        userStore,
+		prefixDb:             spdb,
+		ReplaceSeparatorFunc: mockReplaceSeparator,
+	}
+
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dateBlock, err := time.Parse(time.RFC3339, "2024-10-03T07:23:12Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+	}
+
+	data := store.ProcessTransfers(mockTXResponse)
+
+	// Store all transaction data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_TX_SENDERS:    data.Senders,
+		storedb.DATA_TX_RECIPIENTS: data.Recipients,
+		storedb.DATA_TX_VALUES:     data.TransferValues,
+		storedb.DATA_TX_ADDRESSES:  data.Addresses,
+		storedb.DATA_TX_HASHES:     data.TxHashes,
+		storedb.DATA_TX_DATES:      data.Dates,
+		storedb.DATA_TX_SYMBOLS:    data.Symbols,
+		storedb.DATA_TX_DECIMALS:   data.Decimals,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	expectedTransactionList := []byte("1: Sent 10 SRF 2024-10-03\n2: Received 20 SRF 2024-10-03")
+
+	res, err := h.GetTransactionsList(ctx, "", []byte(""))
+
+	assert.NoError(t, err)
+	assert.Equal(t, res.Content, string(expectedTransactionList))
+}
+
+func TestViewTransactionStatement(t *testing.T) {
+	ctx, userStore := InitializeTestStore(t)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	spdb := InitializeTestSubPrefixDb(t, ctx)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+	flag_incorrect_statement, _ := fm.GetFlag("flag_incorrect_statement")
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		prefixDb:      spdb,
+		flagManager:   fm,
+	}
+
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dateBlock, err := time.Parse(time.RFC3339, "2024-10-03T07:23:12Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	mockTXResponse := []dataserviceapi.Last10TxResponse{
+		{
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+		{
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
+		},
+	}
+
+	data := store.ProcessTransfers(mockTXResponse)
+
+	// Store all transaction data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_TX_SENDERS:    data.Senders,
+		storedb.DATA_TX_RECIPIENTS: data.Recipients,
+		storedb.DATA_TX_VALUES:     data.TransferValues,
+		storedb.DATA_TX_ADDRESSES:  data.Addresses,
+		storedb.DATA_TX_HASHES:     data.TxHashes,
+		storedb.DATA_TX_DATES:      data.Dates,
+		storedb.DATA_TX_SYMBOLS:    data.Symbols,
+		storedb.DATA_TX_DECIMALS:   data.Decimals,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedError  error
+		expectedResult resource.Result
+	}{
+		{
+			name:          "Valid input - index 1",
+			input:         []byte("1"),
+			expectedError: nil,
+			expectedResult: resource.Result{
+				Content:   "Sent 10 SRF\nTo: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0x123wefsf34rf\nDate: 2024-10-03 07:23:12 AM",
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:          "Valid input - index 2",
+			input:         []byte("2"),
+			expectedError: nil,
+			expectedResult: resource.Result{
+				Content:   "Received 20 SRF\nFrom: 0x41c188d63Qa\nContract address: 0X1324262343rfdGW23\nTxhash: 0xq34wresfdb44\nDate: 2024-10-03 07:23:12 AM",
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:          "Invalid input - index 0",
+			input:         []byte("0"),
+			expectedError: nil,
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_incorrect_statement},
+			},
+		},
+		{
+			name:           "Invalid input - index 12",
+			input:          []byte("12"),
+			expectedError:  fmt.Errorf("invalid input: index must be between 1 and 10"),
+			expectedResult: resource.Result{},
+		},
+		{
+			name:           "Invalid input - non-numeric",
+			input:          []byte("abc"),
+			expectedError:  fmt.Errorf("invalid input: must be a number between 1 and 10"),
+			expectedResult: resource.Result{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.ViewTransactionStatement(ctx, "view_transaction_statement", tt.input)
+
+			if tt.expectedError != nil {
+				assert.EqualError(t, err, tt.expectedError.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestRetrieveBlockedNumber(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "0712345678"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := h.RetrieveBlockedNumber(ctx, "retrieve_blocked_number", []byte(""))
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, blockedNumber, res.Content)
+}
+
+func TestMaxAmount(t *testing.T) {
+	sessionId := "session123"
+	activeBal := "500"
+
+	tests := []struct {
+		name           string
+		sessionId      string
+		activeBal      string
+		expectedError  bool
+		expectedResult resource.Result
+	}{
+		{
+			name:           "Valid session ID and active balance",
+			sessionId:      sessionId,
+			activeBal:      activeBal,
+			expectedError:  false,
+			expectedResult: resource.Result{Content: activeBal},
+		},
+		{
+			name:           "Missing Session ID",
+			sessionId:      "",
+			activeBal:      activeBal,
+			expectedError:  true,
+			expectedResult: resource.Result{},
+		},
+		{
+			name:           "Failed to Read Active Balance",
+			sessionId:      sessionId,
+			activeBal:      "", // failure to read active balance
+			expectedError:  true,
+			expectedResult: resource.Result{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, userStore := InitializeTestStore(t)
+			if tt.sessionId != "" {
+				ctx = context.WithValue(ctx, "SessionId", tt.sessionId)
+			}
+
+			h := &MenuHandlers{
+				userdataStore: userStore,
+			}
+
+			// Write active balance to the store only if it's not empty
+			if tt.activeBal != "" {
+				err := userStore.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			res, err := h.MaxAmount(ctx, "max_amount", []byte(""))
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestQuitWithHelp(t *testing.T) {
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
+
+	sessionId := "session123"
+
+	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		flagManager: fm,
+	}
+	tests := []struct {
+		name           string
+		input          []byte
+		status         string
+		expectedResult resource.Result
+	}{
+		{
+			name: "Test quit with help message",
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_account_authorized},
+				Content:   "For more help, please call: 0757628885",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, _ := h.QuitWithHelp(ctx, "quit_with_help", tt.input)
+			//Assert that the aflag_account_authorized has been reset to the result
+			assert.Equal(t, res, tt.expectedResult, "Expected result should be equal to the actual result")
+		})
+	}
+}
+
+func TestShowBlockedAccount(t *testing.T) {
+	sessionId := "session123"
+	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
+
+	h := &MenuHandlers{}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		status         string
+		expectedResult resource.Result
+	}{
+		{
+			name: "Test quit with Show Blocked Account",
+			expectedResult: resource.Result{
+				Content: "Your account has been locked. For help on how to unblock your account, contact support at: 0757628885",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, _ := h.ShowBlockedAccount(ctx, "show_blocked_account", tt.input)
+			//Assert that the result is as expected
+			assert.Equal(t, res, tt.expectedResult, "Expected result should be equal to the actual result")
+		})
+	}
+}
+
+func TestValidateBlockedNumber(t *testing.T) {
+	sessionId := "session123"
+	validNumber := "+254712345678"
+	invalidNumber := "12343"              // Invalid phone number
+	unregisteredNumber := "+254734567890" // Valid but unregistered number
+	publicKey := "0X13242618721"
+	mockState := state.NewState(128)
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_unregistered_number, _ := fm.GetFlag("flag_unregistered_number")
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		st:            mockState,
+		flagManager:   fm,
+	}
+
+	err = userStore.WriteEntry(ctx, validNumber, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedResult resource.Result
+	}{
+		{
+			name:           "Valid and registered number",
+			input:          []byte(validNumber),
+			expectedResult: resource.Result{},
+		},
+		{
+			name:  "Invalid Phone Number",
+			input: []byte(invalidNumber),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_unregistered_number},
+			},
+		},
+		{
+			name:  "Unregistered Phone Number",
+			input: []byte(unregisteredNumber),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_unregistered_number},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.ValidateBlockedNumber(ctx, "validate_blocked_number", tt.input)
+
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.expectedResult, res)
+
+			if tt.name == "Valid and registered number" {
+				blockedNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				assert.Equal(t, validNumber, string(blockedNumber))
+			}
+		})
+	}
+}
+
+func TestSaveOthersTemporaryPin(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	tests := []struct {
+		name          string
+		sessionId     string
+		blockedNumber string
+		testPin       string
+		setup         func() error // Setup function for each test case
+		expectedError bool
+		verifyResult  func(t *testing.T) // Function to verify the result
+	}{
+		{
+			name:          "Missing Session ID",
+			sessionId:     "", // Empty session ID
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup:         nil,
+			expectedError: true,
+			verifyResult:  nil,
+		},
+		{
+			name:          "Failed to Read Blocked Number",
+			sessionId:     sessionId,
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup: func() error {
+				// Do not write the blocked number to simulate a read failure
+				return nil
+			},
+			expectedError: true,
+			verifyResult:  nil,
+		},
+
+		{
+			name:          "Successfully save hashed PIN",
+			sessionId:     sessionId,
+			blockedNumber: blockedNumber,
+			testPin:       testPin,
+			setup: func() error {
+				// Write the blocked number to the store
+				return userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+			},
+			expectedError: false,
+			verifyResult: func(t *testing.T) {
+				// Read the stored hashed PIN
+				othersHashedPin, err := userStore.ReadEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				// Verify that the stored hashed PIN matches the original PIN
+				if !pin.VerifyPIN(string(othersHashedPin), testPin) {
+					t.Fatal("stored hashed PIN does not match the original PIN")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set up the context with the session ID
+			ctx := context.WithValue(context.Background(), "SessionId", tt.sessionId)
+
+			// Run the setup function if provided
+			if tt.setup != nil {
+				err := tt.setup()
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Call the function under test
+			_, err := h.SaveOthersTemporaryPin(ctx, "save_others_temporary_pin", []byte(tt.testPin))
+
+			// Assert the error
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Verify the result if a verification function is provided
+			if tt.verifyResult != nil {
+				tt.verifyResult(t)
+			}
+		})
+	}
+}
+
+func TestCheckBlockedNumPinMisMatch(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+	mockState := state.NewState(128)
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	hashedPIN, err := pin.HashPIN(testPin)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
+		t.Fatal(err)
+	}
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+		st:            mockState,
+		flagManager:   fm,
+	}
+
+	// Write initial data to the store
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = userStore.WriteEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedResult resource.Result
+	}{
+		{
+			name:  "Successful PIN match",
+			input: []byte(testPin),
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_pin_mismatch},
+			},
+		},
+		{
+			name:  "PIN mismatch",
+			input: []byte("1345"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_pin_mismatch},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, err := h.CheckBlockedNumPinMisMatch(ctx, "sym", tt.input)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestGetCurrentProfileInfo(t *testing.T) {
+	sessionId := "session123"
+	ctx, store := InitializeTestStore(t)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_firstname_set, _ := fm.GetFlag("flag_firstname_set")
+	flag_familyname_set, _ := fm.GetFlag("flag_familyname_set")
+	flag_yob_set, _ := fm.GetFlag("flag_yob_set")
+	flag_gender_set, _ := fm.GetFlag("flag_gender_set")
+	flag_location_set, _ := fm.GetFlag("flag_location_set")
+	flag_offerings_set, _ := fm.GetFlag("flag_offerings_set")
+	flag_back_set, _ := fm.GetFlag("flag_back_set")
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+		st:            state.NewState(16),
+	}
+
+	tests := []struct {
+		name     string
+		execPath string
+		dbKey    storedb.DataTyp
+		value    string
+		expected resource.Result
+	}{
+		{
+			name:     "Test fetching first name",
+			execPath: "edit_first_name",
+			dbKey:    storedb.DATA_FIRST_NAME,
+			value:    "John",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_firstname_set},
+				Content:   "John",
+			},
+		},
+		{
+			name:     "Test fetching family name",
+			execPath: "edit_family_name",
+			dbKey:    storedb.DATA_FAMILY_NAME,
+			value:    "Doe",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_familyname_set},
+				Content:   "Doe",
+			},
+		},
+		{
+			name:     "Test fetching year of birth",
+			execPath: "edit_yob",
+			dbKey:    storedb.DATA_YOB,
+			value:    "1980",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_yob_set},
+				Content:   "1980",
+			},
+		},
+		{
+			name:     "Test fetching gender",
+			execPath: "edit_gender",
+			dbKey:    storedb.DATA_GENDER,
+			value:    "Male",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_gender_set},
+				Content:   "Male",
+			},
+		},
+		{
+			name:     "Test fetching location",
+			execPath: "edit_location",
+			dbKey:    storedb.DATA_LOCATION,
+			value:    "Nairobi",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_location_set},
+				Content:   "Nairobi",
+			},
+		},
+		{
+			name:     "Test fetching offerings",
+			execPath: "edit_offerings",
+			dbKey:    storedb.DATA_OFFERINGS,
+			value:    "Fruits",
+			expected: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+				FlagSet:   []uint32{flag_offerings_set},
+				Content:   "Fruits",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx = context.WithValue(ctx, "SessionId", sessionId)
+			ctx = context.WithValue(ctx, "Language", lang.Language{
+				Code: "eng",
+			})
+			// Set ExecPath to include tt.execPath
+			h.st.ExecPath = []string{tt.execPath}
+
+			if tt.value != "" {
+				err := store.WriteEntry(ctx, sessionId, tt.dbKey, []byte(tt.value))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			res, err := h.GetCurrentProfileInfo(ctx, tt.execPath, []byte(""))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tt.expected, res, "Result should match the expected output")
+		})
+	}
+}
+
+func TestResetOthersPin(t *testing.T) {
+	sessionId := "session123"
+	blockedNumber := "+254712345678"
+	testPin := "1234"
+
+	ctx, userStore := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	hashedPIN, err := pin.HashPIN(testPin)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
+		t.Fatal(err)
+	}
+
+	h := &MenuHandlers{
+		userdataStore: userStore,
+	}
+
+	// Write initial data to the store
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = userStore.WriteEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.ResetOthersPin(ctx, "reset_others_pin", []byte(""))
+
+	assert.NoError(t, err)
+}
+
+func TestResetValidPin(t *testing.T) {
+	ctx := context.Background()
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
+
+	expectedResult := resource.Result{
+		FlagReset: []uint32{flag_valid_pin},
+	}
+
+	h := &MenuHandlers{
+		flagManager: fm,
+	}
+
+	res, err := h.ResetValidPin(ctx, "reset_valid_pin", []byte(""))
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedResult, res)
+}
+
+func TestResetUnregisteredNumber(t *testing.T) {
+	ctx := context.Background()
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	flag_unregistered_number, _ := fm.GetFlag("flag_unregistered_number")
+
+	expectedResult := resource.Result{
+		FlagReset: []uint32{flag_unregistered_number},
+	}
+
+	h := &MenuHandlers{
+		flagManager: fm,
+	}
+
+	res, err := h.ResetUnregisteredNumber(ctx, "reset_unregistered_number", []byte(""))
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, expectedResult, res)
+}
+
+func TestConstructAccountAlias(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	mockAccountService := new(mocks.MockAccountService)
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore:  store,
+		accountService: mockAccountService,
+	}
+
+	tests := []struct {
+		name          string
+		firstName     string
+		familyName    string
+		publicKey     string
+		expectedAlias string
+		aliasResponse *models.RequestAliasResult
+		aliasError    error
+		expectedError error
+	}{
+		{
+			name:          "Valid alias construction",
+			firstName:     "John",
+			familyName:    "Doe",
+			publicKey:     "pubkey123",
+			expectedAlias: "JohnDoeAlias",
+			aliasResponse: &models.RequestAliasResult{Alias: "JohnDoeAlias"},
+			aliasError:    nil,
+			expectedError: nil,
+		},
+		{
+			name:          "Account service fails to return alias",
+			firstName:     "Jane",
+			familyName:    "Smith",
+			publicKey:     "pubkey456",
+			expectedAlias: "",
+			aliasResponse: nil,
+			aliasError:    fmt.Errorf("service unavailable"),
+			expectedError: fmt.Errorf("Failed to retrieve alias: service unavailable"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.firstName != "" {
+				err := store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(tt.firstName))
+				require.NoError(t, err)
+			}
+
+			if tt.familyName != "" {
+				err := store.WriteEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(tt.familyName))
+				require.NoError(t, err)
+			}
+
+			if tt.publicKey != "" {
+				err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
+				require.NoError(t, err)
+			}
+
+			aliasInput := fmt.Sprintf("%s%s", tt.firstName, tt.familyName)
+
+			// Mock service behavior
+			mockAccountService.On(
+				"RequestAlias",
+				tt.publicKey,
+				aliasInput,
+			).Return(tt.aliasResponse, tt.aliasError)
+
+			// Call the function under test
+			err := h.constructAccountAlias(ctx)
+
+			// Assertions
+			if tt.expectedError != nil {
+				assert.EqualError(t, err, tt.expectedError.Error())
+			} else {
+				assert.NoError(t, err)
+				if tt.expectedAlias != "" {
+					storedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+					require.NoError(t, err)
+					assert.Equal(t, tt.expectedAlias, string(storedAlias))
+				}
+			}
+
+			// Ensure mock expectations were met
+			mockAccountService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestInsertProfileItems(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	mockState := state.NewState(128)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
+	}
+
+	profileItems := []string{"John", "Doe", "Male", "1990", "Nairobi", "Software"}
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+		st:            mockState,
+		profile: &profile.Profile{
+			ProfileItems: profileItems,
+			Max:          6,
+		},
+	}
+
+	res := &resource.Result{}
+	err = h.insertProfileItems(ctx, sessionId, res)
+	require.NoError(t, err)
+
+	// Loop through profileDataKeys to validate stored values
+	for i, key := range profileDataKeys {
+		storedValue, err := store.ReadEntry(ctx, sessionId, key)
+		require.NoError(t, err)
+		assert.Equal(t, profileItems[i], string(storedValue))
+	}
+}
+
+func TestUpdateAllProfileItems(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	publicKey := "0X13242618721"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	mockState := state.NewState(128)
+	mockAccountService := new(mocks.MockAccountService)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	flag_firstname_set, _ := fm.GetFlag("flag_firstname_set")
+	flag_familyname_set, _ := fm.GetFlag("flag_familyname_set")
+	flag_yob_set, _ := fm.GetFlag("flag_yob_set")
+	flag_gender_set, _ := fm.GetFlag("flag_gender_set")
+	flag_location_set, _ := fm.GetFlag("flag_location_set")
+	flag_offerings_set, _ := fm.GetFlag("flag_offerings_set")
+
+	profileDataKeys := []storedb.DataTyp{
+		storedb.DATA_FIRST_NAME,
+		storedb.DATA_FAMILY_NAME,
+		storedb.DATA_GENDER,
+		storedb.DATA_YOB,
+		storedb.DATA_LOCATION,
+		storedb.DATA_OFFERINGS,
+	}
+
+	profileItems := []string{"John", "Doe", "Male", "1990", "Nairobi", "Software"}
+
+	expectedResult := resource.Result{
+		FlagSet: []uint32{
+			flag_firstname_set,
+			flag_familyname_set,
+			flag_yob_set,
+			flag_gender_set,
+			flag_location_set,
+			flag_offerings_set,
+		},
+	}
+
+	h := &MenuHandlers{
+		userdataStore:  store,
+		flagManager:    fm,
+		st:             mockState,
+		accountService: mockAccountService,
+		profile: &profile.Profile{
+			ProfileItems: profileItems,
+			Max:          6,
+		},
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	require.NoError(t, err)
+
+	aliasInput := fmt.Sprintf("%s%s", profileItems[0], profileItems[1])
+
+	// Mock the account alias response
+	mockAccountService.On(
+		"RequestAlias",
+		publicKey,
+		aliasInput,
+	).Return(&models.RequestAliasResult{Alias: "JohnDoe"}, nil)
+
+	// Call the function under test
+	res, err := h.UpdateAllProfileItems(ctx, "symbol", nil)
+	assert.NoError(t, err)
+
+	// Loop through profileDataKeys to validate stored values
+	for i, key := range profileDataKeys {
+		storedValue, err := store.ReadEntry(ctx, sessionId, key)
+		require.NoError(t, err)
+		assert.Equal(t, profileItems[i], string(storedValue))
+	}
+
+	// Validate alias storage
+	storedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	assert.NoError(t, err)
+	assert.Equal(t, "JohnDoe", string(storedAlias))
+	assert.Equal(t, expectedResult, res)
+}
+
+func TestClearTemporaryValue(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: store,
+	}
+
+	// Write initial data to the store
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte("SomePreviousDATA34$"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = h.ClearTemporaryValue(ctx, "clear_temporary_value", []byte(""))
+
+	assert.NoError(t, err)
+	// Read current temp value from the store
+	currentTempValue, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// assert that the temp value is empty
+	assert.Equal(t, currentTempValue, []byte(""))
 }
