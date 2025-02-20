@@ -42,7 +42,6 @@ func main() {
 	}
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	pfp := path.Join(scriptDir, "pp.csv")
 	flagParser, err := application.NewFlagManager(pfp)

@@ -62,7 +62,6 @@ func main() {
 	}
 
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	ln, err := lang.LanguageFromCode(config.Language())
 	if err != nil {
@@ -74,12 +73,12 @@ func main() {
 	pfp := path.Join(scriptDir, "pp.csv")
 
 	cfg := engine.Config{
-		Root:          "root",
-		SessionId:     sessionId,
-		OutputSize:    uint32(size),
-		FlagCount:     uint32(128),
-		MenuSeparator: menuSeparator,
-		EngineDebug: engineDebug,
+		Root:              "root",
+		SessionId:         sessionId,
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
+		MenuSeparator:     menuSeparator,
+		EngineDebug:       engineDebug,
 		ResetOnEmptyInput: true,
 	}
 
@@ -128,8 +127,8 @@ func main() {
 	accountService := services.New(ctx, menuStorageService)
 	_, err = lhs.GetHandler(accountService)
 	if err != nil {
-	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
-	       os.Exit(1)
+		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+		os.Exit(1)
 	}
 	en := lhs.GetEngine(cfg, rs, pe)
 
