@@ -21,7 +21,7 @@ var (
 	sessionID          string
 	src                = rand.NewSource(42)
 	g                  = rand.New(src)
-	secondarySessionId = "0700000000"
+	secondarySessionId = "+254700000000"
 )
 
 var groupTestFile = flag.String("test-file", "group_test.json", "The test file to use for running the group tests")
