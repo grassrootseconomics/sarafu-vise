@@ -416,7 +416,7 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	if h.st.Back() {
+	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 		return res, nil
 	}
