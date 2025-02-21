@@ -1,4 +1,4 @@
-CATCH pin_entry flag_incorrect_pin 1
+CATCH incorrect_pin flag_incorrect_pin 1
 RELOAD retrieve_blocked_number
 MAP retrieve_blocked_number
 CATCH invalid_others_pin flag_valid_pin 0

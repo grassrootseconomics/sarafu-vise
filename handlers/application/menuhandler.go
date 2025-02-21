@@ -318,7 +318,7 @@ func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	if !h.st.Back() {
+	if string(input) != "0" {
 		pinInput := string(input)
 		// Validate that the PIN is a 4-digit number.
 		if pin.IsValidPIN(pinInput) {
@@ -384,6 +384,12 @@ func (h *MenuHandlers) SaveOthersTemporaryPin(ctx context.Context, sym string, i
 	}
 
 	temporaryPin := string(input)
+
+	// Validate that the input is a 4-digit number.
+	if !pin.IsValidPIN(temporaryPin) {
+		return res, nil
+	}
+
 	// Retrieve the blocked number associated with this session
 	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
@@ -416,7 +422,7 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	if h.st.Back() {
+	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 		return res, nil
 	}
@@ -456,7 +462,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
 
-	if h.st.Back() {
+	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 		return res, nil
 	}
@@ -601,16 +607,20 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 		return res, fmt.Errorf("missing session")
 	}
 
-	if h.st.Back() {
+	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
 		return res, nil
 	}
+
 	blockedNumber := string(input)
-	_, err = store.ReadEntry(ctx, blockedNumber, storedb.DATA_PUBLIC_KEY)
-	if !phone.IsValidPhoneNumber(blockedNumber) {
+	formattedNumber, err := phone.FormatPhoneNumber(blockedNumber)
+	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+		logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", blockedNumber, "error", err)
 		return res, nil
 	}
+
+	_, err = store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		if db.IsNotFound(err) {
 			logg.InfoCtxf(ctx, "Invalid or unregistered number")
@@ -621,7 +631,7 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 			return res, err
 		}
 	}
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
 	if err != nil {
 		return res, nil
 	}

@@ -1,4 +1,4 @@
-CATCH no_admin_privilege flag_admin_privilege  0
+CATCH no_admin_privilege flag_admin_privilege 0
 LOAD reset_account_authorized 0
 RELOAD reset_account_authorized
 MOUT back 0
