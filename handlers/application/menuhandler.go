@@ -384,6 +384,12 @@ func (h *MenuHandlers) SaveOthersTemporaryPin(ctx context.Context, sym string, i
 	}
 
 	temporaryPin := string(input)
+
+	// Validate that the input is a 4-digit number.
+	if !pin.IsValidPIN(temporaryPin) {
+		return res, nil
+	}
+
 	// Retrieve the blocked number associated with this session
 	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
 	if err != nil {
