@@ -318,7 +318,7 @@ func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	if !h.st.Back() {
+	if string(input) != "0" {
 		pinInput := string(input)
 		// Validate that the PIN is a 4-digit number.
 		if pin.IsValidPIN(pinInput) {
@@ -456,7 +456,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
 
-	if h.st.Back() {
+	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 		return res, nil
 	}
