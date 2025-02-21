@@ -1,8 +1,8 @@
-RELOAD reset_incorrect
+RELOAD reset_allow_update
 MOUT back 0
 HALT
 INCMP _ 0
 RELOAD authorize_account
 CATCH incorrect_pin flag_incorrect_pin 1
-CATCH _ flag_account_authorized 0
+CATCH _ flag_allow_update 0
 INCMP new_pin *
