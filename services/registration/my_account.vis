@@ -1,3 +1,4 @@
+LOAD authorize_account 16
 LOAD reset_allow_update 0
 MOUT profile 1
 MOUT change_language 2
@@ -5,6 +6,7 @@ MOUT check_balance 3
 MOUT check_statement 4
 MOUT pin_options 5
 MOUT my_address 6
+MOUT my_account_alias 7
 MOUT back 0
 HALT
 INCMP main 0
@@ -14,4 +16,5 @@ INCMP balances 3
 INCMP check_statement 4
 INCMP pin_management 5
 INCMP address 6
+INCMP my_account_alias 7
 INCMP . *
