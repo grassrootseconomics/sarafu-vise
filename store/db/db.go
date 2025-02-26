@@ -130,7 +130,8 @@ func StringToDataTyp(str string) (DataTyp, error) {
 		return DATA_GENDER, nil
 	case "DATA_OFFERINGS":
 		return DATA_OFFERINGS, nil
-
+	case "DATA_ACCOUNT_ALIAS":
+		return DATA_ACCOUNT_ALIAS, nil
 	default:
 		return 0, errors.New("invalid DataTyp string")
 	}
