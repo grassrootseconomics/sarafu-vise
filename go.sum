@@ -27,6 +27,8 @@ github.com/grassrootseconomics/eth-custodial v1.3.0-beta h1:twrMBhl89GqDUL9PlkzQ
 github.com/grassrootseconomics/eth-custodial v1.3.0-beta/go.mod h1:7uhRcdnJplX4t6GKCEFkbeDhhjlcaGJeJqevbcvGLZo=
 github.com/grassrootseconomics/ussd-data-service v1.2.0-beta h1:fn1gwbWIwHVEBtUC2zi5OqTlfI/5gU1SMk0fgGixIXk=
 github.com/grassrootseconomics/ussd-data-service v1.2.0-beta/go.mod h1:omfI0QtUwIdpu9gMcUqLMCG8O1XWjqJGBx1qUMiGWC0=
+github.com/grassrootseconomics/ussd-data-service v1.4.0-beta h1:4fMd/3h2ZIhRg4GdHQmRw5FfD3MpJvFNNJQo+Q27f5M=
+github.com/grassrootseconomics/ussd-data-service v1.4.0-beta/go.mod h1:9sGnorpKaK76FmOGXoh/xv7x5siSFNYdXxQo9BKW4DI=
 github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4 h1:U4kkNYryi/qfbBF8gh7Vsbuz+cVmhf5kt6pE9bYYyLo=
 github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4/go.mod h1:zpZDgZFzeq9s0MIeB1P50NIEWDFFHSFBohI/NbaTD/Y=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=

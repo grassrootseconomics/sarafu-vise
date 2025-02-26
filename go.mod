@@ -10,7 +10,7 @@ require (
 	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta
+	github.com/grassrootseconomics/ussd-data-service v1.4.0-beta
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.9.0
