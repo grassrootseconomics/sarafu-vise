@@ -124,6 +124,9 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("set_back", appHandlers.SetBack)
 	ls.DbRs.AddLocalFunc("show_blocked_account", appHandlers.ShowBlockedAccount)
 	ls.DbRs.AddLocalFunc("clear_temporary_value", appHandlers.ClearTemporaryValue)
+	ls.DbRs.AddLocalFunc("get_pools", appHandlers.GetPools)
+	ls.DbRs.AddLocalFunc("swap_from_list", appHandlers.LoadSwapFromList)
+	ls.DbRs.AddLocalFunc("swap_to_list", appHandlers.LoadSwapToList)
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil
