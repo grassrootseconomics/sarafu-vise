@@ -101,6 +101,15 @@ const (
 	DATA_TRANSACTIONS = 1024 + iota
 )
 
+const (
+	// List of voucher symbols in the top pools context.
+	DATA_POOL_NAMES = 2048 + iota
+	// List of symbols in the top pools context.
+	DATA_POOL_SYMBOLS
+	// List of contact addresses in the top pools context
+	DATA_POOL_ADDRESSES
+)
+
 var (
 	logg = logging.NewVanilla().WithDomain("urdt-common")
 )
