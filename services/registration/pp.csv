@@ -29,4 +29,4 @@ flag,flag_location_set,35,this is set when the location of the profile is set
 flag,flag_offerings_set,36,this is set when the offerings of the profile is set
 flag,flag_back_set,37,this is set when it is a back navigation
 flag,flag_account_blocked,38,this is set when an account has been blocked after the allowed incorrect PIN attempts have been exceeded
-
+flag,flag_incorrect_pool,39,this is set when the user selects an invalid pool
