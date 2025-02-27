@@ -1037,6 +1037,7 @@ func TestAuthorize(t *testing.T) {
 	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := fm.GetFlag("flag_allow_update")
+	flag_invalid_pin, _ := fm.GetFlag("flag_invalid_pin")
 
 	// Set 1234 is the correct account pin
 	accountPIN := "1234"
@@ -1070,9 +1071,11 @@ func TestAuthorize(t *testing.T) {
 			},
 		},
 		{
-			name:           "Test with pin that is not a 4 digit",
-			input:          []byte("1235aqds"),
-			expectedResult: resource.Result{},
+			name:  "Test with pin that is not a 4 digit",
+			input: []byte("1235aqds"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_invalid_pin},
+			},
 		},
 	}
 
