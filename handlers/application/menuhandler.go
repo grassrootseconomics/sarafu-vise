@@ -1476,9 +1476,9 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		if db.IsNotFound(err) {
 			balance := "0.00"
 			if alias != "" {
-				content = l.Get("Alias: %s\nBalance: %s\n", alias, balance)
+				content = l.Get("%s balance: %s\n", alias, balance)
 			} else {
-				content = l.Get("Balance: %s\n", balance)
+				content = l.Get("balance: %s\n", balance)
 			}
 			res.Content = content
 			return res, nil
@@ -1505,9 +1505,9 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
 
 	if alias != "" {
-		content = l.Get("Alias: %s\nBalance: %s\n", alias, balStr)
+		content = l.Get("%s balance: %s\n", alias, balStr)
 	} else {
-		content = l.Get("Balance: %s\n", balStr)
+		content = l.Get("balance: %s\n", balStr)
 	}
 	res.Content = content
 
