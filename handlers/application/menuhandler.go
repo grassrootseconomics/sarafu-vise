@@ -1441,8 +1441,13 @@ func (h *MenuHandlers) ShowBlockedAccount(ctx context.Context, sym string, input
 // CheckBalance retrieves the balance of the active voucher and sets
 // the balance as the result content.
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
+
+	var (
+		res     resource.Result
+		err     error
+		alias   string
+		content string
+	)
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -1455,12 +1460,27 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 
 	store := h.userdataStore
 
+	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read account alias entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "error", err)
+			return res, err
+		}
+	} else {
+		alias = strings.Split(string(accAlias), ".")[0]
+	}
+
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
 		if db.IsNotFound(err) {
 			balance := "0.00"
-			res.Content = l.Get("Balance: %s\n", balance)
+			if alias != "" {
+				content = l.Get("Alias: %s\nBalance: %s\n", alias, balance)
+			} else {
+				content = l.Get("Balance: %s\n", balance)
+			}
+			res.Content = content
 			return res, nil
 		}
 
@@ -1484,7 +1504,12 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	// Format to 2 decimal places
 	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
 
-	res.Content = l.Get("Balance: %s\n", balStr)
+	if alias != "" {
+		content = l.Get("Alias: %s\nBalance: %s\n", alias, balStr)
+	} else {
+		content = l.Get("Balance: %s\n", balStr)
+	}
+	res.Content = content
 
 	return res, nil
 }
@@ -2420,7 +2445,8 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 	}
 	return nil
 }
-//RequestCustomAlias requests an ENS based alias name based on a user's input,then saves it as temporary value
+
+// RequestCustomAlias requests an ENS based alias name based on a user's input,then saves it as temporary value
 func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -2464,7 +2490,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 	return res, nil
 }
 
-//GetSuggestedAlias loads and displays the suggested alias name from the temporary value
+// GetSuggestedAlias loads and displays the suggested alias name from the temporary value
 func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -2481,7 +2507,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-//ConfirmNewAlias  reads  the suggested alias from the temporary value and confirms it  as the new account alias.
+// ConfirmNewAlias  reads  the suggested alias from the temporary value and confirms it  as the new account alias.
 func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
