@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -1119,7 +1120,6 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 			logg.ErrorCtxf(ctx, "Failed to read account alias entry with", "key", "error", storedb.DATA_ACCOUNT_ALIAS, err)
 			return res, err
 		}
-		res.FlagSet = append(res.FlagSet, flag_offerings_set)
 		res.Content = string(profileInfo)
 	default:
 		break
@@ -1438,6 +1438,33 @@ func (h *MenuHandlers) ShowBlockedAccount(ctx context.Context, sym string, input
 	return res, nil
 }
 
+// loadUserContent loads the main user content in the main menu: the alias,balance associated with active voucher
+func loadUserContent(ctx context.Context, activeSym string, balance string, alias string) (string, error) {
+	var content string
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	balFloat, err := strconv.ParseFloat(balance, 64)
+	if err != nil {
+		//Only exclude ErrSyntax error to avoid returning an error if the active bal is not available yet
+		if !errors.Is(err, strconv.ErrSyntax) {
+			logg.ErrorCtxf(ctx, "failed to parse activeBal as float", "value", balance, "error", err)
+			return "", err
+		}
+		balFloat = 0.00
+	}
+	// Format to 2 decimal places
+	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
+	if alias != "" {
+		content = l.Get("%s balance: %s\n", alias, balStr)
+	} else {
+		content = l.Get("balance: %s\n", balStr)
+	}
+	return content, nil
+}
+
 // CheckBalance retrieves the balance of the active voucher and sets
 // the balance as the result content.
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
@@ -1454,10 +1481,6 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 
-	code := codeFromCtx(ctx)
-	l := gotext.NewLocale(translationDir, code)
-	l.AddDomain("default")
-
 	store := h.userdataStore
 
 	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
@@ -1473,41 +1496,24 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		if db.IsNotFound(err) {
-			balance := "0.00"
-			if alias != "" {
-				content = l.Get("%s balance: %s\n", alias, balance)
-			} else {
-				content = l.Get("balance: %s\n", balance)
-			}
-			res.Content = content
-			return res, nil
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
+			return res, err
 		}
-
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
-		return res, err
 	}
 
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
-		return res, err
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
+			return res, err
+		}
+
 	}
 
-	// Convert activeBal from []byte to float64
-	balFloat, err := strconv.ParseFloat(string(activeBal), 64)
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), alias)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to parse activeBal as float", "value", string(activeBal), "error", err)
 		return res, err
-	}
-
-	// Format to 2 decimal places
-	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
-
-	if alias != "" {
-		content = l.Get("%s balance: %s\n", alias, balStr)
-	} else {
-		content = l.Get("balance: %s\n", balStr)
 	}
 	res.Content = content
 
