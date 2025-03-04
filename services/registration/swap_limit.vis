@@ -1,0 +1,7 @@
+LOAD swap_max_limit 0
+CATCH _ flag_incorrect_voucher 1
+MAP swap_max_limit
+MOUT back 0
+HALT
+INCMP _ 0
+INCMP swap_preview *
