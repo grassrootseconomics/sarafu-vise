@@ -275,36 +275,80 @@ func TestSaveFirstname(t *testing.T) {
 
 	// Set the flag in the State
 	mockState := state.NewState(128)
-	mockState.SetFlag(flag_allow_update)
 
-	expectedResult := resource.Result{}
-
-	// Define test data
-	firstName := "John"
-
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName)); err != nil {
-		t.Fatal(err)
-	}
-
-	expectedResult.FlagSet = []uint32{flag_firstname_set}
-
-	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
 		st:            mockState,
+		profile:       &profile.Profile{Max: 6},
 	}
 
-	// Call the method
-	res, err := h.SaveFirstname(ctx, "save_firstname", []byte(firstName))
+	tests := []struct {
+		name              string
+		setupfunc         func()
+		saveItem          string
+		expectedSavedItem string
+		expectedResult    resource.Result
+	}{
+		{
+			name:     "test when `flag_allow_update` flag is set",
+			saveItem: "John",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.SetFlag(flag_allow_update)
+			},
+			expectedSavedItem: "John",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_firstname_set},
+			},
+		},
+		{
+			name: "test when `flag_allow_update flag` is not set but `flag_firstname_set` set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_firstname_set)
+			},
+			saveItem:          "John",
+			expectedSavedItem: "John",
+			expectedResult:    resource.Result{},
+		},
+		{
+			name: "test when both `flag_allow_update flag`  `flag_firstname_set` are  not set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_firstname_set)
+			},
+			saveItem:          "John",
+			expectedSavedItem: "John",
+			expectedResult:    resource.Result{},
+		},
+	}
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
 
-	// Verify that the DATA_FIRST_NAME entry has been updated with the temporary value
-	storedFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
-	assert.Equal(t, firstName, string(storedFirstName))
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.saveItem)); err != nil {
+				t.Fatal(err)
+			}
+			// Call the method
+			res, err := h.SaveFirstname(ctx, "save_firstname", []byte(tt.saveItem))
+
+			if err != nil {
+				t.Fatalf("Failed to save firstname with error %v", err)
+			}
+			// Assert results
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+
+			// Verify that the DATA_FIRST_NAME entry has been updated with the temporary value
+			storedFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
+			assert.Equal(t, tt.expectedSavedItem, string(storedFirstName))
+
+		})
+	}
 }
 
 func TestSaveFamilyname(t *testing.T) {
@@ -315,40 +359,84 @@ func TestSaveFamilyname(t *testing.T) {
 	fm, _ := NewFlagManager(flagsPath)
 
 	flag_allow_update, _ := fm.GetFlag("flag_allow_update")
-	flag_firstname_set, _ := fm.GetFlag("flag_familyname_set")
+	flag_familyname_set, _ := fm.GetFlag("flag_familyname_set")
 
 	// Set the flag in the State
 	mockState := state.NewState(128)
-	mockState.SetFlag(flag_allow_update)
 
-	expectedResult := resource.Result{}
-
-	expectedResult.FlagSet = []uint32{flag_firstname_set}
-
-	// Define test data
-	familyName := "Doeee"
-
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName)); err != nil {
-		t.Fatal(err)
-	}
-
-	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
-		st:            mockState,
 		flagManager:   fm,
+		st:            mockState,
+		profile:       &profile.Profile{Max: 6},
 	}
 
-	// Call the method
-	res, err := h.SaveFamilyname(ctx, "save_familyname", []byte(familyName))
+	tests := []struct {
+		name              string
+		setupfunc         func()
+		saveItem          string
+		expectedSavedItem string
+		expectedResult    resource.Result
+	}{
+		{
+			name:     "test when `flag_allow_update` flag is set",
+			saveItem: "Doe",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.SetFlag(flag_allow_update)
+			},
+			expectedSavedItem: "Doe",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_familyname_set},
+			},
+		},
+		{
+			name: "test when `flag_allow_update flag` is not set but `flag_familyname_set` set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_familyname_set)
+			},
+			saveItem:          "Doe",
+			expectedSavedItem: "Doe",
+			expectedResult:    resource.Result{},
+		},
+		{
+			name: "test when both `flag_allow_update flag`  `flag_familyname_set` are  not set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_familyname_set)
+			},
+			saveItem:          "Doe",
+			expectedSavedItem: "Doe",
+			expectedResult:    resource.Result{},
+		},
+	}
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
 
-	// Verify that the DATA_FAMILY_NAME entry has been updated with the temporary value
-	storedFamilyName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
-	assert.Equal(t, familyName, string(storedFamilyName))
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.saveItem)); err != nil {
+				t.Fatal(err)
+			}
+			// Call the method
+			res, err := h.SaveFamilyname(ctx, "save_yob", []byte(tt.saveItem))
+
+			if err != nil {
+				t.Fatalf("Failed to save family name with error %v", err)
+			}
+			// Assert results
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+
+			// Verify that the DATA_FAMILY_NAME entry has been updated with the temporary value
+			storedFamilyname, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
+			assert.Equal(t, tt.expectedSavedItem, string(storedFamilyname))
+
+		})
+	}
 }
 
 func TestSaveYoB(t *testing.T) {
@@ -365,37 +453,83 @@ func TestSaveYoB(t *testing.T) {
 	mockState := state.NewState(108)
 	mockState.SetFlag(flag_allow_update)
 
-	expectedResult := resource.Result{}
-
-	// Define test data
-	yob := "1980"
-
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob)); err != nil {
-		t.Fatal(err)
-	}
-
-	expectedResult.FlagSet = []uint32{flag_yob_set}
-
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
 		st:            mockState,
+		profile:       &profile.Profile{Max: 6},
 	}
 
-	// Call the method
-	res, err := h.SaveYob(ctx, "save_yob", []byte(yob))
+	tests := []struct {
+		name              string
+		setupfunc         func()
+		saveItem          string
+		expectedSavedItem string
+		expectedResult    resource.Result
+	}{
+		{
+			name:     "test when `flag_allow_update` flag is set",
+			saveItem: "1980",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.SetFlag(flag_allow_update)
+			},
+			expectedSavedItem: "1980",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_yob_set},
+			},
+		},
+		{
+			name: "test when `flag_allow_update flag` is not set but `flag_yob_set` set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_yob_set)
+			},
+			saveItem:          "1980",
+			expectedSavedItem: "1980",
+			expectedResult:    resource.Result{},
+		},
+		{
+			name: "test when both `flag_allow_update flag`  `flag_yob_set` are  not set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_yob_set)
+			},
+			saveItem:          "1980",
+			expectedSavedItem: "1980",
+			expectedResult:    resource.Result{},
+		},
+	}
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.saveItem)); err != nil {
+				t.Fatal(err)
+			}
+			// Call the method
+			res, err := h.SaveYob(ctx, "save_yob", []byte(tt.saveItem))
 
-	// Verify that the DATA_YOB entry has been updated with the temporary value
-	storedYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
-	assert.Equal(t, yob, string(storedYob))
+			if err != nil {
+				t.Fatalf("Failed to save location with error %v", err)
+			}
+			// Assert results
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+
+			// Verify that the DATA_YOB entry has been updated with the temporary value
+			storedYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
+			assert.Equal(t, tt.expectedSavedItem, string(storedYob))
+
+		})
+	}
 }
 
 func TestSaveLocation(t *testing.T) {
+
 	sessionId := "session123"
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
@@ -407,36 +541,80 @@ func TestSaveLocation(t *testing.T) {
 
 	// Set the flag in the State
 	mockState := state.NewState(108)
-	mockState.SetFlag(flag_allow_update)
-
-	expectedResult := resource.Result{}
-
-	// Define test data
-	location := "Kilifi"
-
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location)); err != nil {
-		t.Fatal(err)
-	}
-
-	expectedResult.FlagSet = []uint32{flag_location_set}
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
+		profile:       &profile.Profile{Max: 6},
 		st:            mockState,
 	}
 
-	// Call the method
-	res, err := h.SaveLocation(ctx, "save_location", []byte(location))
+	tests := []struct {
+		name              string
+		setupfunc         func()
+		saveItem          string
+		expectedSavedItem string
+		expectedResult    resource.Result
+	}{
+		{
+			name:     "test when `flag_allow_update` flag is set",
+			saveItem: "Kilifi",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.SetFlag(flag_allow_update)
+			},
+			expectedSavedItem: "Kilifi",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_location_set},
+			},
+		},
+		{
+			name: "test when `flag_allow_update flag` is not set but `flag_location_set` set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_location_set)
+			},
+			saveItem:          "Kilifi",
+			expectedSavedItem: "Kilifi",
+			expectedResult:    resource.Result{FlagSet: []uint32{flag_location_set}},
+		},
+		{
+			name: "test when both `flag_allow_update flag`  `flag_location_set` are  not set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_location_set)
+			},
+			saveItem:          "Kilifi",
+			expectedSavedItem: "Kilifi",
+			expectedResult:    resource.Result{},
+		},
+	}
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.saveItem)); err != nil {
+				t.Fatal(err)
+			}
+			// Call the method
+			res, err := h.SaveLocation(ctx, "save_location", []byte(tt.saveItem))
 
-	// Verify that the DATA_LOCATION entry has been updated with the temporary value
-	storedLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
-	assert.Equal(t, location, string(storedLocation))
+			if err != nil {
+				t.Fatalf("Failed to save location with error %v", err)
+			}
+			// Assert results
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+
+			// Verify that the DATA_LOCATION entry has been updated with the temporary value
+			storedLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
+			assert.Equal(t, tt.expectedSavedItem, string(storedLocation))
+
+		})
+	}
 }
 
 func TestSaveOfferings(t *testing.T) {
@@ -451,36 +629,76 @@ func TestSaveOfferings(t *testing.T) {
 
 	// Set the flag in the State
 	mockState := state.NewState(108)
-	mockState.SetFlag(flag_allow_update)
 
-	expectedResult := resource.Result{}
-
-	// Define test data
-	offerings := "Bananas"
-
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings)); err != nil {
-		t.Fatal(err)
-	}
-
-	expectedResult.FlagSet = []uint32{flag_offerings_set}
-
-	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
 		st:            mockState,
+		profile:       &profile.Profile{Max: 6},
 	}
 
-	// Call the method
-	res, err := h.SaveOfferings(ctx, "save_offerings", []byte(offerings))
+	tests := []struct {
+		name              string
+		setupfunc         func()
+		saveItem          string
+		expectedSavedItem string
+		expectedResult    resource.Result
+	}{
+		{
+			name:     "test when `flag_allow_update` flag is set",
+			saveItem: "Bananas",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.SetFlag(flag_allow_update)
+			},
+			expectedSavedItem: "Bananas",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_offerings_set},
+			},
+		},
+		{
+			name: "test when `flag_allow_update flag` is not set but `flag_offerings_set` set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_offerings_set)
+			},
+			saveItem:          "Bananas",
+			expectedSavedItem: "Bananas",
+			expectedResult:    resource.Result{},
+		},
+		{
+			name: "test when both `flag_allow_update flag`  `flag_offerings_set` are  not set ",
+			setupfunc: func() {
+				//setup the required flags
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_offerings_set)
+			},
+			saveItem:          "Bananas",
+			expectedSavedItem: "Bananas",
+			expectedResult:    resource.Result{},
+		},
+	}
 
-	// Assert results
-	assert.NoError(t, err)
-	assert.Equal(t, expectedResult, res)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
 
-	// Verify that the DATA_OFFERINGS entry has been updated with the temporary value
-	storedOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
-	assert.Equal(t, offerings, string(storedOfferings))
+			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.saveItem)); err != nil {
+				t.Fatal(err)
+			}
+
+			res, err := h.SaveOfferings(ctx, "save_offerings", []byte(tt.saveItem))
+
+			// Assert results
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
+
+			// Verify that the DATA_OFFERINGS entry has been updated with the temporary value
+			storedOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
+			assert.Equal(t, tt.expectedSavedItem, string(storedOfferings))
+		})
+	}
 }
 
 func TestSaveGender(t *testing.T) {
@@ -1662,6 +1880,11 @@ func TestValidateRecipient(t *testing.T) {
 		{
 			name:           "Test with address",
 			input:          []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
+			expectedResult: resource.Result{},
+		},
+		{
+			name:           "Test with alias recepient",
+			input:          []byte("foobar"),
 			expectedResult: resource.Result{},
 		},
 		{
@@ -3073,6 +3296,53 @@ func TestCheckBlockedNumPinMisMatch(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedResult, res)
+		})
+	}
+}
+
+func TestSetBack(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		flagManager:   fm,
+		st:            state.NewState(16),
+	}
+
+	flag_back_set, _ := h.flagManager.GetFlag("flag_back_set")
+
+	tests := []struct {
+		name           string
+		input          []byte
+		expectedResult resource.Result
+	}{
+		{
+			name:  "Test with `0` input for back navigation",
+			input: []byte("0"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_back_set},
+			},
+		},
+		{
+			name:  "Test with input that is not back",
+			input: []byte("1345"),
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_back_set},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			//Call the function under test
+			res, _ := h.SetBack(ctx, "set_back", tt.input)
+
+			//Assert that the result set to content is what was expected
+			assert.Equal(t, res, tt.expectedResult, "Result should contain flags set according to user input")
 		})
 	}
 }
