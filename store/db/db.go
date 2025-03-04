@@ -63,6 +63,24 @@ const (
 	DATA_INITIAL_LANGUAGE_CODE
 	//Fully qualified account alias string
 	DATA_ACCOUNT_ALIAS
+	// Holds the active pool contract address for the swap
+	DATA_ACTIVE_POOL_ADDRESS
+	// Currently active swap from symbol for the swap
+	DATA_ACTIVE_SWAP_FROM_SYM
+	// Currently active swap from decimal count for the swap
+	DATA_ACTIVE_SWAP_FROM_DECIMAL
+	// Holds the active swap from contract address for the swap
+	DATA_ACTIVE_SWAP_FROM_ADDRESS
+	// Currently active swap from to for the swap
+	DATA_ACTIVE_SWAP_TO_SYM
+	// Currently active swap to decimal count for the swap
+	DATA_ACTIVE_SWAP_TO_DECIMAL
+	// Holds the active pool contract address for the swap
+	DATA_ACTIVE_SWAP_TO_ADDRESS
+	// Holds the max swap amount for the swap
+	DATA_ACTIVE_SWAP_MAX_AMOUNT
+	// Holds the active swap amount for the swap
+	DATA_ACTIVE_SWAP_AMOUNT
 )
 
 const (
@@ -108,6 +126,22 @@ const (
 	DATA_POOL_SYMBOLS
 	// List of contact addresses in the top pools context
 	DATA_POOL_ADDRESSES
+	// List of swap from voucher symbols in the user context.
+	DATA_POOL_FROM_SYMBOLS
+	// List of swap from balances for vouchers valid in the pools context.
+	DATA_POOL_FROM_BALANCES
+	// List of swap from decimal counts for vouchers valid in the pools context.
+	DATA_POOL_FROM_DECIMALS
+	// List of swap from EVM addresses for vouchers valid in the pools context.
+	DATA_POOL_FROM_ADDRESSES
+	// List of swap to voucher symbols in the user context.
+	DATA_POOL_TO_SYMBOLS
+	// List of swap to balances for vouchers valid in the pools context.
+	DATA_POOL_TO_BALANCES
+	// List of swap to decimal counts for vouchers valid in the pools context.
+	DATA_POOL_TO_DECIMALS
+	// List of swap to EVM addresses for vouchers valid in the pools context.
+	DATA_POOL_TO_ADDRESSES
 )
 
 var (
