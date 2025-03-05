@@ -728,6 +728,7 @@ func TestSaveGender(t *testing.T) {
 			input: []byte("1"),
 			setupfunc: func() {
 				mockState.SetFlag(flag_allow_update)
+				mockState.ExecPath = []string{}
 			},
 			expectedGender:  "male",
 			executingSymbol: "set_male",
@@ -741,6 +742,7 @@ func TestSaveGender(t *testing.T) {
 			setupfunc: func() {
 				mockState.ResetFlag(flag_allow_update)
 				mockState.SetFlag(flag_gender_set)
+				mockState.ExecPath = []string{}
 			},
 			expectedResult:  resource.Result{},
 			expectedGender:  "female",
@@ -751,6 +753,7 @@ func TestSaveGender(t *testing.T) {
 			setupfunc: func() {
 				mockState.ResetFlag(flag_allow_update)
 				mockState.ResetFlag(flag_gender_set)
+				mockState.ExecPath = []string{}
 			},
 			input:           []byte("3"),
 			executingSymbol: "set_unspecified",
@@ -763,6 +766,7 @@ func TestSaveGender(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupfunc()
 			mockState.ExecPath = append(mockState.ExecPath, tt.executingSymbol)
+
 			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
 				t.Fatal(err)
 			}
@@ -774,6 +778,7 @@ func TestSaveGender(t *testing.T) {
 				flagManager:   fm,
 				profile:       &profile.Profile{Max: 6},
 			}
+			allowUpdate := h.st.MatchFlag(flag_allow_update, true)
 
 			// Call the method
 			res, err := h.SaveGender(ctx, "save_gender", tt.input)
@@ -782,9 +787,15 @@ func TestSaveGender(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedResult, res)
 
-			// Verify that the DATA_GENDER entry has been updated with the temporary value
-			storedGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
-			assert.Equal(t, tt.expectedGender, string(storedGender))
+			// Verify that the DATA_GENDER entry if the flag_allow_update is set has been updated with the temporary value
+			if allowUpdate {
+				storedGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
+				assert.Equal(t, tt.expectedGender, string(storedGender))
+			} else {
+				// Verify that DATA_TEMPORARY_VALUE is updated with the latest user input
+				temporaryGenderValue, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+				assert.Equal(t, tt.expectedGender, string(temporaryGenderValue))
+			}
 		})
 	}
 }
