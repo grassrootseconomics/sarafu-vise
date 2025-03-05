@@ -1865,7 +1865,7 @@ func TestValidateRecipient(t *testing.T) {
 			},
 		},
 		{
-			name:  "Test with valid unregistered recepient",
+			name:  "Test with valid unregistered recipient",
 			input: []byte("0712345678"),
 			expectedResult: resource.Result{
 				FlagSet: []uint32{flag_invalid_recipient_with_invite},
@@ -1873,7 +1873,7 @@ func TestValidateRecipient(t *testing.T) {
 			},
 		},
 		{
-			name:           "Test with valid registered recepient",
+			name:           "Test with valid registered recipient",
 			input:          []byte("0711223344"),
 			expectedResult: resource.Result{},
 		},
@@ -1883,12 +1883,12 @@ func TestValidateRecipient(t *testing.T) {
 			expectedResult: resource.Result{},
 		},
 		{
-			name:           "Test with alias recepient",
-			input:          []byte("foobar"),
+			name:           "Test with alias recipient",
+			input:          []byte("foobar.sarafu.eth"),
 			expectedResult: resource.Result{},
 		},
 		{
-			name:           "Test with alias recepient",
+			name:           "Test with alias recipient",
 			input:          []byte("alias123.sarafu.local"),
 			expectedResult: resource.Result{},
 		},
@@ -1917,7 +1917,7 @@ func TestValidateRecipient(t *testing.T) {
 			mockAccountService.On("CheckAliasAddress", string(tt.input)).Return(aliasResponse, nil)
 
 			// Call the method
-			res, err := h.ValidateRecipient(ctx, "validate_recepient", tt.input)
+			res, err := h.ValidateRecipient(ctx, "validate_recipient", tt.input)
 
 			if err != nil {
 				t.Error(err)
