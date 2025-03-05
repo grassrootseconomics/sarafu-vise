@@ -713,59 +713,74 @@ func TestSaveGender(t *testing.T) {
 
 	// Set the flag in the State
 	mockState := state.NewState(108)
-	mockState.SetFlag(flag_allow_update)
 
 	// Define test cases
 	tests := []struct {
 		name            string
+		setupfunc       func()
 		input           []byte
 		expectedGender  string
+		expectedResult  resource.Result
 		executingSymbol string
 	}{
 		{
-			name:            "Valid Male Input",
-			input:           []byte("1"),
+			name:  "Valid Male Input with `flag_allow_update_set` set",
+			input: []byte("1"),
+			setupfunc: func() {
+				mockState.SetFlag(flag_allow_update)
+			},
 			expectedGender:  "male",
 			executingSymbol: "set_male",
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_gender_set},
+			},
 		},
 		{
-			name:            "Valid Female Input",
-			input:           []byte("2"),
+			name:  "Valid Female Input when `flag_allow_update` is not set but `flag_gender_set` is set",
+			input: []byte("2"),
+			setupfunc: func() {
+				mockState.ResetFlag(flag_allow_update)
+				mockState.SetFlag(flag_gender_set)
+			},
+			expectedResult:  resource.Result{},
 			expectedGender:  "female",
 			executingSymbol: "set_female",
 		},
 		{
-			name:            "Valid Unspecified Input",
+			name: "Valid Unspecified Input when both `flag_allow_update` and  `flag_gender_set` are not set",
+			setupfunc: func() {
+				mockState.ResetFlag(flag_allow_update)
+				mockState.ResetFlag(flag_gender_set)
+			},
 			input:           []byte("3"),
 			executingSymbol: "set_unspecified",
+			expectedResult:  resource.Result{},
 			expectedGender:  "unspecified",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.setupfunc()
+			mockState.ExecPath = append(mockState.ExecPath, tt.executingSymbol)
 			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
 				t.Fatal(err)
 			}
 
-			mockState.ExecPath = append(mockState.ExecPath, tt.executingSymbol)
 			// Create the MenuHandlers instance with the mock store
 			h := &MenuHandlers{
 				userdataStore: store,
 				st:            mockState,
 				flagManager:   fm,
+				profile:       &profile.Profile{Max: 6},
 			}
-
-			expectedResult := resource.Result{}
 
 			// Call the method
 			res, err := h.SaveGender(ctx, "save_gender", tt.input)
 
-			expectedResult.FlagSet = []uint32{flag_gender_set}
-
 			// Assert results
 			assert.NoError(t, err)
-			assert.Equal(t, expectedResult, res)
+			assert.Equal(t, tt.expectedResult, res)
 
 			// Verify that the DATA_GENDER entry has been updated with the temporary value
 			storedGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
