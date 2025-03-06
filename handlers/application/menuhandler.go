@@ -2761,6 +2761,10 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
 
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
 	userStore := h.userdataStore
 
 	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
@@ -2792,12 +2796,18 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 		return res, err
 	}
 
-	// /pool/quote/:amount/:publicKey/:fromAddr/:poolAddr/:toAddr
-
 	// call the API to get the quote
+	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	if err != nil {
+		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
 
 	// Scale down the quoted amount
-	quoteAmountStr := store.ScaleDownBalance("1339482", swapData.ActiveSwapToDecimal)
+	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
 	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
@@ -2824,8 +2834,6 @@ func (h *MenuHandlers) InitiateSwap(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 
-	fmt.Println("running InitiateSwap")
-
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 
 	code := codeFromCtx(ctx)
@@ -2847,21 +2855,18 @@ func (h *MenuHandlers) InitiateSwap(ctx context.Context, sym string, input []byt
 
 	swapAmountStr := string(swapAmount)
 
-	// /pool/quote/:amount/:publicKey/:fromAddr/:poolAddr/:toAddr
+	// Call the poolSwap API
+	r, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	if err != nil {
+		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
 
-	// Call poolSwap
-
-	// r, err := h.accountService.poolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
-	// if err != nil {
-	// 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-	// 	res.FlagSet = append(res.FlagSet, flag_api_error)
-	// 	res.Content = l.Get("Your request failed. Please try again later.")
-	// 	logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
-	// 	return res, nil
-	// }
-
-	// trackingId := r.TrackingId
-	// logg.InfoCtxf(ctx, "poolSwap", "trackingId", trackingId)
+	trackingId := r.TrackingId
+	logg.InfoCtxf(ctx, "poolSwap", "trackingId", trackingId)
 
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when your %s %s has been swapped for %s.",
