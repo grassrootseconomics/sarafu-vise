@@ -127,6 +127,9 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("get_pools", appHandlers.GetPools)
 	ls.DbRs.AddLocalFunc("swap_from_list", appHandlers.LoadSwapFromList)
 	ls.DbRs.AddLocalFunc("swap_to_list", appHandlers.LoadSwapToList)
+	ls.DbRs.AddLocalFunc("swap_max_limit", appHandlers.SwapMaxLimit)
+	ls.DbRs.AddLocalFunc("swap_preview", appHandlers.SwapPreview)
+	ls.DbRs.AddLocalFunc("initiate_swap", appHandlers.InitiateSwap)
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil
