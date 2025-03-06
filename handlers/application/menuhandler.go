@@ -2412,3 +2412,464 @@ func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, inpu
 	}
 	return res, nil
 }
+
+// GetPools fetches a list of 5 top pools
+func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	userStore := h.userdataStore
+	_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	topPools := []dataserviceapi.PoolDetails{
+		{
+			PoolName:            "Kenya ROLA Pool",
+			PoolSymbol:          "ROLA",
+			PoolContractAdrress: "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		},
+		{
+			PoolName:            "Nairobi ROLA Pool",
+			PoolSymbol:          "NAIROBI",
+			PoolContractAdrress: "0xB0660Ac1Ee3d32ea35bc728D7CA1705Fa5A37528",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		},
+		{
+			PoolName:            "Friends of Kiriba Ecosystem",
+			PoolSymbol:          "FRIENDS",
+			PoolContractAdrress: "0xC4848263821FA02baB2181910A2eFb9CECb2c21C",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		},
+		{
+			PoolName:            "Resilient Community Waqfs",
+			PoolSymbol:          "REZILIENS",
+			PoolContractAdrress: "0x1e40951d7a28147D8B4A554C60c42766C92e2Fc6",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		},
+		{
+			PoolName:            "GrE Tech",
+			PoolSymbol:          "GRET",
+			PoolContractAdrress: "0xb7B9d0A264eD1a8E2418571B7AC5933C79C9c2B8",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		},
+	}
+
+	// Return if there are no pools
+	if len(topPools) == 0 {
+		return res, nil
+	}
+
+	data := store.ProcessPools(topPools)
+
+	// Store all Pool data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_POOL_NAMES:     data.PoolNames,
+		storedb.DATA_POOL_SYMBOLS:   data.PoolSymbols,
+		storedb.DATA_POOL_ADDRESSES: data.PoolContractAdrresses,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			return res, nil
+		}
+	}
+
+	res.Content = h.ReplaceSeparatorFunc(data.PoolSymbols)
+
+	return res, nil
+}
+
+// LoadSwapFromList gets all the possible tokens a user can select to swap from
+func (h *MenuHandlers) LoadSwapFromList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	userStore := h.userdataStore
+
+	flag_incorrect_pool, _ := h.flagManager.GetFlag("flag_incorrect_pool")
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		res.FlagReset = append(res.FlagReset, flag_incorrect_pool)
+		return res, nil
+	}
+
+	poolData, err := store.GetPoolData(ctx, h.prefixDb, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve pool data: %v", err)
+	}
+
+	if poolData == nil {
+		// no match found. Call the API
+		poolResp := dataserviceapi.PoolDetails{
+			PoolName:            "DevTest",
+			PoolSymbol:          "DEVT",
+			PoolContractAdrress: "0x145F87d6198dEDD45C614FFD8b70E9a2fCCc5cc9",
+			LimiterAddress:      "",
+			VoucherRegistry:     "",
+		}
+
+		if (poolResp == dataserviceapi.PoolDetails{}) {
+			// If the API does not return the data, set the flag
+			res.FlagSet = append(res.FlagSet, flag_incorrect_pool)
+			return res, nil
+		}
+
+		poolData = &poolResp
+	}
+
+	activePoolAddress := poolData.PoolContractAdrress
+
+	// set the active pool contract address
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, []byte(activePoolAddress))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write active PoolContractAdrress entry with", "key", storedb.DATA_ACTIVE_POOL_ADDRESS, "value", activePoolAddress, "error", err)
+		return res, err
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_pool)
+
+	// call the api using the pool symbol to get a list of SwapfromSymbolsData
+	swapFromList := []dataserviceapi.TokenHoldings{
+		{
+			ContractAddress: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
+			TokenSymbol:     "AMANI",
+			TokenDecimals:   "6",
+			Balance:         "",
+		},
+		{
+			ContractAddress: "0xF0C3C7581b8b96B59a97daEc8Bd48247cE078674",
+			TokenSymbol:     "AMUA",
+			TokenDecimals:   "6",
+			Balance:         "",
+		},
+		{
+			ContractAddress: "0x371455a30fc62736145Bd8429Fcc6481186f235F",
+			TokenSymbol:     "BAHARI",
+			TokenDecimals:   "6",
+			Balance:         "",
+		},
+		{
+			ContractAddress: "0x7cA6113b59c24a880F382C7E12d609a6Eb05246b",
+			TokenSymbol:     "BANGLA",
+			TokenDecimals:   "6",
+			Balance:         "",
+		},
+	}
+
+	// Return if there are no vouchers
+	if len(swapFromList) == 0 {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_pool)
+		return res, nil
+	}
+
+	data := store.ProcessVouchers(swapFromList)
+
+	// Store all from list voucher data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_POOL_FROM_SYMBOLS:   data.Symbols,
+		storedb.DATA_POOL_FROM_BALANCES:  data.Balances,
+		storedb.DATA_POOL_FROM_DECIMALS:  data.Decimals,
+		storedb.DATA_POOL_FROM_ADDRESSES: data.Addresses,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			return res, nil
+		}
+	}
+
+	res.Content = h.ReplaceSeparatorFunc(data.Symbols)
+
+	return res, nil
+}
+
+// LoadSwapFromList returns a list of possible vouchers to swap to
+func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	// get the public key
+
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	metadata, err := store.GetSwapFromVoucherData(ctx, h.prefixDb, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve swap from voucher data: %v", err)
+	}
+
+	if metadata == nil {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
+	// Store the active swap from data
+	if err := store.UpdateSwapFromVoucherData(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
+		return res, err
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
+
+	// call the api using the public key to get a list of SwapToSymbolsData
+	swapToList := []dataserviceapi.TokenHoldings{
+		{
+			ContractAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+			TokenSymbol:     "cUSD",
+			TokenDecimals:   "18",
+			Balance:         "",
+		},
+	}
+
+	// Return if there are no vouchers
+	if len(swapToList) == 0 {
+		return res, nil
+	}
+
+	data := store.ProcessVouchers(swapToList)
+
+	// Store all to list voucher data
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
+		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
+		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
+		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
+	}
+
+	for key, value := range dataMap {
+		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+			return res, nil
+		}
+	}
+
+	res.Content = h.ReplaceSeparatorFunc(data.Symbols)
+
+	return res, nil
+}
+
+// SwapMaxLimit returns the max FROM token
+// check if max/tokenDecimals > 0.1 for UX purposes and to prevent swapping of dust values
+func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+
+	metadata, err := store.GetSwapToVoucherData(ctx, h.prefixDb, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
+	}
+	if metadata == nil {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
+	userStore := h.userdataStore
+
+	// Store the active swap_to data
+	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
+		return res, err
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
+
+	swapData, err := store.ReadSwapData(ctx, userStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	// call the API
+	// /pool/:pool/limit/:from/:to/:address
+
+	// Scale down the amount
+	maxAmountStr := store.ScaleDownBalance("1339482", swapData.ActiveSwapFromDecimal)
+	if err != nil {
+		return res, err
+	}
+
+	maxAmount, err := strconv.ParseFloat(maxAmountStr, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to parse maxAmountStr as float", "value", maxAmountStr, "error", err)
+		return res, err
+	}
+
+	if maxAmount < 0.1 {
+		// return with low amount flag
+		return res, nil
+	}
+
+	// Format to 2 decimal places
+	maxStr := fmt.Sprintf("%.2f", maxAmount)
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap max amount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "value", maxStr, "error", err)
+		return res, err
+	}
+
+	res.Content = fmt.Sprintf(
+		"Maximum: %s\n\nEnter amount of %s to swap for %s:",
+		maxStr, swapData.ActiveSwapFromSym, swapData.ActiveSwapToSym,
+	)
+
+	return res, nil
+}
+
+// SwapPreview displays the swap preview and estimates
+func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+
+	userStore := h.userdataStore
+
+	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	maxValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
+		return res, err
+	}
+
+	inputAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil || inputAmount > maxValue {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	finalAmountStr, err := store.ParseAndScaleAmount(inputStr, swapData.ActiveSwapFromDecimal)
+	if err != nil {
+		return res, err
+	}
+
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT, []byte(finalAmountStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		return res, err
+	}
+
+	// /pool/quote/:amount/:publicKey/:fromAddr/:poolAddr/:toAddr
+
+	// call the API to get the quote
+
+	// Scale down the quoted amount
+	quoteAmountStr := store.ScaleDownBalance("1339482", swapData.ActiveSwapToDecimal)
+	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
+		return res, err
+	}
+
+	// Format to 2 decimal places
+	qouteStr := fmt.Sprintf("%.2f", qouteAmount)
+
+	res.Content = fmt.Sprintf(
+		"You will swap:\n%s %s for %s %s:",
+		inputStr, swapData.ActiveSwapFromSym, qouteStr, swapData.ActiveSwapToSym,
+	)
+
+	return res, nil
+}
+
+// InitiateSwap calls the poolSwap and returns a confirmation based on the result.
+func (h *MenuHandlers) InitiateSwap(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	fmt.Println("running InitiateSwap")
+
+	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
+		return res, err
+	}
+
+	swapAmountStr := string(swapAmount)
+
+	// /pool/quote/:amount/:publicKey/:fromAddr/:poolAddr/:toAddr
+
+	// Call poolSwap
+
+	// r, err := h.accountService.poolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	// if err != nil {
+	// 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	// 	res.FlagSet = append(res.FlagSet, flag_api_error)
+	// 	res.Content = l.Get("Your request failed. Please try again later.")
+	// 	logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+	// 	return res, nil
+	// }
+
+	// trackingId := r.TrackingId
+	// logg.InfoCtxf(ctx, "poolSwap", "trackingId", trackingId)
+
+	res.Content = l.Get(
+		"Your request has been sent. You will receive an SMS when your %s %s has been swapped for %s.",
+		swapAmountStr,
+		swapData.ActiveSwapFromSym,
+		swapData.ActiveSwapToSym,
+	)
+
+	res.FlagReset = append(res.FlagReset, flag_account_authorized)
+	return res, nil
+}
