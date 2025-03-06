@@ -1,0 +1,3 @@
+LOAD reset_incorrect 6
+LOAD initiate_swap 0
+HALT
