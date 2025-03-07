@@ -1,7 +1,9 @@
 package application
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -453,6 +455,14 @@ func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym strin
 	return res, nil
 }
 
+// ResetInvalidPIN resets the invalid PIN flag
+func (h *MenuHandlers) ResetInvalidPIN(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
+	res.FlagReset = append(res.FlagReset, flag_invalid_pin)
+	return res, nil
+}
+
 // ConfirmPinChange validates user's new PIN. If input matches the temporary PIN, saves it as the new account PIN.
 func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
@@ -705,10 +715,6 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write firstName entry with", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName, "error", err)
-			return res, err
-		}
-		err := h.constructAccountAlias(ctx)
-		if err != nil {
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
@@ -1104,6 +1110,17 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
 		res.Content = string(profileInfo)
+	case storedb.DATA_ACCOUNT_ALIAS:
+		profileInfo, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+		if err != nil {
+			if db.IsNotFound(err) {
+				res.Content = defaultValue
+				break
+			}
+			logg.ErrorCtxf(ctx, "Failed to read account alias entry with", "key", "error", storedb.DATA_ACCOUNT_ALIAS, err)
+			return res, err
+		}
+		res.Content = string(profileInfo)
 	default:
 		break
 	}
@@ -1229,13 +1246,19 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
+	aliasSet := h.st.MatchFlag(flag_alias_set, true)
+
 	err := h.insertProfileItems(ctx, sessionId, &res)
 	if err != nil {
 		return res, err
 	}
-	err = h.constructAccountAlias(ctx)
-	if err != nil {
-		return res, err
+	//Only request an alias if it has not been set yet:
+	if !aliasSet {
+		err = h.constructAccountAlias(ctx)
+		if err != nil {
+			return res, err
+		}
 	}
 	return res, nil
 }
@@ -1275,6 +1298,7 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
+	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
 
 	store := h.userdataStore
 	AccountPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
@@ -1311,6 +1335,9 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 			return res, nil
 		}
 	} else {
+		if string(input) != "0" {
+			res.FlagSet = append(res.FlagSet, flag_invalid_pin)
+		}
 		return res, nil
 	}
 	return res, nil
@@ -1411,53 +1438,84 @@ func (h *MenuHandlers) ShowBlockedAccount(ctx context.Context, sym string, input
 	return res, nil
 }
 
+// loadUserContent loads the main user content in the main menu: the alias,balance associated with active voucher
+func loadUserContent(ctx context.Context, activeSym string, balance string, alias string) (string, error) {
+	var content string
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	balFloat, err := strconv.ParseFloat(balance, 64)
+	if err != nil {
+		//Only exclude ErrSyntax error to avoid returning an error if the active bal is not available yet
+		if !errors.Is(err, strconv.ErrSyntax) {
+			logg.ErrorCtxf(ctx, "failed to parse activeBal as float", "value", balance, "error", err)
+			return "", err
+		}
+		balFloat = 0.00
+	}
+	// Format to 2 decimal places
+	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
+	if alias != "" {
+		content = l.Get("%s balance: %s\n", alias, balStr)
+	} else {
+		content = l.Get("balance: %s\n", balStr)
+	}
+	return content, nil
+}
+
 // CheckBalance retrieves the balance of the active voucher and sets
 // the balance as the result content.
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
+
+	var (
+		res     resource.Result
+		err     error
+		alias   string
+		content string
+	)
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
 
-	code := codeFromCtx(ctx)
-	l := gotext.NewLocale(translationDir, code)
-	l.AddDomain("default")
-
 	store := h.userdataStore
+
+	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read account alias entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "error", err)
+			return res, err
+		}
+	} else {
+		alias = strings.Split(string(accAlias), ".")[0]
+	}
 
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		if db.IsNotFound(err) {
-			balance := "0.00"
-			res.Content = l.Get("Balance: %s\n", balance)
-			return res, nil
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
+			return res, err
 		}
-
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
-		return res, err
 	}
 
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
-		return res, err
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
+			return res, err
+		}
+
 	}
 
-	// Convert activeBal from []byte to float64
-	balFloat, err := strconv.ParseFloat(string(activeBal), 64)
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), alias)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to parse activeBal as float", "value", string(activeBal), "error", err)
 		return res, err
 	}
-
-	// Format to 2 decimal places
-	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
-
-	res.Content = l.Get("Balance: %s\n", balStr)
+	res.Content = content
 
 	return res, nil
 }
@@ -2392,6 +2450,92 @@ func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
 		return err
 	}
 	return nil
+}
+
+// RequestCustomAlias requests an ENS based alias name based on a user's input,then saves it as temporary value
+func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	store := h.userdataStore
+	aliasHint, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		if db.IsNotFound(err) {
+			return res, nil
+		}
+		return res, err
+	}
+	//Ensures that the call doesn't happen twice for the same alias hint
+	if !bytes.Equal(aliasHint, input) {
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(string(input)))
+		if err != nil {
+			return res, err
+		}
+		pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+		if err != nil {
+			if db.IsNotFound(err) {
+				return res, nil
+			}
+		}
+		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), string(input))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
+			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
+		}
+		alias := aliasResult.Alias
+
+		//Store the returned alias,wait for user to confirm it as new account alias
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(alias))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_TEMPORARY_VALUE, "value", alias, "error", err)
+			return res, err
+		}
+	}
+	return res, nil
+}
+
+// GetSuggestedAlias loads and displays the suggested alias name from the temporary value
+func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		return res, nil
+	}
+	res.Content = string(suggestedAlias)
+	return res, nil
+}
+
+// ConfirmNewAlias  reads  the suggested alias from the temporary value and confirms it  as the new account alias.
+func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+
+	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		return res, nil
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(string(newAlias)))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to clear DATA_ACCOUNT_ALIAS_VALUE entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "value", "empty", "error", err)
+		return res, err
+	}
+
+	res.FlagSet = append(res.FlagSet, flag_alias_set)
+	return res, nil
 }
 
 // ClearTemporaryValue empties the DATA_TEMPORARY_VALUE at the main menu to prevent

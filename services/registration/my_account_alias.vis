@@ -1,0 +1,8 @@
+LOAD get_current_profile_info 0
+MAP get_current_profile_info
+MOUT back 0
+HALT 
+INCMP _ 0
+LOAD request_custom_alias 0
+RELOAD request_custom_alias
+INCMP  confirm_new_alias *

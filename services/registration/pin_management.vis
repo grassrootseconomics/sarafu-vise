@@ -1,9 +1,10 @@
 LOAD set_back 6
-LOAD authorize_account 5
+LOAD authorize_account 16
 LOAD reset_allow_update 4
 LOAD verify_new_pin 2
 LOAD save_temporary_pin 1
 LOAD reset_incorrect 0
+LOAD reset_invalid_pin 6
 MOUT change_pin 1
 MOUT reset_pin 2
 MOUT back 0

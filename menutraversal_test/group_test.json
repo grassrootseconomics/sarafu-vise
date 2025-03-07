@@ -71,7 +71,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "5",
@@ -108,11 +108,11 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "2",
@@ -149,7 +149,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "5",
@@ -173,7 +173,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "0",
@@ -190,7 +190,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "5",
@@ -239,7 +239,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "5",
@@ -264,7 +264,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "3",
@@ -284,7 +284,7 @@
                 },
                 {
                     "input": "1234",
-                    "expectedContent": "Balance: {balance}\n\n0:Back\n9:Quit"
+                    "expectedContent": "{balance}\n\n0:Back\n9:Quit"
                 },
                 {
                     "input": "0",
@@ -292,7 +292,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "0",
@@ -309,7 +309,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "3",
@@ -337,7 +337,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "0",
@@ -354,7 +354,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -411,7 +411,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -448,7 +448,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -489,7 +489,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -526,7 +526,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -563,7 +563,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -600,7 +600,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
@@ -633,7 +633,7 @@
                 },
                 {
                     "input": "3",
-                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n0:Back"
+                    "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
                     "input": "1",
