@@ -2416,21 +2416,10 @@ func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, inpu
 // GetPools fetches a list of 5 top pools
 func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	userStore := h.userdataStore
-	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-		return res, err
-	}
-
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
-	topPools, err := h.accountService.FetchTopPools(ctx, string(publicKey))
+	// call the api to get a list of top 5 pools sorted by swaps
+	topPools, err := h.accountService.FetchTopPools(ctx)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
@@ -2471,6 +2460,12 @@ func (h *MenuHandlers) LoadSwapFromList(ctx context.Context, sym string, input [
 	}
 
 	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
 	flag_incorrect_pool, _ := h.flagManager.GetFlag("flag_incorrect_pool")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
@@ -2515,8 +2510,8 @@ func (h *MenuHandlers) LoadSwapFromList(ctx context.Context, sym string, input [
 
 	res.FlagReset = append(res.FlagReset, flag_incorrect_pool)
 
-	// call the api using the pool symbol to get a list of SwapfromSymbolsData
-	swapFromList, err := h.accountService.GetPoolSwappableFromVouchers(ctx, activePoolAddress)
+	// call the api using the activePoolAddress and publicKey to get a list of SwapfromSymbolsData
+	swapFromList, err := h.accountService.GetPoolSwappableFromVouchers(ctx, activePoolAddress, string(publicKey))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
@@ -2591,8 +2586,14 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
 
-	// call the api using the public key to get a list of SwapToSymbolsData
-	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(publicKey))
+	activePoolAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read activePoolAddress entry with", "key", storedb.DATA_ACTIVE_POOL_ADDRESS, "error", err)
+		return res, err
+	}
+
+	// call the api using the activePoolAddress and publicKey to get a list of SwapToSymbolsData
+	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(activePoolAddress), string(publicKey))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
