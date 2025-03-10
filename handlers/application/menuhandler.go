@@ -1619,6 +1619,7 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 				//Perform a search for each search domain,break on first match
 				for _, domain := range config.SearchDomains() {
 					fqdn := fmt.Sprintf("%s.%s", recipient, domain)
+					logg.InfoCtxf(ctx, "Resolving with fqdn alias", "alias", fqdn)
 					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
 					if err == nil {
 						AliasAddressResult = AliasAddress.Address
@@ -2459,6 +2460,10 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+	if string(input) == "0" {
+		return res, nil
+	}
+
 	store := h.userdataStore
 	aliasHint, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
