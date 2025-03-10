@@ -2422,48 +2422,19 @@ func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (
 	}
 
 	userStore := h.userdataStore
-	_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
-	topPools := []dataserviceapi.PoolDetails{
-		{
-			PoolName:            "Kenya ROLA Pool",
-			PoolSymbol:          "ROLA",
-			PoolContractAdrress: "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
-			LimiterAddress:      "",
-			VoucherRegistry:     "",
-		},
-		{
-			PoolName:            "Nairobi ROLA Pool",
-			PoolSymbol:          "NAIROBI",
-			PoolContractAdrress: "0xB0660Ac1Ee3d32ea35bc728D7CA1705Fa5A37528",
-			LimiterAddress:      "",
-			VoucherRegistry:     "",
-		},
-		{
-			PoolName:            "Friends of Kiriba Ecosystem",
-			PoolSymbol:          "FRIENDS",
-			PoolContractAdrress: "0xC4848263821FA02baB2181910A2eFb9CECb2c21C",
-			LimiterAddress:      "",
-			VoucherRegistry:     "",
-		},
-		{
-			PoolName:            "Resilient Community Waqfs",
-			PoolSymbol:          "REZILIENS",
-			PoolContractAdrress: "0x1e40951d7a28147D8B4A554C60c42766C92e2Fc6",
-			LimiterAddress:      "",
-			VoucherRegistry:     "",
-		},
-		{
-			PoolName:            "GrE Tech",
-			PoolSymbol:          "GRET",
-			PoolContractAdrress: "0xb7B9d0A264eD1a8E2418571B7AC5933C79C9c2B8",
-			LimiterAddress:      "",
-			VoucherRegistry:     "",
-		},
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+
+	topPools, err := h.accountService.FetchTopPools(ctx, string(publicKey))
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
+		return res, err
 	}
 
 	// Return if there are no pools
@@ -2500,8 +2471,8 @@ func (h *MenuHandlers) LoadSwapFromList(ctx context.Context, sym string, input [
 	}
 
 	userStore := h.userdataStore
-
 	flag_incorrect_pool, _ := h.flagManager.GetFlag("flag_incorrect_pool")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
 	inputStr := string(input)
 	if inputStr == "0" {
@@ -2545,31 +2516,11 @@ func (h *MenuHandlers) LoadSwapFromList(ctx context.Context, sym string, input [
 	res.FlagReset = append(res.FlagReset, flag_incorrect_pool)
 
 	// call the api using the pool symbol to get a list of SwapfromSymbolsData
-	swapFromList := []dataserviceapi.TokenHoldings{
-		{
-			ContractAddress: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
-			TokenSymbol:     "AMANI",
-			TokenDecimals:   "6",
-			Balance:         "",
-		},
-		{
-			ContractAddress: "0xF0C3C7581b8b96B59a97daEc8Bd48247cE078674",
-			TokenSymbol:     "AMUA",
-			TokenDecimals:   "6",
-			Balance:         "",
-		},
-		{
-			ContractAddress: "0x371455a30fc62736145Bd8429Fcc6481186f235F",
-			TokenSymbol:     "BAHARI",
-			TokenDecimals:   "6",
-			Balance:         "",
-		},
-		{
-			ContractAddress: "0x7cA6113b59c24a880F382C7E12d609a6Eb05246b",
-			TokenSymbol:     "BANGLA",
-			TokenDecimals:   "6",
-			Balance:         "",
-		},
+	swapFromList, err := h.accountService.GetPoolSwappableFromVouchers(ctx, activePoolAddress)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
+		return res, err
 	}
 
 	// Return if there are no vouchers
@@ -2607,9 +2558,15 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 
-	// get the public key
+	userStore := h.userdataStore
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
 
 	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
 	inputStr := string(input)
 	if inputStr == "0" {
@@ -2627,7 +2584,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	}
 
 	// Store the active swap from data
-	if err := store.UpdateSwapFromVoucherData(ctx, h.userdataStore, sessionId, metadata); err != nil {
+	if err := store.UpdateSwapFromVoucherData(ctx, userStore, sessionId, metadata); err != nil {
 		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
 		return res, err
 	}
@@ -2635,13 +2592,11 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
 
 	// call the api using the public key to get a list of SwapToSymbolsData
-	swapToList := []dataserviceapi.TokenHoldings{
-		{
-			ContractAddress: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-			TokenSymbol:     "cUSD",
-			TokenDecimals:   "18",
-			Balance:         "",
-		},
+	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(publicKey))
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
+		return res, err
 	}
 
 	// Return if there are no vouchers
