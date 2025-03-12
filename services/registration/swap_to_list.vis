@@ -3,5 +3,9 @@ CATCH _ flag_incorrect_voucher 1
 MAP swap_to_list
 MOUT back 0
 HALT
+LOAD swap_max_limit 64
+RELOAD swap_max_limit
+CATCH . flag_incorrect_voucher 1
+CATCH low_swap_amount flag_low_swap_amount 1
 INCMP _ 0
 INCMP swap_limit *
