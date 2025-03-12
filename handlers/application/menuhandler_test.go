@@ -3827,3 +3827,28 @@ func TestClearTemporaryValue(t *testing.T) {
 	// assert that the temp value is empty
 	assert.Equal(t, currentTempValue, []byte(""))
 }
+
+func TestGetSuggestedAlias(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	alias := "foo.sarafu.eth"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	h := &MenuHandlers{
+		userdataStore: store,
+	}
+
+	//Set a suggested alias a temporary value that will be expected to be in the result content
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(alias))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := h.GetSuggestedAlias(ctx, "getsuggested_alias", []byte(""))
+	if err != nil {
+		t.Fail()
+	}
+	assert.Equal(t, res.Content, alias)
+
+}
