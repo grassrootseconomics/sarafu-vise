@@ -1281,6 +1281,7 @@ func TestAuthorize(t *testing.T) {
 	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := fm.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := fm.GetFlag("flag_allow_update")
+	flag_invalid_pin, _ := fm.GetFlag("flag_invalid_pin")
 
 	// Set 1234 is the correct account pin
 	accountPIN := "1234"
@@ -1314,9 +1315,11 @@ func TestAuthorize(t *testing.T) {
 			},
 		},
 		{
-			name:           "Test with pin that is not a 4 digit",
-			input:          []byte("1235aqds"),
-			expectedResult: resource.Result{},
+			name:  "Test with pin that is not a 4 digit",
+			input: []byte("1235aqds"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_invalid_pin},
+			},
 		},
 	}
 
@@ -1973,7 +1976,7 @@ func TestCheckBalance(t *testing.T) {
 			publicKey:      "0X98765432109",
 			activeSym:      "ETH",
 			activeBal:      "1.5",
-			expectedResult: resource.Result{Content: "Balance: 1.50 ETH\n"},
+			expectedResult: resource.Result{Content: "balance: 1.50 ETH\n"},
 			expectError:    false,
 		},
 	}

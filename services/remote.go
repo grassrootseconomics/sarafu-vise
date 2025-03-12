@@ -14,6 +14,6 @@ import (
 func New(ctx context.Context, storageService storage.StorageService) remote.AccountService {
 	return &httpremote.HTTPAccountService{
 		SS:     storageService,
-		UseApi: false,
+		UseApi: true,
 	}
 }

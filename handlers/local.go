@@ -124,6 +124,11 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("set_back", appHandlers.SetBack)
 	ls.DbRs.AddLocalFunc("show_blocked_account", appHandlers.ShowBlockedAccount)
 	ls.DbRs.AddLocalFunc("clear_temporary_value", appHandlers.ClearTemporaryValue)
+	ls.DbRs.AddLocalFunc("reset_invalid_pin", appHandlers.ResetInvalidPIN)
+	ls.DbRs.AddLocalFunc("request_custom_alias", appHandlers.RequestCustomAlias)
+	ls.DbRs.AddLocalFunc("get_suggested_alias", appHandlers.GetSuggestedAlias)
+	ls.DbRs.AddLocalFunc("confirm_new_alias", appHandlers.ConfirmNewAlias)
+
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil
