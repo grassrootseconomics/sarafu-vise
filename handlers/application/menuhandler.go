@@ -2635,12 +2635,17 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 		return res, fmt.Errorf("missing session")
 	}
 
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_low_swap_amount, _ := h.flagManager.GetFlag("flag_low_swap_amount")
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
+	res.FlagReset = append(res.FlagSet, flag_low_swap_amount)
+
 	inputStr := string(input)
 	if inputStr == "0" {
 		return res, nil
 	}
-
-	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
 
 	metadata, err := store.GetSwapToVoucherData(ctx, h.prefixDb, inputStr)
 	if err != nil {
@@ -2659,35 +2664,41 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 		return res, err
 	}
 
-	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
-
 	swapData, err := store.ReadSwapData(ctx, userStore, sessionId)
 	if err != nil {
 		return res, err
 	}
 
-	// call the API
-	// /pool/:pool/limit/:from/:to/:address
+	// call the api using the ActivePoolAddress, ActiveSwapFromAddress, ActiveSwapToAddress and PublicKey to get the swap max limit
+	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, swapData.PublicKey)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
+		return res, err
+	}
 
 	// Scale down the amount
-	maxAmountStr := store.ScaleDownBalance("1339482", swapData.ActiveSwapFromDecimal)
+	maxAmountStr := store.ScaleDownBalance(r.Max, swapData.ActiveSwapFromDecimal)
 	if err != nil {
 		return res, err
 	}
 
-	maxAmount, err := strconv.ParseFloat(maxAmountStr, 64)
+	maxAmountFloat, err := strconv.ParseFloat(maxAmountStr, 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to parse maxAmountStr as float", "value", maxAmountStr, "error", err)
 		return res, err
 	}
 
-	if maxAmount < 0.1 {
+	// Format to 2 decimal places
+	maxStr := fmt.Sprintf("%.2f", maxAmountFloat)
+
+	if maxAmountFloat < 0.1 {
 		// return with low amount flag
+		res.Content = maxStr
+		res.FlagSet = append(res.FlagSet, flag_low_swap_amount)
 		return res, nil
 	}
 
-	// Format to 2 decimal places
-	maxStr := fmt.Sprintf("%.2f", maxAmount)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxStr))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write swap max amount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "value", maxStr, "error", err)
