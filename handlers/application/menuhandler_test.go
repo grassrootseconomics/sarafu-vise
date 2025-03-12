@@ -3852,3 +3852,45 @@ func TestGetSuggestedAlias(t *testing.T) {
 	assert.Equal(t, res.Content, alias)
 
 }
+
+func TestConfirmNewAlias(t *testing.T) {
+	ctx, store := InitializeTestStore(t)
+	sessionId := "session123"
+	expectedSavedAlias := "fooo.sarafu.eth"
+
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	//Set a temporary alias that is suggested,confirm if the the current new alias after confirmation
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(expectedSavedAlias))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mockState := state.NewState(128)
+
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	h := &MenuHandlers{
+		userdataStore: store,
+		st:            mockState,
+		flagManager:   fm,
+	}
+	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
+
+	expectedResult := resource.Result{
+		FlagSet: []uint32{flag_alias_set},
+	}
+
+	res, err := h.ConfirmNewAlias(ctx, "confirm_new_alias", []byte(""))
+	if err != nil {
+		t.Fail()
+	}
+	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, expectedResult, res)
+	assert.Equal(t, expectedSavedAlias, string(accAlias))
+}
