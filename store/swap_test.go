@@ -1,8 +1,11 @@
 package store
 
 import (
+	"context"
 	"testing"
 
+	visedb "git.defalsify.org/vise.git/db"
+	memdb "git.defalsify.org/vise.git/db/mem"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
 )
@@ -87,4 +90,41 @@ func TestReadSwapPreviewData(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, data)
+}
+
+func TestGetSwapFromVoucherData(t *testing.T) {
+	ctx := context.Background()
+
+	db := memdb.NewMemDb()
+	err := db.Connect(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
+	spdb := storedb.NewSubPrefixDb(db, prefix)
+
+	// Test pool swap data
+	mockData := map[storedb.DataTyp][]byte{
+		storedb.DATA_POOL_FROM_SYMBOLS:   []byte("1:AMANI\n2:AMUA"),
+		storedb.DATA_POOL_FROM_BALANCES:  []byte("1:\n2:"),
+		storedb.DATA_POOL_FROM_DECIMALS:  []byte("1:6\n2:4"),
+		storedb.DATA_POOL_FROM_ADDRESSES: []byte("1:0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe\n2:0xF0C3C7581b8b96B59a97daEc8Bd48247cE078674"),
+	}
+
+	// Put the data
+	for key, value := range mockData {
+		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := GetSwapFromVoucherData(ctx, spdb, "1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "AMANI", result.TokenSymbol)
+	assert.Equal(t, "", result.Balance)
+	assert.Equal(t, "6", result.TokenDecimals)
+	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe", result.ContractAddress)
 }
