@@ -167,3 +167,40 @@ func TestUpdateSwapFromVoucherData(t *testing.T) {
 		require.Equal(t, expectedValue, storedValue, "Active swap from data mismatch for key %v", key)
 	}
 }
+
+func TestGetSwapToVoucherData(t *testing.T) {
+	ctx := context.Background()
+
+	db := memdb.NewMemDb()
+	err := db.Connect(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
+	spdb := storedb.NewSubPrefixDb(db, prefix)
+
+	// Test pool swap data
+	mockData := map[storedb.DataTyp][]byte{
+		storedb.DATA_POOL_TO_SYMBOLS:   []byte("1:cUSD\n2:AMUA"),
+		storedb.DATA_POOL_TO_BALANCES:  []byte("1:\n2:"),
+		storedb.DATA_POOL_TO_DECIMALS:  []byte("1:6\n2:4"),
+		storedb.DATA_POOL_TO_ADDRESSES: []byte("1:0xc7B78Ac9ACB9E025C8234621\n2:0xF0C3C7581b8b96B59a97daEc8Bd48247cE078674"),
+	}
+
+	// Put the data
+	for key, value := range mockData {
+		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	result, err := GetSwapToVoucherData(ctx, spdb, "1")
+
+	assert.NoError(t, err)
+	assert.Equal(t, "cUSD", result.TokenSymbol)
+	assert.Equal(t, "", result.Balance)
+	assert.Equal(t, "6", result.TokenDecimals)
+	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621", result.ContractAddress)
+}
