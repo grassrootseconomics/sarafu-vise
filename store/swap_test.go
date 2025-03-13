@@ -8,6 +8,8 @@ import (
 	memdb "git.defalsify.org/vise.git/db/mem"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadSwapData(t *testing.T) {
@@ -127,4 +129,41 @@ func TestGetSwapFromVoucherData(t *testing.T) {
 	assert.Equal(t, "", result.Balance)
 	assert.Equal(t, "6", result.TokenDecimals)
 	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe", result.ContractAddress)
+}
+
+func TestUpdateSwapFromVoucherData(t *testing.T) {
+	ctx, store := InitializeTestDb(t)
+	sessionId := "session123"
+
+	// New swap from voucher data
+	newData := &dataserviceapi.TokenHoldings{
+		TokenSymbol:     "AMANI",
+		TokenDecimals:   "6",
+		ContractAddress: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
+	}
+
+	// Old temporary data
+	tempData := &dataserviceapi.TokenHoldings{
+		TokenSymbol:     "OLD",
+		TokenDecimals:   "8",
+		ContractAddress: "0xold",
+	}
+	require.NoError(t, StoreTemporaryVoucher(ctx, store, sessionId, tempData))
+
+	// Execute update
+	err := UpdateSwapFromVoucherData(ctx, store, sessionId, newData)
+	require.NoError(t, err)
+
+	// Verify active swap from data was stored correctly
+	activeEntries := map[storedb.DataTyp][]byte{
+		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     []byte(newData.TokenSymbol),
+		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: []byte(newData.TokenDecimals),
+		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: []byte(newData.ContractAddress),
+	}
+
+	for key, expectedValue := range activeEntries {
+		storedValue, err := store.ReadEntry(ctx, sessionId, key)
+		require.NoError(t, err)
+		require.Equal(t, expectedValue, storedValue, "Active swap from data mismatch for key %v", key)
+	}
 }
