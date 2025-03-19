@@ -22,7 +22,6 @@ WORKDIR /build/sarafu-vise
 RUN echo "Building on $BUILDPLATFORM, building for $TARGETPLATFORM"
 RUN go mod download
 RUN go build -tags logtrace,online -o sarafu-at -ldflags="-X main.build=${BUILD} -s -w" cmd/africastalking/main.go
-RUN go build -tags logtrace,online -o sarafu-ssh -ldflags="-X main.build=${BUILD} -s -w" cmd/ssh/main.go
 
 FROM debian:bookworm-slim
 
@@ -37,7 +36,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /service
 
 COPY --from=build /build/sarafu-vise/sarafu-at .
-COPY --from=build /build/sarafu-vise/sarafu-ssh .
 COPY --from=build /build/sarafu-vise/LICENSE .
 COPY --from=build /build/sarafu-vise/README.md .
 COPY --from=build /build/sarafu-vise/services ./services
@@ -45,6 +43,5 @@ COPY --from=build /build/sarafu-vise/.env.example .
 RUN mv .env.example .env
 
 EXPOSE 7123
-EXPOSE 7122
 
 CMD ["./sarafu-at"]
