@@ -1315,8 +1315,15 @@ func TestAuthorize(t *testing.T) {
 			},
 		},
 		{
-			name:  "Test with pin that is not a 4 digit",
-			input: []byte("1235aqds"),
+			name:  "Test with PIN that is more than  4 digits",
+			input: []byte("12357"),
+			expectedResult: resource.Result{
+				FlagSet: []uint32{flag_invalid_pin},
+			},
+		},
+		{
+			name:  "Test with pin that is less than 4 digit",
+			input: []byte("123"),
 			expectedResult: resource.Result{
 				FlagSet: []uint32{flag_invalid_pin},
 			},
