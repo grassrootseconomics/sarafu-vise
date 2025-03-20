@@ -1495,14 +1495,15 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		logg.InfoCtxf(ctx, "could not find the activeSym in checkBalance:", "err", err)
+		fmt.Println("could not find the activeSym in checkBalance:", err)
 		if !db.IsNotFound(err) {
+			fmt.Println("the err:", err)
 			logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 			return res, err
 		}
 	}
 
-	logg.InfoCtxf(ctx, "The active data in CheckBalance:", "activeSym", string(activeSym))
+	fmt.Println("The active data in CheckBalance:", string(activeSym))
 
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
@@ -1942,10 +1943,10 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 
 	// check if the user has an active sym
 	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
-	logg.InfoCtxf(ctx, "The activeSym in SetDefaultVoucher:", "activeSym", string(activeSym))
+	fmt.Println("The activeSym in SetDefaultVoucher:", string(activeSym))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "The err", err)
-		logg.InfoCtxf(ctx, "Checking the data as no activeSym", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
+		fmt.Println("The err", err)
+		fmt.Println("Checking the data as no activeSym", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
 
 		if db.IsNotFound(err) {
 			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
@@ -1955,16 +1956,27 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			}
 
 			// Fetch vouchers from the API using the public key
-			vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-			if err != nil {
-				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
-				return res, nil
+			// vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
+			// if err != nil {
+			// 	fmt.Println("setting the flag_no_active_voucher")
+			// 	res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+			// 	return res, nil
+			// }
+
+			vouchersResp := []dataserviceapi.TokenHoldings{
+				{
+					ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
+					TokenSymbol:     "PES",
+					TokenDecimals:   "6",
+					Balance:         "10000000",
+				},
 			}
 
-			logg.InfoCtxf(ctx, "fetched user vouchers in SetDefaultVoucher", "public_key", string(publicKey), "vouchers", vouchersResp)
+			fmt.Println("fetched user vouchers in SetDefaultVoucher", "public_key", string(publicKey), "vouchers", vouchersResp)
 
 			// Return if there is no voucher
 			if len(vouchersResp) == 0 {
+				fmt.Println("setting the flag_no_active_voucher in SetDefaultVoucher")
 				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 				return res, nil
 			}
@@ -1979,13 +1991,13 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
 
-			logg.InfoCtxf(ctx, "firstVoucher data", "defaultSym", defaultSym, "defaultBal", defaultBal, "defaultDec", defaultDec, "defaultAddr", defaultAddr)
+			fmt.Println("firstVoucher data", "defaultSym", defaultSym, "defaultBal", defaultBal, "defaultDec", defaultDec, "defaultAddr", defaultAddr)
 
 			// TODO: implement atomic transaction
 			// set the active symbol
 			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(defaultSym))
 			if err != nil {
-				logg.InfoCtxf(ctx, "got an error in writing DATA_ACTIVE_SYM", "defaultSym", defaultSym)
+				fmt.Println("got an error in writing DATA_ACTIVE_SYM", "defaultSym", defaultSym)
 
 				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", storedb.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
 				return res, err
@@ -2012,7 +2024,7 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			return res, nil
 		}
 
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
+		fmt.Println("failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
 
@@ -2038,12 +2050,21 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	}
 
 	// Fetch vouchers from the API using the public key
-	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-	if err != nil {
-		return res, nil
+	// vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
+	// if err != nil {
+	// 	return res, nil
+	// }
+
+	vouchersResp := []dataserviceapi.TokenHoldings{
+		{
+			ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
+			TokenSymbol:     "PES",
+			TokenDecimals:   "6",
+			Balance:         "10000000",
+		},
 	}
 
-	logg.InfoCtxf(ctx, "fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
+	fmt.Println("fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
 
 	// check the current active sym and update the data
 	activeSym, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
@@ -2080,11 +2101,11 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	activeBal, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	activeAddr, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 
-	logg.InfoCtxf(ctx, "The active data in CheckVouchers:", "activeSym", string(activeSym), string(activeBal), string(activeAddr))
+	fmt.Println(ctx, "The active data in CheckVouchers:", "activeSym", string(activeSym), string(activeBal), string(activeAddr))
 
 	data := store.ProcessVouchers(vouchersResp)
 
-	logg.InfoCtxf(ctx, "The data in CheckVouchers:", "data", data)
+	fmt.Println(ctx, "The data in CheckVouchers:", "data", data)
 
 	// Store all voucher data
 	dataMap := map[storedb.DataTyp]string{
