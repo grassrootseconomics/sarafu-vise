@@ -1956,21 +1956,21 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			}
 
 			// Fetch vouchers from the API using the public key
-			// vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-			// if err != nil {
-			// 	fmt.Println("setting the flag_no_active_voucher")
-			// 	res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
-			// 	return res, nil
-			// }
-
-			vouchersResp := []dataserviceapi.TokenHoldings{
-				{
-					ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
-					TokenSymbol:     "PES",
-					TokenDecimals:   "6",
-					Balance:         "10000000",
-				},
+			vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
+			if err != nil {
+				fmt.Println("setting the flag_no_active_voucher")
+				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+				return res, nil
 			}
+
+			// vouchersResp := []dataserviceapi.TokenHoldings{
+			// 	{
+			// 		ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
+			// 		TokenSymbol:     "PES",
+			// 		TokenDecimals:   "6",
+			// 		Balance:         "10000000",
+			// 	},
+			// }
 
 			fmt.Println("fetched user vouchers in SetDefaultVoucher", "public_key", string(publicKey), "vouchers", vouchersResp)
 
@@ -2050,19 +2050,19 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	}
 
 	// Fetch vouchers from the API using the public key
-	// vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-	// if err != nil {
-	// 	return res, nil
-	// }
-
-	vouchersResp := []dataserviceapi.TokenHoldings{
-		{
-			ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
-			TokenSymbol:     "PES",
-			TokenDecimals:   "6",
-			Balance:         "10000000",
-		},
+	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
+	if err != nil {
+		return res, nil
 	}
+
+	// vouchersResp := []dataserviceapi.TokenHoldings{
+	// 	{
+	// 		ContractAddress: "0xcB453B742Bc8BE1BAa03Ce1927e287788d0aF065",
+	// 		TokenSymbol:     "PES",
+	// 		TokenDecimals:   "6",
+	// 		Balance:         "10000000",
+	// 	},
+	// }
 
 	fmt.Println("fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
 
