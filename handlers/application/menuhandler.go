@@ -1468,7 +1468,6 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 // CheckBalance retrieves the balance of the active voucher and sets
 // the balance as the result content.
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-
 	var (
 		res     resource.Result
 		err     error
@@ -1496,11 +1495,14 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
+		logg.InfoCtxf(ctx, "could not find the activeSym in checkBalance:", "err", err)
 		if !db.IsNotFound(err) {
 			logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 			return res, err
 		}
 	}
+
+	logg.InfoCtxf(ctx, "The active data in CheckBalance:", "activeSym", string(activeSym))
 
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
@@ -1508,7 +1510,6 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 			return res, err
 		}
-
 	}
 
 	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), alias)
@@ -1944,7 +1945,7 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 
 	if err != nil {
-		logg.InfoCtxf(ctx, "Checking the data as no", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
+		logg.InfoCtxf(ctx, "Checking the data as no activeSym", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
 
 		if db.IsNotFound(err) {
 			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
@@ -2011,7 +2012,7 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 		return res, err
 	}
 
-	logg.InfoCtxf(ctx, "The activeSym:", "activeSym", string(activeSym))
+	logg.InfoCtxf(ctx, "The activeSym in SetDefaultVoucher:", "activeSym", string(activeSym))
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
 
@@ -2074,7 +2075,15 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		}
 	}
 
+	
+	activeBal, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
+	activeAddr, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+
+	logg.InfoCtxf(ctx, "The active data in CheckVouchers:", "activeSym", string(activeSym), string(activeBal), string(activeAddr))
+
 	data := store.ProcessVouchers(vouchersResp)
+
+	logg.InfoCtxf(ctx, "The data in CheckVouchers:", "data", data)	
 
 	// Store all voucher data
 	dataMap := map[storedb.DataTyp]string{
