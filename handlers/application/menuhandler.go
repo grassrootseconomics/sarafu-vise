@@ -1931,7 +1931,6 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 // and sets the first as the default voucher, if no active voucher is set.
 func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
-	var err error
 	userStore := h.userdataStore
 
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -1943,8 +1942,9 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 
 	// check if the user has an active sym
 	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
-
+	logg.InfoCtxf(ctx, "The activeSym in SetDefaultVoucher:", "activeSym", string(activeSym))
 	if err != nil {
+		logg.ErrorCtxf(ctx, "The err", err)
 		logg.InfoCtxf(ctx, "Checking the data as no activeSym", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
 
 		if db.IsNotFound(err) {
@@ -2015,8 +2015,6 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
-
-	logg.InfoCtxf(ctx, "The activeSym in SetDefaultVoucher:", "activeSym", string(activeSym))
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
 
