@@ -1941,9 +1941,11 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 
 	// check if the user has an active sym
-	_, err = userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 
 	if err != nil {
+		logg.InfoCtxf(ctx, "Checking the data as no", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
+
 		if db.IsNotFound(err) {
 			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 			if err != nil {
@@ -1957,6 +1959,8 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 				return res, nil
 			}
+
+			logg.InfoCtxf(ctx, "fetched user vouchers in SetDefaultVoucher", "public_key", string(publicKey), "vouchers", vouchersResp)
 
 			// Return if there is no voucher
 			if len(vouchersResp) == 0 {
@@ -2006,6 +2010,8 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
 		return res, err
 	}
+
+	logg.InfoCtxf(ctx, "The activeSym:", "activeSym", string(activeSym))
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
 
