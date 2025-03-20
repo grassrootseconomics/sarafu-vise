@@ -1979,10 +1979,14 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
 
+			logg.InfoCtxf(ctx, "firstVoucher data", "defaultSym", defaultSym, "defaultBal", defaultBal, "defaultDec", defaultDec, "defaultAddr", defaultAddr)
+
 			// TODO: implement atomic transaction
 			// set the active symbol
 			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(defaultSym))
 			if err != nil {
+				logg.InfoCtxf(ctx, "got an error in writing DATA_ACTIVE_SYM", "defaultSym", defaultSym)
+
 				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", storedb.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
 				return res, err
 			}
@@ -2075,7 +2079,6 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		}
 	}
 
-	
 	activeBal, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	activeAddr, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 
@@ -2083,7 +2086,7 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 
 	data := store.ProcessVouchers(vouchersResp)
 
-	logg.InfoCtxf(ctx, "The data in CheckVouchers:", "data", data)	
+	logg.InfoCtxf(ctx, "The data in CheckVouchers:", "data", data)
 
 	// Store all voucher data
 	dataMap := map[storedb.DataTyp]string{
