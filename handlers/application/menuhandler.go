@@ -2034,6 +2034,8 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		return res, nil
 	}
 
+	logg.InfoCtxf(ctx, "fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
+
 	// check the current active sym and update the data
 	activeSym, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if activeSym != nil {
