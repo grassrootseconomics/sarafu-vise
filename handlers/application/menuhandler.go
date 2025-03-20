@@ -195,6 +195,7 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 	data := map[storedb.DataTyp]string{
 		storedb.DATA_TRACKING_ID: trackingId,
 		storedb.DATA_PUBLIC_KEY:  publicKey,
+		storedb.DATA_ACCOUNT_ALIAS: "",
 	}
 	store := h.userdataStore
 	for key, value := range data {
@@ -1460,7 +1461,7 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 	if alias != "" {
 		content = l.Get("%s balance: %s\n", alias, balStr)
 	} else {
-		content = l.Get("balance: %s\n", balStr)
+		content = l.Get("Balance: %s\n", balStr)
 	}
 	return content, nil
 }
@@ -1482,16 +1483,6 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 
 	store := h.userdataStore
 
-	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
-	if err != nil {
-		if !db.IsNotFound(err) {
-			logg.ErrorCtxf(ctx, "failed to read account alias entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "error", err)
-			return res, err
-		}
-	} else {
-		alias = strings.Split(string(accAlias), ".")[0]
-	}
-
 	// get the active sym and active balance
 	activeSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
@@ -1502,14 +1493,22 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		}
 	}
 
-	logg.InfoCtxf(ctx, "The active data in CheckBalance:", "activeSym", string(activeSym))
-
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
 		if !db.IsNotFound(err) {
 			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 			return res, err
 		}
+	}
+
+	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read account alias entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "error", err)
+			return res, err
+		}
+	} else {
+		alias = strings.Split(string(accAlias), ".")[0]
 	}
 
 	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), alias)
@@ -1941,12 +1940,8 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 
 	// check if the user has an active sym
-	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
-	logg.InfoCtxf(ctx, "The activeSym in SetDefaultVoucher:", "activeSym", string(activeSym))
+	_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "The err", err)
-		logg.InfoCtxf(ctx, "Checking the data as no activeSym", "DATA_ACTIVE_SYM", storedb.DATA_ACTIVE_SYM)
-
 		if db.IsNotFound(err) {
 			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 			if err != nil {
@@ -1960,8 +1955,6 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 				return res, nil
 			}
-
-			logg.InfoCtxf(ctx, "fetched user vouchers in SetDefaultVoucher", "public_key", string(publicKey), "vouchers", vouchersResp)
 
 			// Return if there is no voucher
 			if len(vouchersResp) == 0 {
@@ -1979,14 +1972,10 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
 
-			logg.InfoCtxf(ctx, "firstVoucher data", "defaultSym", defaultSym, "defaultBal", defaultBal, "defaultDec", defaultDec, "defaultAddr", defaultAddr)
-
 			// TODO: implement atomic transaction
 			// set the active symbol
 			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(defaultSym))
 			if err != nil {
-				logg.InfoCtxf(ctx, "got an error in writing DATA_ACTIVE_SYM", "defaultSym", defaultSym)
-
 				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", storedb.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
 				return res, err
 			}
@@ -2083,8 +2072,6 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	logg.InfoCtxf(ctx, "The active data in CheckVouchers:", "activeSym", string(activeSym), string(activeBal), string(activeAddr))
 
 	data := store.ProcessVouchers(vouchersResp)
-
-	logg.InfoCtxf(ctx, "The data in CheckVouchers:", "data", data)
 
 	// Store all voucher data
 	dataMap := map[storedb.DataTyp]string{
