@@ -68,7 +68,7 @@ func ScaleDownBalance(balance, decimals string) string {
 }
 
 // GetVoucherData retrieves and matches voucher data
-func GetVoucherData(ctx context.Context, db storedb.PrefixDb, input string) (*dataserviceapi.TokenHoldings, error) {
+func GetVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
 	keys := []storedb.DataTyp{
 		storedb.DATA_VOUCHER_SYMBOLS,
 		storedb.DATA_VOUCHER_BALANCES,
@@ -78,9 +78,9 @@ func GetVoucherData(ctx context.Context, db storedb.PrefixDb, input string) (*da
 	data := make(map[storedb.DataTyp]string)
 
 	for _, key := range keys {
-		value, err := db.Get(ctx, storedb.ToBytes(key))
+		value, err := store.ReadEntry(ctx, sessionId, key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get prefix key %x: %v", storedb.ToBytes(key), err)
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
 		}
 		data[key] = string(value)
 	}

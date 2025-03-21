@@ -193,8 +193,8 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 	publicKey := r.PublicKey
 
 	data := map[storedb.DataTyp]string{
-		storedb.DATA_TRACKING_ID: trackingId,
-		storedb.DATA_PUBLIC_KEY:  publicKey,
+		storedb.DATA_TRACKING_ID:   trackingId,
+		storedb.DATA_PUBLIC_KEY:    publicKey,
 		storedb.DATA_ACCOUNT_ALIAS: "",
 	}
 	store := h.userdataStore
@@ -2081,11 +2081,19 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		storedb.DATA_VOUCHER_ADDRESSES: data.Addresses,
 	}
 
+	// Write data entries
 	for key, value := range dataMap {
-		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
-			return res, nil
+		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
+			continue
 		}
 	}
+
+	// for key, value := range dataMap {
+	// 	if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
+	// 		return res, nil
+	// 	}
+	// }
 
 	return res, nil
 }
@@ -2093,13 +2101,24 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 // GetVoucherList fetches the list of vouchers and formats them.
 func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	userStore := h.userdataStore
 
 	// Read vouchers from the store
-	voucherData, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
+	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "Failed to read the voucherData from prefixDb", "error", err)
+		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
 	}
+	// voucherData, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
+	// if err != nil {
+	// 	logg.ErrorCtxf(ctx, "Failed to read the voucherData from prefixDb", "error", err)
+	// 	return res, err
+	// }
 
 	formattedData := h.ReplaceSeparatorFunc(string(voucherData))
 
@@ -2129,7 +2148,7 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	metadata, err := store.GetVoucherData(ctx, h.prefixDb, inputStr)
+	metadata, err := store.GetVoucherData(ctx, h.userdataStore, sessionId, inputStr)
 	if err != nil {
 		return res, fmt.Errorf("failed to retrieve voucher data: %v", err)
 	}
