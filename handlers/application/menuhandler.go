@@ -2083,6 +2083,7 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 
 	// Write data entries
 	for key, value := range dataMap {
+		logg.InfoCtxf(ctx, "Writing data entry for sessionId: %s", sessionId, "key", key, "value", value)
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
@@ -2110,6 +2111,7 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 
 	// Read vouchers from the store
 	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
+	logg.InfoCtxf(ctx, "reading GetVoucherList entries for sessionId: %s", sessionId, "key", storedb.DATA_VOUCHER_SYMBOLS, "voucherData", voucherData)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
@@ -2121,6 +2123,8 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 	// }
 
 	formattedData := h.ReplaceSeparatorFunc(string(voucherData))
+
+	logg.InfoCtxf(ctx, "final output for sessionId: %s", sessionId, "key", storedb.DATA_VOUCHER_SYMBOLS, "formattedData", formattedData)
 
 	res.Content = string(formattedData)
 
