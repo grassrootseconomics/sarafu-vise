@@ -30,3 +30,7 @@ msgstr "Salio la Kikundi: 0.00"
 
 msgid "Symbol: %s\nBalance: %s"
 msgstr "Sarafu: %s\nSalio: %s"
+
+
+msgid "%s balance: %s\n"
+msgstr "%s salio: %s\n"
