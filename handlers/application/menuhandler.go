@@ -1170,9 +1170,9 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
 	alias := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS))
 
-	if alias != defaultValue {
+	if alias != defaultValue && alias != "" {
 		alias = strings.Split(alias, ".")[0]
-	} else if alias == "" {
+	} else {
 		alias = defaultValue
 	}
 
