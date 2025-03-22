@@ -1121,7 +1121,12 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 			logg.ErrorCtxf(ctx, "Failed to read account alias entry with", "key", "error", storedb.DATA_ACCOUNT_ALIAS, err)
 			return res, err
 		}
-		res.Content = string(profileInfo)
+		alias := string(profileInfo)
+		if alias == "" {
+			res.Content = defaultValue
+		} else {
+			res.Content = alias
+		}
 	default:
 		break
 	}
@@ -1167,6 +1172,8 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 
 	if alias != defaultValue {
 		alias = strings.Split(alias, ".")[0]
+	} else if alias == "" {
+		alias = defaultValue
 	}
 
 	// Construct the full name
@@ -1247,19 +1254,9 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
-	aliasSet := h.st.MatchFlag(flag_alias_set, true)
-
 	err := h.insertProfileItems(ctx, sessionId, &res)
 	if err != nil {
 		return res, err
-	}
-	//Only request an alias if it has not been set yet:
-	if !aliasSet {
-		err = h.constructAccountAlias(ctx)
-		if err != nil {
-			return res, err
-		}
 	}
 	return res, nil
 }
