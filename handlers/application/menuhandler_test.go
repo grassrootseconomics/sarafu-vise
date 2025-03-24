@@ -2067,12 +2067,10 @@ func TestCheckVouchers(t *testing.T) {
 
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	spdb := InitializeTestSubPrefixDb(t, ctx)
 
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
-		prefixDb:       spdb,
 	}
 
 	err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
@@ -2104,7 +2102,7 @@ func TestCheckVouchers(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Read voucher sym data from the store
-	voucherData, err := spdb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
+	voucherData, err := store.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
 	if err != nil {
 		t.Fatal(err)
 	}
