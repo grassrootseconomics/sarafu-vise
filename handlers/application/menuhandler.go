@@ -242,6 +242,28 @@ func (h *MenuHandlers) CreateAccount(ctx context.Context, sym string, input []by
 	return res, nil
 }
 
+func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_account_created, _ := h.flagManager.GetFlag("flag_account_created")
+
+	store := h.userdataStore
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	_, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			return res, err
+		}
+		return res, nil
+	}
+	res.FlagSet = append(res.FlagSet, flag_account_created)
+	return res, nil
+}
+
 // ResetValidPin resets the flag_valid_pin flag.
 func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
