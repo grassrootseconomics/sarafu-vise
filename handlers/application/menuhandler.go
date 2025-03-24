@@ -2533,7 +2533,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			}
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
-		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), string(sanitizedInput))
+		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
