@@ -2156,15 +2156,11 @@ func TestViewVoucher(t *testing.T) {
 	}
 	ctx, store := InitializeTestStore(t)
 	sessionId := "session123"
-
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-
-	spdb := InitializeTestSubPrefixDb(t, ctx)
 
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
-		prefixDb:      spdb,
 	}
 
 	// Define mock voucher data
@@ -2177,7 +2173,7 @@ func TestViewVoucher(t *testing.T) {
 
 	// Put the data
 	for key, value := range mockData {
-		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
+		err := store.WriteEntry(ctx, sessionId, key, []byte(value))
 		if err != nil {
 			t.Fatal(err)
 		}
