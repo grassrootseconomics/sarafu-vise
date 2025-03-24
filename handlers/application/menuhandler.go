@@ -2110,12 +2110,6 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		}
 	}
 
-	// for key, value := range dataMap {
-	// 	if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
-	// 		return res, nil
-	// 	}
-	// }
-
 	return res, nil
 }
 
@@ -2136,11 +2130,6 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
 	}
-	// voucherData, err := h.prefixDb.Get(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS))
-	// if err != nil {
-	// 	logg.ErrorCtxf(ctx, "Failed to read the voucherData from prefixDb", "error", err)
-	// 	return res, err
-	// }
 
 	formattedData := h.ReplaceSeparatorFunc(string(voucherData))
 
