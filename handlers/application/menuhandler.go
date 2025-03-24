@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"gopkg.in/leonelquinteros/gotext.v1"
 
@@ -1143,7 +1144,12 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 			logg.ErrorCtxf(ctx, "Failed to read account alias entry with", "key", "error", storedb.DATA_ACCOUNT_ALIAS, err)
 			return res, err
 		}
-		res.Content = string(profileInfo)
+		alias := string(profileInfo)
+		if alias == "" {
+			res.Content = defaultValue
+		} else {
+			res.Content = alias
+		}
 	default:
 		break
 	}
@@ -1187,8 +1193,10 @@ func (h *MenuHandlers) GetProfileInfo(ctx context.Context, sym string, input []b
 	offerings := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS))
 	alias := getEntryOrDefault(store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS))
 
-	if alias != defaultValue {
+	if alias != defaultValue && alias != "" {
 		alias = strings.Split(alias, ".")[0]
+	} else {
+		alias = defaultValue
 	}
 
 	// Construct the full name
@@ -1269,19 +1277,9 @@ func (h *MenuHandlers) UpdateAllProfileItems(ctx context.Context, sym string, in
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
-	aliasSet := h.st.MatchFlag(flag_alias_set, true)
-
 	err := h.insertProfileItems(ctx, sessionId, &res)
 	if err != nil {
 		return res, err
-	}
-	//Only request an alias if it has not been set yet:
-	if !aliasSet {
-		err = h.constructAccountAlias(ctx)
-		if err != nil {
-			return res, err
-		}
 	}
 	return res, nil
 }
@@ -2534,7 +2532,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 				return res, nil
 			}
 		}
-		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), string(input))
+		sanitizedInput := sanitizeAliasHint(string(input))
+		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
@@ -2549,6 +2548,17 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 	}
 	return res, nil
+}
+
+func sanitizeAliasHint(input string) string {
+	for i, r := range input {
+		// Check if the character is a special character (non-alphanumeric)
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+			return input[:i]
+		}
+	}
+	// If no special character is found, return the whole input
+	return input
 }
 
 // GetSuggestedAlias loads and displays the suggested alias name from the temporary value
