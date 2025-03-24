@@ -2124,20 +2124,19 @@ func TestCheckVouchers(t *testing.T) {
 func TestGetVoucherList(t *testing.T) {
 	sessionId := "session123"
 
-	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
-
-	spdb := InitializeTestSubPrefixDb(t, ctx)
+	ctx, store := InitializeTestStore(t)
+	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	// Initialize MenuHandlers
 	h := &MenuHandlers{
-		prefixDb:             spdb,
+		userdataStore:        store,
 		ReplaceSeparatorFunc: mockReplaceSeparator,
 	}
 
 	mockSyms := []byte("1:SRF\n2:MILO")
 
 	// Put voucher sym data from the store
-	err := spdb.Put(ctx, storedb.ToBytes(storedb.DATA_VOUCHER_SYMBOLS), mockSyms)
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS, mockSyms)
 	if err != nil {
 		t.Fatal(err)
 	}
