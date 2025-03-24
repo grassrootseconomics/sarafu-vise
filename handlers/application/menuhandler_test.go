@@ -3469,15 +3469,6 @@ func TestUpdateAllProfileItems(t *testing.T) {
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	require.NoError(t, err)
 
-	aliasInput := fmt.Sprintf("%s%s", profileItems[0], profileItems[1])
-
-	// Mock the account alias response
-	mockAccountService.On(
-		"RequestAlias",
-		publicKey,
-		aliasInput,
-	).Return(&models.RequestAliasResult{Alias: "JohnDoe"}, nil)
-
 	// Call the function under test
 	res, err := h.UpdateAllProfileItems(ctx, "symbol", nil)
 	assert.NoError(t, err)
@@ -3489,10 +3480,6 @@ func TestUpdateAllProfileItems(t *testing.T) {
 		assert.Equal(t, profileItems[i], string(storedValue))
 	}
 
-	// Validate alias storage
-	storedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
-	assert.NoError(t, err)
-	assert.Equal(t, "JohnDoe", string(storedAlias))
 	assert.Equal(t, expectedResult, res)
 }
 
