@@ -8,6 +8,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"gopkg.in/leonelquinteros/gotext.v1"
 
@@ -2509,7 +2510,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 				return res, nil
 			}
 		}
-		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), string(input))
+		sanitizedInput := sanitizeAliasHint(string(input))
+		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), string(sanitizedInput))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
@@ -2524,6 +2526,17 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 	}
 	return res, nil
+}
+
+func sanitizeAliasHint(input string) string {
+	for i, r := range input {
+		// Check if the character is a special character (non-alphanumeric)
+		if !unicode.IsLetter(r) && !unicode.IsNumber(r) {
+			return input[:i]
+		}
+	}
+	// If no special character is found, return the whole input
+	return input
 }
 
 // GetSuggestedAlias loads and displays the suggested alias name from the temporary value
