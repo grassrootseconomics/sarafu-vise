@@ -1,7 +1,7 @@
 LOAD clear_temporary_value 2
 RELOAD clear_temporary_value
-LOAD manage_vouchers 0
-RELOAD check_vouchers
+LOAD manage_vouchers 160
+RELOAD manage_vouchers
 LOAD check_balance 128
 RELOAD check_balance
 CATCH api_failure flag_api_call_error 1
