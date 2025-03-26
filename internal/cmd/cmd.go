@@ -13,6 +13,11 @@ import (
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
+var argc map[string]int = map[string]int{
+	"reset": 0,
+	"admin": 1,
+}
+
 var (
 	logg = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
 )
@@ -153,12 +158,23 @@ func (c *Cmd) parseCmdReset(cmd string, param string, more []string) (bool, erro
 }
 
 func (c *Cmd) Parse(args []string) error {
-	if len(args) < 2 {
+	var param string
+	if len(args) < 1 {
 		return fmt.Errorf("Wrong number of arguments: %v", args)
 	}
 	cmd := args[0]
-	param := args[1]
-	args = args[2:]
+
+	n, ok := argc[cmd]
+	if !ok {
+		return fmt.Errorf("invalid command: %v", cmd)
+	}
+	if n > 0 {
+		if len(args) < n + 1 {
+			return fmt.Errorf("Wrong number of arguments, need: %d", n)
+		}
+		param = args[1]
+		args = args[2:]
+	}
 
 	r, err := c.parseCmdAdmin(cmd, param, args)
 	if err != nil {
