@@ -1403,7 +1403,7 @@ func (h *MenuHandlers) CheckAccountStatus(ctx context.Context, sym string, input
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on TrackAccountStatus", "error", err)
-		return res, err
+		return res, nil
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_api_error)
@@ -1569,6 +1569,7 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 	}
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	recipient := string(input)
 
@@ -1642,10 +1643,13 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 					logg.InfoCtxf(ctx, "Resolving with fqdn alias", "alias", fqdn)
 					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
 					if err == nil {
+						res.FlagReset = append(res.FlagReset, flag_api_error)
 						AliasAddressResult = AliasAddress.Address
 						continue
 					} else {
+						res.FlagSet = append(res.FlagSet, flag_api_error)
 						logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
+						return res, nil
 					}
 				}
 			}
@@ -2038,6 +2042,7 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	userStore := h.userdataStore
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
@@ -2049,8 +2054,10 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 	// Fetch vouchers from the API using the public key
 	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
 	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	logg.InfoCtxf(ctx, "fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
 
