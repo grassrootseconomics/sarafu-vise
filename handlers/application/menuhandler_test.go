@@ -1990,36 +1990,46 @@ func TestFetchCommunityBalance(t *testing.T) {
 	}
 }
 
-func TestSetDefaultVoucher(t *testing.T) {
+func TestManageVouchers(t *testing.T) {
 	sessionId := "session123"
+	publicKey := "0X13242618721"
+
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
-		t.Logf(err.Error())
+		t.Fatal(err)
 	}
 	flag_no_active_voucher, err := fm.GetFlag("flag_no_active_voucher")
 	if err != nil {
-		t.Logf(err.Error())
+		t.Fatal(err)
 	}
 
-	publicKey := "0X13242618721"
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
-		name           string
-		vouchersResp   []dataserviceapi.TokenHoldings
-		expectedResult resource.Result
+		name                   string
+		vouchersResp           []dataserviceapi.TokenHoldings
+		storedActiveVoucher    string
+		expectedVoucherSymbols []byte
+		expectedUpdatedAddress []byte
+		expectedResult         resource.Result
 	}{
 		{
-			name:         "Test no vouchers available",
-			vouchersResp: []dataserviceapi.TokenHoldings{},
+			name:                   "No vouchers available",
+			vouchersResp:           []dataserviceapi.TokenHoldings{},
+			expectedVoucherSymbols: []byte(""),
+			expectedUpdatedAddress: []byte(""),
 			expectedResult: resource.Result{
 				FlagSet: []uint32{flag_no_active_voucher},
 			},
 		},
 		{
-			name: "Test set default voucher when no active voucher is set",
+			name: "Set default voucher when no active voucher is set",
 			vouchersResp: []dataserviceapi.TokenHoldings{
 				{
 					ContractAddress: "0x123",
@@ -2028,7 +2038,24 @@ func TestSetDefaultVoucher(t *testing.T) {
 					Balance:         "100",
 				},
 			},
-			expectedResult: resource.Result{},
+			expectedVoucherSymbols: []byte("1:TOKEN1"),
+			expectedUpdatedAddress: []byte("0x123"),
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_no_active_voucher},
+			},
+		},
+		{
+			name: "Check and update active voucher balance",
+			vouchersResp: []dataserviceapi.TokenHoldings{
+				{ContractAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100"},
+				{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
+			},
+			storedActiveVoucher:    "SRF",
+			expectedVoucherSymbols: []byte("1:SRF\n2:MILO"),
+			expectedUpdatedAddress: []byte("0xd4c288865Ce"),
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_no_active_voucher},
+			},
 		},
 	}
 
@@ -2042,83 +2069,39 @@ func TestSetDefaultVoucher(t *testing.T) {
 				flagManager:    fm,
 			}
 
-			err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
-			if err != nil {
-				t.Fatal(err)
-			}
-
 			mockAccountService.On("FetchVouchers", string(publicKey)).Return(tt.vouchersResp, nil)
 
-			res, err := h.SetDefaultVoucher(ctx, "set_default_voucher", []byte("some-input"))
+			// Store active voucher if needed
+			if tt.storedActiveVoucher != "" {
+				err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.storedActiveVoucher))
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
 
+			res, err := h.ManageVouchers(ctx, "manage_vouchers", []byte(""))
 			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedResult, res)
 
-			assert.Equal(t, res, tt.expectedResult, "Expected result should be equal to the actual result")
+			if tt.storedActiveVoucher != "" {
+				// Validate stored voucher symbols
+				voucherData, err := store.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedVoucherSymbols, voucherData)
 
-			mockAccountService.AssertExpectations(t)
+				// Validate stored active contract address
+				updatedAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedUpdatedAddress, updatedAddress)
+
+				mockAccountService.AssertExpectations(t)
+			}
 		})
 	}
-}
-
-func TestCheckVouchers(t *testing.T) {
-	mockAccountService := new(mocks.MockAccountService)
-	sessionId := "session123"
-	publicKey := "0X13242618721"
-
-	ctx, store := InitializeTestStore(t)
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
-
-	h := &MenuHandlers{
-		userdataStore:  store,
-		accountService: mockAccountService,
-	}
-
-	err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	mockVouchersResponse := []dataserviceapi.TokenHoldings{
-		{ContractAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100"},
-		{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
-	}
-
-	// store the default voucher data
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte("SRF"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedSym := []byte("1:SRF\n2:MILO")
-	expectedUpdatedAddress := []byte("0xd4c288865Ce")
-
-	mockAccountService.On("FetchVouchers", string(publicKey)).Return(mockVouchersResponse, nil)
-
-	_, err = h.CheckVouchers(ctx, "check_vouchers", []byte(""))
-	assert.NoError(t, err)
-
-	// Read voucher sym data from the store
-	voucherData, err := store.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Read active contract address from the store
-	updatedAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// assert that the data is stored correctly
-	assert.Equal(t, expectedSym, voucherData)
-	// assert that the address is updated
-	assert.Equal(t, expectedUpdatedAddress, updatedAddress)
-
-	mockAccountService.AssertExpectations(t)
 }
 
 func TestGetVoucherList(t *testing.T) {
