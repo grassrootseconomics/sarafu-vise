@@ -23,14 +23,14 @@ var (
 )
 
 type Cmd struct {
-	sessionId  string
-	conn       storage.ConnData
-	flagParser *application.FlagManager
-	cmd        int
-	enable     bool
-	exec       func(ctx context.Context, ss storage.StorageService) error
-	engineConfig	*engine.Config
-	st	*state.State
+	sessionId    string
+	conn         storage.ConnData
+	flagParser   *application.FlagManager
+	cmd          int
+	enable       bool
+	exec         func(ctx context.Context, ss storage.StorageService) error
+	engineConfig *engine.Config
+	st           *state.State
 }
 
 func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
@@ -91,6 +91,9 @@ func (c *Cmd) execReset(ctx context.Context, ss storage.StorageService) error {
 	if err != nil {
 		return err
 	}
+	ca := pe.GetMemory()
+	ca.Pop()
+
 	_, err = en.(*engine.DefaultEngine).Reset(ctx, false)
 	if err != nil {
 		return err
@@ -169,7 +172,7 @@ func (c *Cmd) Parse(args []string) error {
 		return fmt.Errorf("invalid command: %v", cmd)
 	}
 	if n > 0 {
-		if len(args) < n + 1 {
+		if len(args) < n+1 {
 			return fmt.Errorf("Wrong number of arguments, need: %d", n)
 		}
 		param = args[1]
@@ -191,7 +194,6 @@ func (c *Cmd) Parse(args []string) error {
 	if r {
 		return nil
 	}
-
 
 	return fmt.Errorf("unknown subcommand: %s", cmd)
 }
