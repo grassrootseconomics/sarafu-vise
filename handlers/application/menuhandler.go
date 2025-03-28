@@ -2535,9 +2535,10 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 		}
 		alias := aliasResult.Alias
+		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
 
 		//Store the returned alias,wait for user to confirm it as new account alias
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(alias))
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_TEMPORARY_VALUE, "value", alias, "error", err)
 			return res, err
@@ -2566,7 +2567,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
 	if err != nil {
 		return res, nil
 	}
@@ -2574,7 +2575,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-// ConfirmNewAlias  reads  the suggested alias from the temporary value and confirms it  as the new account alias.
+// ConfirmNewAlias  reads  the suggested alias from the [DATA_SUGGECTED_ALIAS] key and confirms it  as the new account alias.
 func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -2585,10 +2586,11 @@ func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
 	if err != nil {
 		return res, nil
 	}
+	logg.InfoCtxf(ctx, "Confirming new alias", "alias", string(newAlias))
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(string(newAlias)))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to clear DATA_ACCOUNT_ALIAS_VALUE entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "value", "empty", "error", err)
