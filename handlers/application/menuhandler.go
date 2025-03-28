@@ -2509,7 +2509,6 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 		return res, err
 	}
-	logg.InfoCtxf(ctx, "Read alias hint from temporary value", "hint", string(aliasHint))
 	//Ensures that the call doesn't happen twice for the same alias hint
 	if !bytes.Equal(aliasHint, input) {
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(string(input)))
@@ -2523,7 +2522,6 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			}
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
-		logg.InfoCtxf(ctx, "sanitized alias hint", "sanitizedhint", sanitizedInput)
 		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
