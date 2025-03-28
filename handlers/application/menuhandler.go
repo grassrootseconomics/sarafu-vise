@@ -487,6 +487,14 @@ func (h *MenuHandlers) ResetInvalidPIN(ctx context.Context, sym string, input []
 	return res, nil
 }
 
+// ResetApiCallFailure resets the api call failure flag
+func (h *MenuHandlers) ResetApiCallFailure(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	res.FlagReset = append(res.FlagReset, flag_api_error)
+	return res, nil
+}
+
 // ConfirmPinChange validates user's new PIN. If input matches the temporary PIN, saves it as the new account PIN.
 func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
@@ -2508,6 +2516,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		return res, nil
 	}
 
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+
 	store := h.userdataStore
 	aliasHint, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
@@ -2531,9 +2541,12 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		sanitizedInput := sanitizeAliasHint(string(input))
 		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
+			res.FlagSet = append(res.FlagSet, flag_api_error)
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
-			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
+			return res, nil
 		}
+		res.FlagReset = append(res.FlagReset, flag_api_error)
+
 		alias := aliasResult.Alias
 		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
 
