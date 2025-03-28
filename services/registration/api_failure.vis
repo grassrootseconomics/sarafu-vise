@@ -1,3 +1,5 @@
+LOAD reset_api_call_failure 6
+RELOAD reset_api_call_failure
 MOUT retry 1
 MOUT quit 9
 HALT
