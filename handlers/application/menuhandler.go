@@ -2509,6 +2509,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 		return res, err
 	}
+	logg.InfoCtxf(ctx, "Read alias hint from temporary value", "hint", string(aliasHint))
 	//Ensures that the call doesn't happen twice for the same alias hint
 	if !bytes.Equal(aliasHint, input) {
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(string(input)))
@@ -2522,12 +2523,14 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			}
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
+		logg.InfoCtxf(ctx, "sanitized alias hint", "sanitizedhint", sanitizedInput)
 		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 		}
 		alias := aliasResult.Alias
+		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
 
 		//Store the returned alias,wait for user to confirm it as new account alias
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
@@ -2582,6 +2585,7 @@ func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []
 	if err != nil {
 		return res, nil
 	}
+	logg.InfoCtxf(ctx, "Confirming new alias", "alias", string(newAlias))
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(string(newAlias)))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to clear DATA_ACCOUNT_ALIAS_VALUE entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "value", "empty", "error", err)
