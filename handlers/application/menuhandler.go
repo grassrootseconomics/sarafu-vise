@@ -1970,6 +1970,7 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 	}
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// check if the user has an active sym
 	_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
@@ -1984,9 +1985,10 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			// Fetch vouchers from the API using the public key
 			vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
 			if err != nil {
-				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+				res.FlagSet = append(res.FlagSet, flag_api_error)
 				return res, nil
 			}
+			res.FlagReset = append(res.FlagReset, flag_api_error)
 
 			// Return if there is no voucher
 			if len(vouchersResp) == 0 {
@@ -2246,6 +2248,7 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	res.Content = fmt.Sprintf(
 		"Name: %s\nSymbol: %s\nCommodity: %s\nLocation: %s", voucherData.TokenName, voucherData.TokenSymbol, voucherData.TokenCommodity, voucherData.TokenLocation,
@@ -2279,6 +2282,7 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
 		return res, err
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	// Return if there are no transactions
 	if len(transactionsResp) == 0 {
