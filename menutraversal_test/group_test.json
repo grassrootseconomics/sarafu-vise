@@ -612,7 +612,7 @@
                 },
                 {
                     "input": "1234",
-                    "expectedContent": "My profile:\nName: foo bar\nGender: male\nAge: 80\nLocation: Kilifi\nYou provide: Bananas\nYour alias: \n\n0:Back\n9:Quit"
+                    "expectedContent": "My profile:\nName: foo bar\nGender: male\nAge: 80\nLocation: Kilifi\nYou provide: Bananas\nYour alias: Not Provided\n\n0:Back\n9:Quit"
                 },
                 {
                     "input": "0",
