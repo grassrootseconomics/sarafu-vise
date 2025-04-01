@@ -1695,12 +1695,12 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 		return res, fmt.Errorf("Data error encountered")
 	}
 
-	// TODO
-	// send an invitation SMS
-	// if successful
-	// res.Content = l.Get("Your invitation to %s to join Sarafu Network has been sent.",  string(recipient))
-
-	res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
+	_, err := h.accountService.SendUpsellSMS(ctx, sessionId, string(recipient))
+	if err != nil {
+		res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
+		return res, nil
+	}
+	res.Content = l.Get("Your invitation to %s to join Sarafu Network has been sent.", string(recipient))
 	return res, nil
 }
 
