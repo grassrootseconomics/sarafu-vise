@@ -201,6 +201,8 @@ func TestCreateAccount(t *testing.T) {
 	}
 
 	flag_account_created, err := fm.GetFlag("flag_account_created")
+	flag_account_creation_failed, _ := fm.GetFlag("flag_account_creation_failed")
+
 	if err != nil {
 		t.Logf(err.Error())
 	}
@@ -217,7 +219,8 @@ func TestCreateAccount(t *testing.T) {
 				PublicKey:  "0xD3adB33f",
 			},
 			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_account_created},
+				FlagSet:   []uint32{flag_account_created},
+				FlagReset: []uint32{flag_account_creation_failed},
 			},
 		},
 	}
@@ -2003,6 +2006,11 @@ func TestSetDefaultVoucher(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
+	flag_api_error, err := fm.GetFlag("flag_api_call_error")
+
+	if err != nil {
+		t.Logf(err.Error())
+	}
 
 	publicKey := "0X13242618721"
 
@@ -2015,7 +2023,8 @@ func TestSetDefaultVoucher(t *testing.T) {
 			name:         "Test no vouchers available",
 			vouchersResp: []dataserviceapi.TokenHoldings{},
 			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_no_active_voucher},
+				FlagSet:   []uint32{flag_no_active_voucher},
+				FlagReset: []uint32{flag_api_error},
 			},
 		},
 		{
@@ -2028,7 +2037,9 @@ func TestSetDefaultVoucher(t *testing.T) {
 					Balance:         "100",
 				},
 			},
-			expectedResult: resource.Result{},
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_api_error},
+			},
 		},
 	}
 
@@ -2068,12 +2079,18 @@ func TestCheckVouchers(t *testing.T) {
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
+	fm, err := NewFlagManager(flagsPath)
+	if err != nil {
+		t.Logf(err.Error())
+	}
+
 	h := &MenuHandlers{
 		userdataStore:  store,
 		accountService: mockAccountService,
+		flagManager:    fm,
 	}
 
-	err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2222,6 +2239,8 @@ func TestGetVoucherDetails(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
+
+	flag_api_error, _ := fm.GetFlag("flag_api_call_error")
 	mockAccountService := new(mocks.MockAccountService)
 
 	sessionId := "session123"
@@ -2249,8 +2268,8 @@ func TestGetVoucherDetails(t *testing.T) {
 		"Name: %s\nSymbol: %s\nCommodity: %s\nLocation: %s", tokenDetails.TokenName, tokenDetails.TokenSymbol, tokenDetails.TokenCommodity, tokenDetails.TokenLocation,
 	)
 	mockAccountService.On("VoucherData", string(tokA_AAddress)).Return(tokenDetails, nil)
-
 	res, err := h.GetVoucherDetails(ctx, "SessionId", []byte(""))
+	expectedResult.FlagReset = append(expectedResult.FlagReset, flag_api_error)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResult, res)
 }
