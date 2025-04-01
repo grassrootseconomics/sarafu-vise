@@ -186,10 +186,16 @@ func (h *MenuHandlers) SetLanguage(ctx context.Context, sym string, input []byte
 // handles the account creation when no existing account is present for the session and stores associated data in the user data store.
 func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId string, res *resource.Result) error {
 	flag_account_created, _ := h.flagManager.GetFlag("flag_account_created")
+	flag_account_creation_failed, _ := h.flagManager.GetFlag("flag_account_creation_failed")
+
 	r, err := h.accountService.CreateAccount(ctx)
 	if err != nil {
-		return err
+		res.FlagSet = append(res.FlagSet, flag_account_creation_failed)
+		logg.ErrorCtxf(ctx, "failed to create an account", "error", err)
+		return nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_account_creation_failed)
+
 	trackingId := r.TrackingId
 	publicKey := r.PublicKey
 
