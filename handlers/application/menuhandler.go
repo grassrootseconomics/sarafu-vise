@@ -1981,8 +1981,6 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
 
-	logg.InfoCtxf(ctx, "Fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
-
 	// Check if user has an active voucher with proper error handling
 	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
@@ -2058,7 +2056,6 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	// Write data entries
 	for key, value := range dataMap {
-		logg.InfoCtxf(ctx, "Writing data entry for sessionId: %s", sessionId, "key", key, "value", value)
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
