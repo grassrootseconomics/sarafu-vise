@@ -1989,9 +1989,10 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	// Fetch vouchers from API
 	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	if len(vouchersResp) == 0 {
 		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
