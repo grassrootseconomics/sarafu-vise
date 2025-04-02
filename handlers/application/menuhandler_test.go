@@ -2050,7 +2050,7 @@ func TestManageVouchers(t *testing.T) {
 			expectedVoucherSymbols: []byte("1:TOKEN1"),
 			expectedUpdatedAddress: []byte("0x123"),
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_no_active_voucher},
+				FlagReset: []uint32{flag_api_error, flag_no_active_voucher},
 			},
 		},
 		{
@@ -2063,7 +2063,7 @@ func TestManageVouchers(t *testing.T) {
 			expectedVoucherSymbols: []byte("1:SRF\n2:MILO"),
 			expectedUpdatedAddress: []byte("0xd4c288865Ce"),
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_no_active_voucher},
+				FlagReset: []uint32{flag_api_error, flag_no_active_voucher},
 			},
 		},
 	}
