@@ -297,16 +297,27 @@ func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []by
 	return res, nil
 }
 
-// CheckBlockedStatus resets the account blocked flag if the PIN attempts have been reset by an admin.
+// CheckBlockedStatus:
+// 1. Checks whether the DATA_SELF_PIN_RESET is 1 and sets the flag_account_pin_reset
+// 2. resets the account blocked flag if the PIN attempts have been reset by an admin.
 func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
 
 	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
+	}
+
+	selfPinReset, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET)
+	if err == nil {
+		pinResetValue, _ := strconv.ParseUint(string(selfPinReset), 0, 64)
+		if pinResetValue == 1 {
+			res.FlagSet = append(res.FlagSet, flag_account_pin_reset)
+		}
 	}
 
 	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
@@ -317,7 +328,6 @@ func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input
 	}
 
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-
 	if pinAttemptsValue == 0 {
 		res.FlagReset = append(res.FlagReset, flag_account_blocked)
 		return res, nil
@@ -659,6 +669,7 @@ func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, 
 
 // ValidateBlockedNumber performs validation of phone numbers, specifically for blocked numbers in the system.
 // It checks phone number format and verifies registration status.
+// If valid, it sets DATA_SELF_PIN_RESET as 1 on the account
 func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	var err error
@@ -694,10 +705,18 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 			return res, err
 		}
 	}
+
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
 	if err != nil {
 		return res, nil
 	}
+
+	// set the DATA_SELF_PIN_RESET for the account
+	err = store.WriteEntry(ctx, formattedNumber, storedb.DATA_SELF_PIN_RESET, []byte("1"))
+	if err != nil {
+		return res, nil
+	}
+
 	return res, nil
 }
 
