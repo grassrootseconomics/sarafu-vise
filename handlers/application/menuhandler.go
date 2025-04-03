@@ -1946,9 +1946,11 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	return res, nil
 }
 
-// SetDefaultVoucher retrieves the current vouchers
-// and sets the first as the default voucher, if no active voucher is set.
-func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+// ManageVouchers retrieves the token holdings from the API using the "PublicKey" and
+// 1. sets the first as the default voucher if no active voucher is set.
+// 2. Stores list of vouchers
+// 3. updates the balance of the active voucher
+func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	userStore := h.userdataStore
 
@@ -1959,30 +1961,31 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 
-	// check if the user has an active sym
-	_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	// Fetch vouchers from API
+	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+		return res, nil
+	}
+
+	if len(vouchersResp) == 0 {
+		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+		return res, nil
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
+
+	// Check if user has an active voucher with proper error handling
+	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
 		if db.IsNotFound(err) {
-			publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-				return res, err
-			}
-
-			// Fetch vouchers from the API using the public key
-			vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-			if err != nil {
-				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
-				return res, nil
-			}
-
-			// Return if there is no voucher
-			if len(vouchersResp) == 0 {
-				res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
-				return res, nil
-			}
-
-			// Use only the first voucher
+			// No active voucher, set the first one as default
 			firstVoucher := vouchersResp[0]
 			defaultSym := firstVoucher.TokenSymbol
 			defaultBal := firstVoucher.Balance
@@ -1992,71 +1995,27 @@ func (h *MenuHandlers) SetDefaultVoucher(ctx context.Context, sym string, input 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
 
-			// TODO: implement atomic transaction
-			// set the active symbol
-			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(defaultSym))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultSym entry with", "key", storedb.DATA_ACTIVE_SYM, "value", defaultSym, "error", err)
-				return res, err
-			}
-			// set the active balance
-			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL, []byte(scaledBalance))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultBal entry with", "key", storedb.DATA_ACTIVE_BAL, "value", scaledBalance, "error", err)
-				return res, err
-			}
-			// set the active decimals
-			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL, []byte(defaultDec))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultDec entry with", "key", storedb.DATA_ACTIVE_DECIMAL, "value", defaultDec, "error", err)
-				return res, err
-			}
-			// set the active contract address
-			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte(defaultAddr))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write defaultAddr entry with", "key", storedb.DATA_ACTIVE_ADDRESS, "value", defaultAddr, "error", err)
-				return res, err
+			firstVoucherMap := map[storedb.DataTyp]string{
+				storedb.DATA_ACTIVE_SYM:     defaultSym,
+				storedb.DATA_ACTIVE_BAL:     scaledBalance,
+				storedb.DATA_ACTIVE_DECIMAL: defaultDec,
+				storedb.DATA_ACTIVE_ADDRESS: defaultAddr,
 			}
 
-			return res, nil
+			for key, value := range firstVoucherMap {
+				if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+					logg.ErrorCtxf(ctx, "Failed to write active voucher data", "key", key, "error", err)
+					return res, err
+				}
+			}
+
+			logg.InfoCtxf(ctx, "Default voucher set", "symbol", defaultSym, "balance", defaultBal, "decimals", defaultDec, "address", defaultAddr)
+		} else {
+			logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
+			return res, err
 		}
-
-		logg.ErrorCtxf(ctx, "failed to read activeSym entry with", "key", storedb.DATA_ACTIVE_SYM, "error", err)
-		return res, err
-	}
-
-	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
-
-	return res, nil
-}
-
-// CheckVouchers retrieves the token holdings from the API using the "PublicKey" and stores
-// them to gdbm.
-func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	userStore := h.userdataStore
-	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-		return res, err
-	}
-
-	// Fetch vouchers from the API using the public key
-	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
-	if err != nil {
-		return res, nil
-	}
-
-	logg.InfoCtxf(ctx, "fetched user vouchers", "public_key", string(publicKey), "vouchers", vouchersResp)
-
-	// check the current active sym and update the data
-	activeSym, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
-	if activeSym != nil {
+	} else {
+		// Update active voucher balance
 		activeSymStr := string(activeSym)
 
 		// Find the matching voucher data
@@ -2086,14 +2045,8 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 		}
 	}
 
-	activeBal, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
-	activeAddr, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
-
-	logg.InfoCtxf(ctx, "The active data in CheckVouchers:", "activeSym", string(activeSym), string(activeBal), string(activeAddr))
-
-	data := store.ProcessVouchers(vouchersResp)
-
 	// Store all voucher data
+	data := store.ProcessVouchers(vouchersResp)
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
 		storedb.DATA_VOUCHER_BALANCES:  data.Balances,
@@ -2103,7 +2056,6 @@ func (h *MenuHandlers) CheckVouchers(ctx context.Context, sym string, input []by
 
 	// Write data entries
 	for key, value := range dataMap {
-		logg.InfoCtxf(ctx, "Writing data entry for sessionId: %s", sessionId, "key", key, "value", value)
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
@@ -2528,9 +2480,10 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
 		}
 		alias := aliasResult.Alias
+		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
 
 		//Store the returned alias,wait for user to confirm it as new account alias
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(alias))
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_TEMPORARY_VALUE, "value", alias, "error", err)
 			return res, err
@@ -2559,7 +2512,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
 	if err != nil {
 		return res, nil
 	}
@@ -2567,7 +2520,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-// ConfirmNewAlias  reads  the suggested alias from the temporary value and confirms it  as the new account alias.
+// ConfirmNewAlias  reads  the suggested alias from the [DATA_SUGGECTED_ALIAS] key and confirms it  as the new account alias.
 func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -2578,10 +2531,11 @@ func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
 	if err != nil {
 		return res, nil
 	}
+	logg.InfoCtxf(ctx, "Confirming new alias", "alias", string(newAlias))
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(string(newAlias)))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to clear DATA_ACCOUNT_ALIAS_VALUE entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "value", "empty", "error", err)

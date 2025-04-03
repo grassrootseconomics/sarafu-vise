@@ -63,6 +63,8 @@ const (
 	DATA_INITIAL_LANGUAGE_CODE
 	//Fully qualified account alias string
 	DATA_ACCOUNT_ALIAS
+	//currently suggested alias by the api awaiting user's confirmation as accepted account alias
+	DATA_SUGGESTED_ALIAS
 )
 
 const (
