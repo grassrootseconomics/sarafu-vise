@@ -3,9 +3,11 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
 
-	"git.defalsify.org/vise.git/logging"
+	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/engine"
+	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/persist"
 	"git.defalsify.org/vise.git/resource"
 	"git.defalsify.org/vise.git/state"
@@ -16,21 +18,24 @@ import (
 var argc map[string]int = map[string]int{
 	"reset": 0,
 	"admin": 1,
+	"clone": 1,
 }
 
 var (
-	logg = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
+	logg             = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
+	cloneTargetRegex = `^\+000`
 )
 
 type Cmd struct {
-	sessionId  string
-	conn       storage.ConnData
-	flagParser *application.FlagManager
-	cmd        int
-	enable     bool
-	exec       func(ctx context.Context, ss storage.StorageService) error
-	engineConfig	*engine.Config
-	st	*state.State
+	sessionId    string
+	conn         storage.ConnData
+	flagParser   *application.FlagManager
+	cmd          int
+	enable       bool
+	param        string
+	exec         func(ctx context.Context, ss storage.StorageService) error
+	engineConfig *engine.Config
+	st           *state.State
 }
 
 func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
@@ -68,6 +73,50 @@ func (c *Cmd) engine(ctx context.Context, rs resource.Resource, pe *persist.Pers
 	en = en.WithMemory(ca)
 	logg.DebugCtxf(ctx, "state loaded", "state", st)
 	return en, nil
+}
+
+func (c *Cmd) execClone(ctx context.Context, ss storage.StorageService) error {
+	re := regexp.MustCompile(cloneTargetRegex)
+	if !re.MatchString(c.param) {
+		return fmt.Errorf("Clone sessionId must match target: %s", c.param)
+	}
+
+	pe, err := ss.GetPersister(ctx)
+	if err != nil {
+		return fmt.Errorf("get persister error: %v", err)
+	}
+	err = pe.Load(c.engineConfig.SessionId)
+	if err != nil {
+		return fmt.Errorf("persister load error: %v", err)
+	}
+
+	/// TODO consider DRY with devtools/store/dump
+	store, err := ss.GetUserdataDb(ctx)
+	if err != nil {
+		return fmt.Errorf("store retrieve error: %v", err)
+	}
+
+	store.SetSession(c.engineConfig.SessionId)
+	store.SetPrefix(db.DATATYPE_USERDATA)
+	dmp, err := store.Dump(ctx, []byte(""))
+	if err != nil {
+		return fmt.Errorf("store dump fail: %v\n", err.Error())
+	}
+
+	for true {
+		store.SetSession(c.engineConfig.SessionId)
+		k, v := dmp.Next(ctx)
+		if k == nil {
+			break
+		}
+		store.SetSession(c.param)
+		err = store.Put(ctx, k, v)
+		if err != nil {
+			return fmt.Errorf("user data store clone failed on key: %x", k)
+		}
+	}
+
+	return pe.Save(c.param)
 }
 
 func (c *Cmd) execReset(ctx context.Context, ss storage.StorageService) error {
@@ -157,6 +206,16 @@ func (c *Cmd) parseCmdReset(cmd string, param string, more []string) (bool, erro
 	return false, nil
 }
 
+func (c *Cmd) parseCmdClone(cmd string, param string, more []string) (bool, error) {
+	if cmd == "clone" {
+		c.enable = false
+		c.param = param
+		c.exec = c.execClone
+		return true, nil
+	}
+	return false, nil
+}
+
 func (c *Cmd) Parse(args []string) error {
 	var param string
 	if len(args) < 1 {
@@ -169,7 +228,7 @@ func (c *Cmd) Parse(args []string) error {
 		return fmt.Errorf("invalid command: %v", cmd)
 	}
 	if n > 0 {
-		if len(args) < n + 1 {
+		if len(args) < n+1 {
 			return fmt.Errorf("Wrong number of arguments, need: %d", n)
 		}
 		param = args[1]
@@ -192,6 +251,13 @@ func (c *Cmd) Parse(args []string) error {
 		return nil
 	}
 
+	r, err = c.parseCmdClone(cmd, param, args)
+	if err != nil {
+		return err
+	}
+	if r {
+		return nil
+	}
 
 	return fmt.Errorf("unknown subcommand: %s", cmd)
 }

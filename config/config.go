@@ -25,7 +25,7 @@ const (
 	defaultSSHHost  string = "127.0.0.1"
 	defaultSSHPort  uint   = 7122
 	defaultHTTPHost string = "127.0.0.1"
-	defaultHTTPPort uint     = 7123
+	defaultHTTPPort uint   = 7123
 	defaultDomain          = "sarafu.local"
 )
 
@@ -51,7 +51,6 @@ func SearchDomains() []string {
 	}
 	return ParsedDomains
 }
-
 
 func Language() string {
 	return viseconfig.DefaultLanguage

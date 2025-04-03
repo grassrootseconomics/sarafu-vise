@@ -7,8 +7,8 @@ import (
 	"os"
 	"path"
 
-	"git.defalsify.org/vise.git/logging"
 	"git.defalsify.org/vise.git/engine"
+	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	logg      = logging.NewVanilla().WithContextKey("SessionId")
-	scriptDir = path.Join("services", "registration")
+	logg          = logging.NewVanilla().WithContextKey("SessionId")
+	scriptDir     = path.Join("services", "registration")
 	menuSeparator = ": "
 )
 
@@ -87,5 +87,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "cmd exec error: %v\n", err)
 		os.Exit(1)
 	}
-
 }

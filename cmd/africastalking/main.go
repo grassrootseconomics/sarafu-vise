@@ -77,10 +77,10 @@ func main() {
 	pfp := path.Join(scriptDir, "pp.csv")
 
 	cfg := engine.Config{
-		Root:          "root",
-		OutputSize:    uint32(size),
-		FlagCount:     uint32(128),
-		MenuSeparator: menuSeparator,
+		Root:              "root",
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
+		MenuSeparator:     menuSeparator,
 		ResetOnEmptyInput: true,
 	}
 

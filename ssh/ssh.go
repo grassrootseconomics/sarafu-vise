@@ -181,8 +181,8 @@ func (s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	accountService := services.New(ctx, menuStorageService)
 	_, err = lhs.GetHandler(accountService)
 	if err != nil {
-	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
-	       os.Exit(1)
+		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+		os.Exit(1)
 	}
 	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	closer := func() {

@@ -38,7 +38,7 @@ func main() {
 	var stateDebug bool
 	var host string
 	var port uint
-	
+
 	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
 	flag.StringVar(&override.ResourceConn, "resource", "?", "resource connection string")
 	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
@@ -81,9 +81,9 @@ func main() {
 	pfp := path.Join(scriptDir, "pp.csv")
 
 	cfg := engine.Config{
-		Root:       "root",
-		OutputSize: uint32(size),
-		FlagCount:  uint32(128),
+		Root:              "root",
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
 		ResetOnEmptyInput: true,
 	}
 	if stateDebug {
