@@ -73,7 +73,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "cmd parse fail: %v\n", err)
 		os.Exit(1)
 	}
-
 	logg.Infof("start command", "conn", conns, "subcmd", x)
 
 	menuStorageService := storage.NewMenuStorageService(conns)
