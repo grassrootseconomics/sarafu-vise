@@ -245,6 +245,7 @@ func (h *MenuHandlers) CreateAccount(ctx context.Context, sym string, input []by
 
 func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	flag_language_set, _ := h.flagManager.GetFlag("flag_language_set")
 	flag_account_created, _ := h.flagManager.GetFlag("flag_account_created")
 
 	store := h.userdataStore
@@ -256,11 +257,17 @@ func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, inpu
 
 	_, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
-		if !db.IsNotFound(err) {
-			return res, err
+		if db.IsNotFound(err) {
+			// reset major flags
+			res.FlagReset = append(res.FlagReset, flag_language_set)
+			res.FlagReset = append(res.FlagReset, flag_account_created)
+
+			return res, nil
 		}
+
 		return res, nil
 	}
+
 	res.FlagSet = append(res.FlagSet, flag_account_created)
 	return res, nil
 }
