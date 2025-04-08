@@ -568,10 +568,57 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	return res, nil
 }
 
+// ValidateBlockedNumber performs validation of phone numbers during the Reset other's PIN.
+// It checks phone number format and verifies registration status.
+// If valid, it writes the number under DATA_BLOCKED_NUMBER on the admin account
+func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+
+	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	if string(input) == "0" {
+		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
+		return res, nil
+	}
+
+	blockedNumber := string(input)
+	formattedNumber, err := phone.FormatPhoneNumber(blockedNumber)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+		logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", blockedNumber, "error", err)
+		return res, nil
+	}
+
+	_, err = store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		if db.IsNotFound(err) {
+			logg.InfoCtxf(ctx, "Invalid or unregistered number")
+			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+			return res, nil
+		} else {
+			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
+			return res, err
+		}
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
+	if err != nil {
+		return res, nil
+	}
+
+	return res, nil
+}
+
 // ResetOthersPin handles the PIN reset process for other users' accounts by:
 // 1. Retrieving the blocked phone number from the session
-// 2. Fetching the hashed temporary PIN associated with that number
-// 3. Updating the account PIN with the temporary PIN
+// 2. Writing the DATA_SELF_PIN_RESET on the blocked phone number
+// 3. Resetting the DATA_INCORRECT_PIN_ATTEMPTS to 0 for the blocked phone number
 func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -584,19 +631,11 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
-	hashedTemporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read hashedTmporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
-		return res, err
-	}
-	if len(hashedTemporaryPin) == 0 {
-		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
-		return res, fmt.Errorf("Data error encountered")
-	}
 
-	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	// set the DATA_SELF_PIN_RESET for the account
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_SELF_PIN_RESET, []byte("1"))
 	if err != nil {
-		return res, err
+		return res, nil
 	}
 
 	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
@@ -664,59 +703,6 @@ func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, 
 	var res resource.Result
 	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
 	res.FlagReset = append(res.FlagReset, flag_unregistered_number)
-	return res, nil
-}
-
-// ValidateBlockedNumber performs validation of phone numbers, specifically for blocked numbers in the system.
-// It checks phone number format and verifies registration status.
-// If valid, it sets DATA_SELF_PIN_RESET as 1 on the account
-func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
-
-	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	if string(input) == "0" {
-		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
-		return res, nil
-	}
-
-	blockedNumber := string(input)
-	formattedNumber, err := phone.FormatPhoneNumber(blockedNumber)
-	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-		logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", blockedNumber, "error", err)
-		return res, nil
-	}
-
-	_, err = store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		if db.IsNotFound(err) {
-			logg.InfoCtxf(ctx, "Invalid or unregistered number")
-			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-			return res, nil
-		} else {
-			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
-			return res, err
-		}
-	}
-
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
-	if err != nil {
-		return res, nil
-	}
-
-	// set the DATA_SELF_PIN_RESET for the account
-	err = store.WriteEntry(ctx, formattedNumber, storedb.DATA_SELF_PIN_RESET, []byte("1"))
-	if err != nil {
-		return res, nil
-	}
-
 	return res, nil
 }
 
