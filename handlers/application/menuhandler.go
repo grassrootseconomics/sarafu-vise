@@ -288,6 +288,8 @@ func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input
 		return res, fmt.Errorf("missing session")
 	}
 
+	res.FlagReset = append(res.FlagReset, flag_account_pin_reset)
+
 	selfPinReset, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET)
 	if err == nil {
 		pinResetValue, _ := strconv.ParseUint(string(selfPinReset), 0, 64)
@@ -505,6 +507,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		return res, fmt.Errorf("missing session")
 	}
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
 	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
@@ -535,6 +538,13 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedTemporaryPin, "error", err)
 		return res, err
 	}
+	// set the DATA_SELF_PIN_RESET as 0
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET, []byte("0"))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write DATA_SELF_PIN_RESET entry with", "key", storedb.DATA_SELF_PIN_RESET, "self PIN reset value", "0", "error", err)
+		return res, err
+	}
+	res.FlagReset = append(res.FlagReset, flag_account_pin_reset)
 
 	return res, nil
 }
