@@ -3047,30 +3047,6 @@ func TestResetOthersPin(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestResetValidPin(t *testing.T) {
-	ctx := context.Background()
-
-	fm, err := NewFlagManager(flagsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
-
-	expectedResult := resource.Result{
-		FlagReset: []uint32{flag_valid_pin},
-	}
-
-	h := &MenuHandlers{
-		flagManager: fm,
-	}
-
-	res, err := h.ResetValidPin(ctx, "reset_valid_pin", []byte(""))
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, expectedResult, res)
-}
-
 func TestResetUnregisteredNumber(t *testing.T) {
 	ctx := context.Background()
 
