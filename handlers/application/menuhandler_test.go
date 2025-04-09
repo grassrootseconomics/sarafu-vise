@@ -1889,7 +1889,7 @@ func TestVerifyNewPin(t *testing.T) {
 	}
 }
 
-func TestConfirmPin(t *testing.T) {
+func TestConfirmPinChange(t *testing.T) {
 	sessionId := "session123"
 
 	mockState := state.NewState(16)
@@ -1898,6 +1898,8 @@ func TestConfirmPin(t *testing.T) {
 
 	fm, _ := NewFlagManager(flagsPath)
 	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
+	flag_account_pin_reset, _ := fm.GetFlag("flag_account_pin_reset")
+
 	mockAccountService := new(mocks.MockAccountService)
 	h := &MenuHandlers{
 		userdataStore:  store,
@@ -1917,7 +1919,7 @@ func TestConfirmPin(t *testing.T) {
 			input:        []byte("1234"),
 			temporarypin: "1234",
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_pin_mismatch},
+				FlagReset: []uint32{flag_pin_mismatch, flag_account_pin_reset},
 			},
 		},
 	}
