@@ -2355,10 +2355,8 @@ func TestCheckBlockedStatus(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
-	flag_account_blocked, err := fm.GetFlag("flag_account_blocked")
-	if err != nil {
-		t.Logf(err.Error())
-	}
+	flag_account_blocked, _ := fm.GetFlag("flag_account_blocked")
+	flag_account_pin_reset, _ := fm.GetFlag("flag_account_pin_reset")
 
 	h := &MenuHandlers{
 		userdataStore: store,
@@ -2373,13 +2371,15 @@ func TestCheckBlockedStatus(t *testing.T) {
 		{
 			name:                    "Currently blocked account",
 			currentWrongPinAttempts: "4",
-			expectedResult:          resource.Result{},
+			expectedResult:          resource.Result{
+				FlagReset: []uint32{flag_account_pin_reset},
+			},
 		},
 		{
 			name:                    "Account with 0 wrong PIN attempts",
 			currentWrongPinAttempts: "0",
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_account_blocked},
+				FlagReset: []uint32{flag_account_pin_reset, flag_account_blocked},
 			},
 		},
 	}
