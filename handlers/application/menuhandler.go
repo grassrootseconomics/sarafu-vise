@@ -407,15 +407,20 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 		return res, fmt.Errorf("missing session")
 	}
 
-	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
-	accountPIN := string(input)
+	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
 
-	// Validate that the PIN is a 4-digit number.
-	if !pin.IsValidPIN(accountPIN) {
-		res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
+	if string(input) == "0" {
 		return res, nil
 	}
-	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+	accountPIN := string(input)
+
+	// Validate that the PIN has a valid format.
+	if !pin.IsValidPIN(accountPIN) {
+		res.FlagSet = append(res.FlagSet, flag_invalid_pin)
+		return res, nil
+	}
+	res.FlagReset = append(res.FlagReset, flag_invalid_pin)
 
 	// Hash the PIN
 	hashedPIN, err := pin.HashPIN(string(accountPIN))
@@ -718,14 +723,20 @@ func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, 
 func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
-	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
-
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+
+	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
+	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
+
+	if string(input) == "0" {
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
+		return res, nil
+	}
+
 	store := h.userdataStore
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
@@ -738,14 +749,15 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	}
 
 	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
-		res.FlagSet = []uint32{flag_valid_pin}
-		res.FlagReset = []uint32{flag_pin_mismatch}
+		res.FlagSet = append(res.FlagSet, flag_valid_pin)
 		res.FlagSet = append(res.FlagSet, flag_pin_set)
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 	} else {
-		res.FlagSet = []uint32{flag_pin_mismatch}
+		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
 		return res, nil
 	}
 
+	// save the hashed PIN as the new account PIN
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
