@@ -27,6 +27,7 @@ type LocalHandlerService struct {
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
+	LogDb         *db.Db
 	Cfg           engine.Config
 	Rs            resource.Resource
 	first         resource.EntryFunc
@@ -57,12 +58,16 @@ func (ls *LocalHandlerService) SetDataStore(db *db.Db) {
 	ls.UserdataStore = db
 }
 
+func (ls *LocalHandlerService) SetLogDb(db *db.Db) {
+	ls.LogDb = db
+}
+
 func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) (*application.MenuHandlers, error) {
 	replaceSeparatorFunc := func(input string) string {
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, *ls.LogDb, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}
