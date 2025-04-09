@@ -1,6 +1,6 @@
 MOUT back 0
 MOUT quit 9
 HALT
-INCMP main 0
+INCMP ^ 0
 INCMP quit 9
 INCMP . *

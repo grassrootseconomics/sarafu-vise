@@ -9,7 +9,7 @@ MOUT my_address 6
 MOUT my_account_alias 7
 MOUT back 0
 HALT
-INCMP main 0
+INCMP ^ 0
 INCMP edit_profile 1
 INCMP change_language 2
 INCMP balances 3
