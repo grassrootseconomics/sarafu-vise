@@ -4,4 +4,4 @@ HALT
 INCMP _ 0
 RELOAD confirm_pin_change
 CATCH pin_mismatch flag_pin_mismatch 1
-INCMP * pin_reset_success
+INCMP pin_reset_success *
