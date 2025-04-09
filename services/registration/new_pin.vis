@@ -3,5 +3,5 @@ HALT
 INCMP _ 0
 RELOAD save_temporary_pin
 RELOAD verify_new_pin
-CATCH invalid_pin flag_valid_pin 0
+CATCH invalid_pin flag_invalid_pin 1
 INCMP confirm_pin_change *
