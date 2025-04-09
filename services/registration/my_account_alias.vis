@@ -5,4 +5,4 @@ HALT
 INCMP _ 0
 LOAD request_custom_alias 0
 RELOAD request_custom_alias
-INCMP  confirm_new_alias *
+INCMP confirm_new_alias *
