@@ -265,14 +265,6 @@ func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, inpu
 	return res, nil
 }
 
-// ResetValidPin resets the flag_valid_pin flag.
-func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	res.FlagReset = append(res.FlagReset, flag_valid_pin)
-	return res, nil
-}
-
 // CheckBlockedStatus:
 // 1. Checks whether the DATA_SELF_PIN_RESET is 1 and sets the flag_account_pin_reset
 // 2. resets the account blocked flag if the PIN attempts have been reset by an admin.
