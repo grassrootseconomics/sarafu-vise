@@ -4,5 +4,5 @@ LOAD save_temporary_pin 1
 RELOAD save_temporary_pin
 LOAD verify_new_pin 2
 RELOAD verify_new_pin
-CATCH invalid_pin flag_valid_pin 0
+CATCH invalid_pin flag_invalid_pin 1
 INCMP confirm_self_pin_reset * 
