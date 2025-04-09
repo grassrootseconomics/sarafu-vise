@@ -1843,52 +1843,6 @@ func TestGetProfile(t *testing.T) {
 	}
 }
 
-func TestVerifyNewPin(t *testing.T) {
-	sessionId := "session123"
-
-	fm, _ := NewFlagManager(flagsPath)
-	mockState := state.NewState(16)
-
-	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
-	mockAccountService := new(mocks.MockAccountService)
-	h := &MenuHandlers{
-		flagManager:    fm,
-		accountService: mockAccountService,
-		st:             mockState,
-	}
-	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
-
-	tests := []struct {
-		name           string
-		input          []byte
-		expectedResult resource.Result
-	}{
-		{
-			name:  "Test with valid pin",
-			input: []byte("1234"),
-			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_valid_pin},
-			},
-		},
-		{
-			name:  "Test with invalid pin",
-			input: []byte("123"),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_valid_pin},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			//Call the function under test
-			res, _ := h.VerifyNewPin(ctx, "verify_new_pin", tt.input)
-
-			//Assert that the result set to content is what was expected
-			assert.Equal(t, res, tt.expectedResult, "Result should contain flags set according to user input")
-		})
-	}
-}
-
 func TestConfirmPinChange(t *testing.T) {
 	sessionId := "session123"
 

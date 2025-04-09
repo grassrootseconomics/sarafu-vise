@@ -340,29 +340,6 @@ func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-// VerifyNewPin checks if a new PIN meets the required format criteria.
-func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	res := resource.Result{}
-	_, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	if string(input) != "0" {
-		pinInput := string(input)
-		// Validate that the PIN is a 4-digit number.
-		if pin.IsValidPIN(pinInput) {
-			res.FlagSet = append(res.FlagSet, flag_valid_pin)
-		} else {
-			res.FlagReset = append(res.FlagReset, flag_valid_pin)
-		}
-	} else {
-		res.FlagSet = append(res.FlagSet, flag_valid_pin)
-	}
-
-	return res, nil
-}
-
 // SaveTemporaryPin saves the valid PIN input to the DATA_TEMPORARY_VALUE,
 // during the account creation process
 // and during the change PIN process.
