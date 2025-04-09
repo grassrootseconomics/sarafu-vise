@@ -2,6 +2,7 @@ LOAD check_blocked_status 1
 RELOAD check_blocked_status
 LOAD check_account_created 2
 RELOAD check_account_created
+CATCH self_reset_pin flag_account_pin_reset 1
 CATCH blocked_account flag_account_blocked 1
 CATCH select_language flag_language_set 0
 CATCH terms flag_account_created 0
