@@ -566,7 +566,7 @@ func TestSaveTemporaryPin(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
+	flag_invalid_pin, _ := fm.GetFlag("flag_invalid_pin")
 
 	// Create the MenuHandlers instance with the mock flag manager
 	h := &MenuHandlers{
@@ -584,14 +584,14 @@ func TestSaveTemporaryPin(t *testing.T) {
 			name:  "Valid Pin entry",
 			input: []byte("1234"),
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_incorrect_pin},
+				FlagReset: []uint32{flag_invalid_pin},
 			},
 		},
 		{
 			name:  "Invalid Pin entry",
 			input: []byte("12343"),
 			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_incorrect_pin},
+				FlagSet: []uint32{flag_invalid_pin},
 			},
 		},
 	}
