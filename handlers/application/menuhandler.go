@@ -272,24 +272,29 @@ func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, inpu
 	return res, nil
 }
 
-// ResetValidPin resets the flag_valid_pin flag.
-func (h *MenuHandlers) ResetValidPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	res.FlagReset = append(res.FlagReset, flag_valid_pin)
-	return res, nil
-}
-
-// CheckBlockedStatus resets the account blocked flag if the PIN attempts have been reset by an admin.
+// CheckBlockedStatus:
+// 1. Checks whether the DATA_SELF_PIN_RESET is 1 and sets the flag_account_pin_reset
+// 2. resets the account blocked flag if the PIN attempts have been reset by an admin.
 func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
 
 	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
+	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_account_pin_reset)
+
+	selfPinReset, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET)
+	if err == nil {
+		pinResetValue, _ := strconv.ParseUint(string(selfPinReset), 0, 64)
+		if pinResetValue == 1 {
+			res.FlagSet = append(res.FlagSet, flag_account_pin_reset)
+		}
 	}
 
 	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
@@ -300,7 +305,6 @@ func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input
 	}
 
 	pinAttemptsValue, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-
 	if pinAttemptsValue == 0 {
 		res.FlagReset = append(res.FlagReset, flag_account_blocked)
 		return res, nil
@@ -343,29 +347,6 @@ func (h *MenuHandlers) ResetIncorrectPin(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-// VerifyNewPin checks if a new PIN meets the required format criteria.
-func (h *MenuHandlers) VerifyNewPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	res := resource.Result{}
-	_, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	if string(input) != "0" {
-		pinInput := string(input)
-		// Validate that the PIN is a 4-digit number.
-		if pin.IsValidPIN(pinInput) {
-			res.FlagSet = append(res.FlagSet, flag_valid_pin)
-		} else {
-			res.FlagReset = append(res.FlagReset, flag_valid_pin)
-		}
-	} else {
-		res.FlagSet = append(res.FlagSet, flag_valid_pin)
-	}
-
-	return res, nil
-}
-
 // SaveTemporaryPin saves the valid PIN input to the DATA_TEMPORARY_VALUE,
 // during the account creation process
 // and during the change PIN process.
@@ -378,15 +359,20 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 		return res, fmt.Errorf("missing session")
 	}
 
-	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
-	accountPIN := string(input)
+	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
 
-	// Validate that the PIN is a 4-digit number.
-	if !pin.IsValidPIN(accountPIN) {
-		res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
+	if string(input) == "0" {
 		return res, nil
 	}
-	res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+	accountPIN := string(input)
+
+	// Validate that the PIN has a valid format.
+	if !pin.IsValidPIN(accountPIN) {
+		res.FlagSet = append(res.FlagSet, flag_invalid_pin)
+		return res, nil
+	}
+	res.FlagReset = append(res.FlagReset, flag_invalid_pin)
 
 	// Hash the PIN
 	hashedPIN, err := pin.HashPIN(string(accountPIN))
@@ -402,87 +388,6 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	return res, nil
-}
-
-// SaveOthersTemporaryPin allows authorized users to set temporary PINs for blocked numbers.
-func (h *MenuHandlers) SaveOthersTemporaryPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
-
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	temporaryPin := string(input)
-
-	// Validate that the input is a 4-digit number.
-	if !pin.IsValidPIN(temporaryPin) {
-		return res, nil
-	}
-
-	// Retrieve the blocked number associated with this session
-	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
-		return res, err
-	}
-
-	// Hash the temporary PIN
-	hashedPIN, err := pin.HashPIN(string(temporaryPin))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to hash temporaryPin", "error", err)
-		return res, err
-	}
-
-	// Save the hashed temporary PIN for that blocked number
-	err = store.WriteEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write hashed temporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryPin, "error", err)
-		return res, err
-	}
-
-	return res, nil
-}
-
-// CheckBlockedNumPinMisMatch checks if the provided PIN matches a temporary PIN stored for a blocked number.
-func (h *MenuHandlers) CheckBlockedNumPinMisMatch(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	res := resource.Result{}
-	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	if string(input) == "0" {
-		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
-		return res, nil
-	}
-
-	// Get blocked number from storage.
-	store := h.userdataStore
-	blockedNumber, err := store.ReadEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read blockedNumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
-		return res, err
-	}
-	// Get Hashed temporary PIN for the blocked number.
-	hashedTemporaryPin, err := store.ReadEntry(ctx, string(blockedNumber), storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
-		return res, err
-	}
-	if len(hashedTemporaryPin) == 0 {
-		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
-		return res, fmt.Errorf("Data error encountered")
-	}
-
-	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
-		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
-	} else {
-		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
-	}
 	return res, nil
 }
 
@@ -502,6 +407,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		return res, fmt.Errorf("missing session")
 	}
 	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
 	if string(input) == "0" {
 		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
@@ -532,14 +438,68 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedTemporaryPin, "error", err)
 		return res, err
 	}
+	// set the DATA_SELF_PIN_RESET as 0
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET, []byte("0"))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write DATA_SELF_PIN_RESET entry with", "key", storedb.DATA_SELF_PIN_RESET, "self PIN reset value", "0", "error", err)
+		return res, err
+	}
+	res.FlagReset = append(res.FlagReset, flag_account_pin_reset)
+
+	return res, nil
+}
+
+// ValidateBlockedNumber performs validation of phone numbers during the Reset other's PIN.
+// It checks phone number format and verifies registration status.
+// If valid, it writes the number under DATA_BLOCKED_NUMBER on the admin account
+func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+
+	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
+	store := h.userdataStore
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	if string(input) == "0" {
+		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
+		return res, nil
+	}
+
+	blockedNumber := string(input)
+	formattedNumber, err := phone.FormatPhoneNumber(blockedNumber)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+		logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", blockedNumber, "error", err)
+		return res, nil
+	}
+
+	_, err = store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		if db.IsNotFound(err) {
+			logg.InfoCtxf(ctx, "Invalid or unregistered number")
+			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
+			return res, nil
+		} else {
+			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
+			return res, err
+		}
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
+	if err != nil {
+		return res, nil
+	}
 
 	return res, nil
 }
 
 // ResetOthersPin handles the PIN reset process for other users' accounts by:
 // 1. Retrieving the blocked phone number from the session
-// 2. Fetching the hashed temporary PIN associated with that number
-// 3. Updating the account PIN with the temporary PIN
+// 2. Writing the DATA_SELF_PIN_RESET on the blocked phone number
+// 3. Resetting the DATA_INCORRECT_PIN_ATTEMPTS to 0 for the blocked phone number
 func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -552,19 +512,11 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read blockedPhonenumber entry with", "key", storedb.DATA_BLOCKED_NUMBER, "error", err)
 		return res, err
 	}
-	hashedTemporaryPin, err := store.ReadEntry(ctx, string(blockedPhonenumber), storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read hashedTmporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
-		return res, err
-	}
-	if len(hashedTemporaryPin) == 0 {
-		logg.ErrorCtxf(ctx, "hashedTemporaryPin is empty", "key", storedb.DATA_TEMPORARY_VALUE)
-		return res, fmt.Errorf("Data error encountered")
-	}
 
-	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	// set the DATA_SELF_PIN_RESET for the account
+	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_SELF_PIN_RESET, []byte("1"))
 	if err != nil {
-		return res, err
+		return res, nil
 	}
 
 	err = store.WriteEntry(ctx, string(blockedPhonenumber), storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
@@ -635,64 +587,26 @@ func (h *MenuHandlers) ResetUnregisteredNumber(ctx context.Context, sym string, 
 	return res, nil
 }
 
-// ValidateBlockedNumber performs validation of phone numbers, specifically for blocked numbers in the system.
-// It checks phone number format and verifies registration status.
-func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	var err error
-
-	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-
-	if string(input) == "0" {
-		res.FlagReset = append(res.FlagReset, flag_unregistered_number)
-		return res, nil
-	}
-
-	blockedNumber := string(input)
-	formattedNumber, err := phone.FormatPhoneNumber(blockedNumber)
-	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-		logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", blockedNumber, "error", err)
-		return res, nil
-	}
-
-	_, err = store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		if db.IsNotFound(err) {
-			logg.InfoCtxf(ctx, "Invalid or unregistered number")
-			res.FlagSet = append(res.FlagSet, flag_unregistered_number)
-			return res, nil
-		} else {
-			logg.ErrorCtxf(ctx, "Error on ValidateBlockedNumber", "error", err)
-			return res, err
-		}
-	}
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
-	if err != nil {
-		return res, nil
-	}
-	return res, nil
-}
-
 // VerifyCreatePin checks whether the confirmation PIN is similar to the temporary PIN
 // If similar, it sets the USERFLAG_PIN_SET flag and writes the account PIN allowing the user
 // to access the main menu.
 func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 
-	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
-	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
-	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
-
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
+
+	flag_valid_pin, _ := h.flagManager.GetFlag("flag_valid_pin")
+	flag_pin_mismatch, _ := h.flagManager.GetFlag("flag_pin_mismatch")
+	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
+
+	if string(input) == "0" {
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
+		return res, nil
+	}
+
 	store := h.userdataStore
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
@@ -705,14 +619,15 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	}
 
 	if pin.VerifyPIN(string(hashedTemporaryPin), string(input)) {
-		res.FlagSet = []uint32{flag_valid_pin}
-		res.FlagReset = []uint32{flag_pin_mismatch}
+		res.FlagSet = append(res.FlagSet, flag_valid_pin)
 		res.FlagSet = append(res.FlagSet, flag_pin_set)
+		res.FlagReset = append(res.FlagReset, flag_pin_mismatch)
 	} else {
-		res.FlagSet = []uint32{flag_pin_mismatch}
+		res.FlagSet = append(res.FlagSet, flag_pin_mismatch)
 		return res, nil
 	}
 
+	// save the hashed PIN as the new account PIN
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)

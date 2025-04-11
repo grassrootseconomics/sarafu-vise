@@ -202,23 +202,7 @@
                 },
                 {
                     "input": "0700000000",
-                    "expectedContent": "Please enter new PIN for: {secondary_session_id}\n0:Back"
-                },
-                {
-                    "input": "11111",
-                    "expectedContent": "The PIN you have entered is invalid.Please try a 4 digit number instead.\n1:Retry\n9:Quit"
-                },
-                {
-                    "input": "1",
-                    "expectedContent": "Please enter new PIN for: {secondary_session_id}\n0:Back"
-                },
-                {
-                    "input": "1111",
-                    "expectedContent": "Please confirm new PIN for: {secondary_session_id}\n0:Back"
-                },
-                {
-                    "input": "1111",
-                    "expectedContent": "Please enter your PIN:"
+                    "expectedContent": "{secondary_session_id} will get a PIN reset request.\nPlease enter your PIN to confirm:\n0:Back\n9:Quit"
                 },
                 {
                     "input": "1234",
@@ -612,7 +596,7 @@
                 },
                 {
                     "input": "1234",
-                    "expectedContent": "My profile:\nName: foo bar\nGender: male\nAge: 80\nLocation: Kilifi\nYou provide: Bananas\nYour alias: \n\n0:Back\n9:Quit"
+                    "expectedContent": "My profile:\nName: foo bar\nGender: male\nAge: 80\nLocation: Kilifi\nYou provide: Bananas\nYour alias: Not Provided\n\n0:Back\n9:Quit"
                 },
                 {
                     "input": "0",

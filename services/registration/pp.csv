@@ -9,7 +9,7 @@ flag,flag_account_authorized,15,this is set to allow a user access guarded nodes
 flag,flag_invalid_recipient,16,this is set when the transaction recipient is invalid
 flag,flag_invalid_recipient_with_invite,17,this is set when the transaction recipient is valid but not on the platform
 flag,flag_invalid_amount,18,this is set when the given transaction amount is invalid
-flag,flag_incorrect_pin,19,this is set when the provided PIN is invalid or does not match the current account's PIN
+flag,flag_incorrect_pin,19,this is set when the provided PIN does not match the current account's PIN
 flag,flag_valid_pin,20,this is set when the given PIN is valid
 flag,flag_allow_update,21,this is set to allow a user to update their profile data
 flag,flag_single_edit,22,this is set to allow a user to edit a single profile item such as year of birth
@@ -31,3 +31,4 @@ flag,flag_back_set,37,this is set when it is a back navigation
 flag,flag_account_blocked,38,this is set when an account has been blocked after the allowed incorrect PIN attempts have been exceeded
 flag,flag_invalid_pin,39,this is set when the given PIN is invalid(is  less than or more than 4 digits)
 flag,flag_alias_set,40,this is set when an account alias has been assigned to a user
+flag,flag_account_pin_reset,41,this is set on an account when an admin triggers a PIN reset for them

@@ -566,7 +566,7 @@ func TestSaveTemporaryPin(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	flag_incorrect_pin, _ := fm.GetFlag("flag_incorrect_pin")
+	flag_invalid_pin, _ := fm.GetFlag("flag_invalid_pin")
 
 	// Create the MenuHandlers instance with the mock flag manager
 	h := &MenuHandlers{
@@ -584,14 +584,14 @@ func TestSaveTemporaryPin(t *testing.T) {
 			name:  "Valid Pin entry",
 			input: []byte("1234"),
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_incorrect_pin},
+				FlagReset: []uint32{flag_invalid_pin},
 			},
 		},
 		{
 			name:  "Invalid Pin entry",
 			input: []byte("12343"),
 			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_incorrect_pin},
+				FlagSet: []uint32{flag_invalid_pin},
 			},
 		},
 	}
@@ -1843,53 +1843,7 @@ func TestGetProfile(t *testing.T) {
 	}
 }
 
-func TestVerifyNewPin(t *testing.T) {
-	sessionId := "session123"
-
-	fm, _ := NewFlagManager(flagsPath)
-	mockState := state.NewState(16)
-
-	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
-	mockAccountService := new(mocks.MockAccountService)
-	h := &MenuHandlers{
-		flagManager:    fm,
-		accountService: mockAccountService,
-		st:             mockState,
-	}
-	ctx := context.WithValue(context.Background(), "SessionId", sessionId)
-
-	tests := []struct {
-		name           string
-		input          []byte
-		expectedResult resource.Result
-	}{
-		{
-			name:  "Test with valid pin",
-			input: []byte("1234"),
-			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_valid_pin},
-			},
-		},
-		{
-			name:  "Test with invalid pin",
-			input: []byte("123"),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_valid_pin},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			//Call the function under test
-			res, _ := h.VerifyNewPin(ctx, "verify_new_pin", tt.input)
-
-			//Assert that the result set to content is what was expected
-			assert.Equal(t, res, tt.expectedResult, "Result should contain flags set according to user input")
-		})
-	}
-}
-
-func TestConfirmPin(t *testing.T) {
+func TestConfirmPinChange(t *testing.T) {
 	sessionId := "session123"
 
 	mockState := state.NewState(16)
@@ -1898,6 +1852,8 @@ func TestConfirmPin(t *testing.T) {
 
 	fm, _ := NewFlagManager(flagsPath)
 	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
+	flag_account_pin_reset, _ := fm.GetFlag("flag_account_pin_reset")
+
 	mockAccountService := new(mocks.MockAccountService)
 	h := &MenuHandlers{
 		userdataStore:  store,
@@ -1917,7 +1873,7 @@ func TestConfirmPin(t *testing.T) {
 			input:        []byte("1234"),
 			temporarypin: "1234",
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_pin_mismatch},
+				FlagReset: []uint32{flag_pin_mismatch, flag_account_pin_reset},
 			},
 		},
 	}
@@ -2336,10 +2292,8 @@ func TestCheckBlockedStatus(t *testing.T) {
 	if err != nil {
 		t.Logf(err.Error())
 	}
-	flag_account_blocked, err := fm.GetFlag("flag_account_blocked")
-	if err != nil {
-		t.Logf(err.Error())
-	}
+	flag_account_blocked, _ := fm.GetFlag("flag_account_blocked")
+	flag_account_pin_reset, _ := fm.GetFlag("flag_account_pin_reset")
 
 	h := &MenuHandlers{
 		userdataStore: store,
@@ -2354,13 +2308,15 @@ func TestCheckBlockedStatus(t *testing.T) {
 		{
 			name:                    "Currently blocked account",
 			currentWrongPinAttempts: "4",
-			expectedResult:          resource.Result{},
+			expectedResult:          resource.Result{
+				FlagReset: []uint32{flag_account_pin_reset},
+			},
 		},
 		{
 			name:                    "Account with 0 wrong PIN attempts",
 			currentWrongPinAttempts: "0",
 			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_account_blocked},
+				FlagReset: []uint32{flag_account_pin_reset, flag_account_blocked},
 			},
 		},
 	}
@@ -2889,173 +2845,6 @@ func TestValidateBlockedNumber(t *testing.T) {
 	}
 }
 
-func TestSaveOthersTemporaryPin(t *testing.T) {
-	sessionId := "session123"
-	blockedNumber := "+254712345678"
-	testPin := "1234"
-
-	ctx, userStore := InitializeTestStore(t)
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
-
-	h := &MenuHandlers{
-		userdataStore: userStore,
-	}
-
-	tests := []struct {
-		name          string
-		sessionId     string
-		blockedNumber string
-		testPin       string
-		setup         func() error // Setup function for each test case
-		expectedError bool
-		verifyResult  func(t *testing.T) // Function to verify the result
-	}{
-		{
-			name:          "Missing Session ID",
-			sessionId:     "", // Empty session ID
-			blockedNumber: blockedNumber,
-			testPin:       testPin,
-			setup:         nil,
-			expectedError: true,
-			verifyResult:  nil,
-		},
-		{
-			name:          "Failed to Read Blocked Number",
-			sessionId:     sessionId,
-			blockedNumber: blockedNumber,
-			testPin:       testPin,
-			setup: func() error {
-				// Do not write the blocked number to simulate a read failure
-				return nil
-			},
-			expectedError: true,
-			verifyResult:  nil,
-		},
-
-		{
-			name:          "Successfully save hashed PIN",
-			sessionId:     sessionId,
-			blockedNumber: blockedNumber,
-			testPin:       testPin,
-			setup: func() error {
-				// Write the blocked number to the store
-				return userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
-			},
-			expectedError: false,
-			verifyResult: func(t *testing.T) {
-				// Read the stored hashed PIN
-				othersHashedPin, err := userStore.ReadEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				// Verify that the stored hashed PIN matches the original PIN
-				if !pin.VerifyPIN(string(othersHashedPin), testPin) {
-					t.Fatal("stored hashed PIN does not match the original PIN")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set up the context with the session ID
-			ctx := context.WithValue(context.Background(), "SessionId", tt.sessionId)
-
-			// Run the setup function if provided
-			if tt.setup != nil {
-				err := tt.setup()
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			// Call the function under test
-			_, err := h.SaveOthersTemporaryPin(ctx, "save_others_temporary_pin", []byte(tt.testPin))
-
-			// Assert the error
-			if tt.expectedError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
-
-			// Verify the result if a verification function is provided
-			if tt.verifyResult != nil {
-				tt.verifyResult(t)
-			}
-		})
-	}
-}
-
-func TestCheckBlockedNumPinMisMatch(t *testing.T) {
-	sessionId := "session123"
-	blockedNumber := "+254712345678"
-	testPin := "1234"
-	mockState := state.NewState(128)
-
-	ctx, userStore := InitializeTestStore(t)
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
-
-	hashedPIN, err := pin.HashPIN(testPin)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to hash testPin", "error", err)
-		t.Fatal(err)
-	}
-
-	fm, err := NewFlagManager(flagsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	flag_pin_mismatch, _ := fm.GetFlag("flag_pin_mismatch")
-
-	h := &MenuHandlers{
-		userdataStore: userStore,
-		st:            mockState,
-		flagManager:   fm,
-	}
-
-	// Write initial data to the store
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(blockedNumber))
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = userStore.WriteEntry(ctx, blockedNumber, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tests := []struct {
-		name           string
-		input          []byte
-		expectedResult resource.Result
-	}{
-		{
-			name:  "Successful PIN match",
-			input: []byte(testPin),
-			expectedResult: resource.Result{
-				FlagReset: []uint32{flag_pin_mismatch},
-			},
-		},
-		{
-			name:  "PIN mismatch",
-			input: []byte("1345"),
-			expectedResult: resource.Result{
-				FlagSet: []uint32{flag_pin_mismatch},
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			res, err := h.CheckBlockedNumPinMisMatch(ctx, "sym", tt.input)
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedResult, res)
-		})
-	}
-}
-
 func TestGetCurrentProfileInfo(t *testing.T) {
 	sessionId := "session123"
 	ctx, store := InitializeTestStore(t)
@@ -3210,30 +2999,6 @@ func TestResetOthersPin(t *testing.T) {
 	_, err = h.ResetOthersPin(ctx, "reset_others_pin", []byte(""))
 
 	assert.NoError(t, err)
-}
-
-func TestResetValidPin(t *testing.T) {
-	ctx := context.Background()
-
-	fm, err := NewFlagManager(flagsPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	flag_valid_pin, _ := fm.GetFlag("flag_valid_pin")
-
-	expectedResult := resource.Result{
-		FlagReset: []uint32{flag_valid_pin},
-	}
-
-	h := &MenuHandlers{
-		flagManager: fm,
-	}
-
-	res, err := h.ResetValidPin(ctx, "reset_valid_pin", []byte(""))
-
-	assert.NoError(t, err)
-
-	assert.Equal(t, expectedResult, res)
 }
 
 func TestResetUnregisteredNumber(t *testing.T) {
