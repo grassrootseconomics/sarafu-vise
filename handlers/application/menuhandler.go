@@ -1631,18 +1631,23 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
-	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
-	if len(recipient) == 0 {
-		logg.ErrorCtxf(ctx, "recipient is empty", "key", storedb.DATA_TEMPORARY_VALUE)
-		return res, fmt.Errorf("Data error encountered")
+	recipient, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read invalid recipient info", "error", err)
+		return res, err
 	}
 
-	// TODO
-	// send an invitation SMS
-	// if successful
-	// res.Content = l.Get("Your invitation to %s to join Sarafu Network has been sent.",  string(recipient))
+	if !phone.IsValidPhoneNumber(string(recipient)) {
+		logg.InfoCtxf(ctx, "corrupted recipient", "key", storedb.DATA_TEMPORARY_VALUE, "recipient", recipient)
+		return res, nil
+	}
 
-	res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
+	_, err = h.accountService.SendUpsellSMS(ctx, sessionId, string(recipient))
+	if err != nil {
+		res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
+		return res, nil
+	}
+	res.Content = l.Get("Your invitation to %s to join Sarafu Network has been sent.", string(recipient))
 	return res, nil
 }
 
