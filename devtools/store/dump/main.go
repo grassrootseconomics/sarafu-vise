@@ -24,7 +24,7 @@ func formatItem(k []byte, v []byte, sessionId string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	s := fmt.Sprintf("%v\t%v\n", o.Label, string(v))
+	s := fmt.Sprintf("%v\n\t%v\n", o.Label, string(v))
 
 	return s, nil
 }

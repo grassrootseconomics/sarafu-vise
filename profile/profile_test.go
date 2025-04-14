@@ -10,9 +10,9 @@ import (
 func TestInsertOrShift(t *testing.T) {
 	tests := []struct {
 		name     string
-		profile Profile
-		index   int
-		value   string
+		profile  Profile
+		index    int
+		value    string
 		expected []string
 	}{
 		{

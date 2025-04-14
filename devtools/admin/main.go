@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 
+	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	logg      = logging.NewVanilla().WithContextKey("SessionId")
-	scriptDir = path.Join("services", "registration")
+	logg          = logging.NewVanilla().WithContextKey("SessionId")
+	scriptDir     = path.Join("services", "registration")
+	menuSeparator = ": "
 )
 
 func main() {
@@ -25,6 +27,8 @@ func main() {
 
 	override := config.NewOverride()
 	var sessionId string
+	var size uint
+	var engineDebug bool
 
 	flag.StringVar(&sessionId, "session-id", "075xx2123", "session id")
 	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
@@ -32,6 +36,8 @@ func main() {
 
 	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
 	flag.StringVar(&override.StateConn, "state", "?", "state store connection string")
+	flag.BoolVar(&engineDebug, "d", false, "use engine debug output")
+	flag.UintVar(&size, "s", 160, "max size of output")
 	flag.Parse()
 
 	config.Apply(override)
@@ -50,13 +56,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	cfg := engine.Config{
+		Root:              "root",
+		SessionId:         sessionId,
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
+		MenuSeparator:     menuSeparator,
+		EngineDebug:       engineDebug,
+		ResetOnEmptyInput: true,
+	}
+
 	x := cmd.NewCmd(sessionId, flagParser)
+	x = x.WithEngine(cfg)
 	err = x.Parse(flag.Args())
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "cmd parse fail: %v\n", err)
 		os.Exit(1)
 	}
-
 	logg.Infof("start command", "conn", conns, "subcmd", x)
 
 	menuStorageService := storage.NewMenuStorageService(conns)
@@ -70,5 +86,4 @@ func main() {
 		fmt.Fprintf(os.Stderr, "cmd exec error: %v\n", err)
 		os.Exit(1)
 	}
-
 }

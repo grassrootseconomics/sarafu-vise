@@ -3,23 +3,39 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"regexp"
 
+	"git.defalsify.org/vise.git/db"
+	"git.defalsify.org/vise.git/engine"
 	"git.defalsify.org/vise.git/logging"
+	"git.defalsify.org/vise.git/persist"
+	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
 )
 
+var argc map[string]int = map[string]int{
+	"reset": 0,
+	"admin": 1,
+	"clone": 1,
+}
+
 var (
-	logg = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
+	logg             = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
+	cloneTargetRegex = `^\+000`
 )
 
 type Cmd struct {
-	sessionId  string
-	conn       storage.ConnData
-	flagParser *application.FlagManager
-	cmd        int
-	enable     bool
-	exec       func(ctx context.Context, ss storage.StorageService) error
+	sessionId    string
+	conn         storage.ConnData
+	flagParser   *application.FlagManager
+	cmd          int
+	enable       bool
+	param        string
+	exec         func(ctx context.Context, ss storage.StorageService) error
+	engineConfig *engine.Config
+	st           *state.State
 }
 
 func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
@@ -29,8 +45,113 @@ func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
 	}
 }
 
+func (c *Cmd) WithEngine(engineConfig engine.Config) *Cmd {
+	c.engineConfig = &engineConfig
+	return c
+}
+
 func (c *Cmd) Exec(ctx context.Context, ss storage.StorageService) error {
 	return c.exec(ctx, ss)
+}
+
+func (c *Cmd) engine(ctx context.Context, rs resource.Resource, pe *persist.Persister) (engine.Engine, error) {
+	if c.engineConfig == nil {
+		return nil, fmt.Errorf("engine config missing")
+	}
+	en := engine.NewEngine(*c.engineConfig, rs)
+
+	st := pe.GetState()
+	if st == nil {
+		return nil, fmt.Errorf("persister state fail")
+	}
+	en = en.WithState(st)
+	st.UseDebug()
+	ca := pe.GetMemory()
+	if ca == nil {
+		return nil, fmt.Errorf("persister cache fail")
+	}
+	en = en.WithMemory(ca)
+	logg.DebugCtxf(ctx, "state loaded", "state", st)
+	return en, nil
+}
+
+func (c *Cmd) execClone(ctx context.Context, ss storage.StorageService) error {
+	re := regexp.MustCompile(cloneTargetRegex)
+	if !re.MatchString(c.param) {
+		return fmt.Errorf("Clone sessionId must match target: %s", c.param)
+	}
+
+	pe, err := ss.GetPersister(ctx)
+	if err != nil {
+		return fmt.Errorf("get persister error: %v", err)
+	}
+	err = pe.Load(c.engineConfig.SessionId)
+	if err != nil {
+		return fmt.Errorf("persister load error: %v", err)
+	}
+
+	/// TODO consider DRY with devtools/store/dump
+	store, err := ss.GetUserdataDb(ctx)
+	if err != nil {
+		return fmt.Errorf("store retrieve error: %v", err)
+	}
+
+	store.SetSession(c.engineConfig.SessionId)
+	store.SetPrefix(db.DATATYPE_USERDATA)
+	dmp, err := store.Dump(ctx, []byte(""))
+	if err != nil {
+		return fmt.Errorf("store dump fail: %v\n", err.Error())
+	}
+
+	for true {
+		store.SetSession(c.engineConfig.SessionId)
+		k, v := dmp.Next(ctx)
+		if k == nil {
+			break
+		}
+		store.SetSession(c.param)
+		err = store.Put(ctx, k, v)
+		if err != nil {
+			return fmt.Errorf("user data store clone failed on key: %x", k)
+		}
+	}
+
+	return pe.Save(c.param)
+}
+
+func (c *Cmd) execReset(ctx context.Context, ss storage.StorageService) error {
+	pe, err := ss.GetPersister(ctx)
+	if err != nil {
+		return fmt.Errorf("get persister error: %v", err)
+	}
+	rs, err := ss.GetResource(ctx)
+	if err != nil {
+		return fmt.Errorf("get resource error: %v", err)
+	}
+	dbResource, ok := rs.(*resource.DbResource)
+	if !ok {
+		return fmt.Errorf("get dbresource error: %v", err)
+	}
+	err = pe.Load(c.engineConfig.SessionId)
+	if err != nil {
+		return fmt.Errorf("persister load error: %v", err)
+	}
+	en, err := c.engine(ctx, dbResource, pe)
+	if err != nil {
+		return err
+	}
+	_, err = en.(*engine.DefaultEngine).Reset(ctx, false)
+	if err != nil {
+		return err
+	}
+	st := pe.GetState()
+	logg.DebugCtxf(ctx, "state after reset", "state", st)
+
+	err = pe.Save(c.engineConfig.SessionId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Cmd) execAdmin(ctx context.Context, ss storage.StorageService) error {
@@ -76,15 +197,61 @@ func (c *Cmd) parseCmdAdmin(cmd string, param string, more []string) (bool, erro
 	return false, nil
 }
 
+func (c *Cmd) parseCmdReset(cmd string, param string, more []string) (bool, error) {
+	if cmd == "reset" {
+		c.enable = false
+		c.exec = c.execReset
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *Cmd) parseCmdClone(cmd string, param string, more []string) (bool, error) {
+	if cmd == "clone" {
+		c.enable = false
+		c.param = param
+		c.exec = c.execClone
+		return true, nil
+	}
+	return false, nil
+}
+
 func (c *Cmd) Parse(args []string) error {
-	if len(args) < 2 {
+	var param string
+	if len(args) < 1 {
 		return fmt.Errorf("Wrong number of arguments: %v", args)
 	}
 	cmd := args[0]
-	param := args[1]
-	args = args[2:]
+
+	n, ok := argc[cmd]
+	if !ok {
+		return fmt.Errorf("invalid command: %v", cmd)
+	}
+	if n > 0 {
+		if len(args) < n+1 {
+			return fmt.Errorf("Wrong number of arguments, need: %d", n)
+		}
+		param = args[1]
+		args = args[2:]
+	}
 
 	r, err := c.parseCmdAdmin(cmd, param, args)
+	if err != nil {
+		return err
+	}
+	if r {
+		return nil
+	}
+
+	r, err = c.parseCmdReset(cmd, param, args)
+	if err != nil {
+		return err
+	}
+	if r {
+		return nil
+	}
+
+	r, err = c.parseCmdClone(cmd, param, args)
 	if err != nil {
 		return err
 	}
