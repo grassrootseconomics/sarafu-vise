@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/engine"
@@ -13,12 +14,15 @@ import (
 	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
 
 var argc map[string]int = map[string]int{
-	"reset": 0,
-	"admin": 1,
-	"clone": 1,
+	"reset":     0,
+	"admin":     1,
+	"clone":     1,
+	"overwrite": 2,
 }
 
 var (
@@ -36,6 +40,8 @@ type Cmd struct {
 	exec         func(ctx context.Context, ss storage.StorageService) error
 	engineConfig *engine.Config
 	st           *state.State
+	key          string
+	value        string
 }
 
 func NewCmd(sessionId string, flagParser *application.FlagManager) *Cmd {
@@ -184,6 +190,50 @@ func (c *Cmd) execAdmin(ctx context.Context, ss storage.StorageService) error {
 	return nil
 }
 
+func (c *Cmd) execOverwrite(ctx context.Context, ss storage.StorageService) error {
+	store, err := ss.GetUserdataDb(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get userdata store: %v", err)
+	}
+
+	// Map of symbolic keys to their DataTyp constants
+	symbolicKeys := map[string]storedb.DataTyp{
+		"first_name":  storedb.DATA_FIRST_NAME,
+		"family_name": storedb.DATA_FAMILY_NAME,
+		"yob":         storedb.DATA_YOB,
+		"location":    storedb.DATA_LOCATION,
+		"gender":      storedb.DATA_GENDER,
+	}
+
+	// Lookup symbolic key
+	dtype, ok := symbolicKeys[strings.ToLower(c.key)]
+	if !ok {
+		return fmt.Errorf("unknown key '%s'. Available keys: %v", c.key, keysOf(symbolicKeys))
+	}
+
+	k := storedb.ToBytes(dtype)
+
+	store.SetPrefix(db.DATATYPE_USERDATA)
+	store.SetSession(c.sessionId)
+
+	err = store.Put(ctx, k, []byte(c.value))
+	if err != nil {
+		return fmt.Errorf("failed to overwrite entry for key %s: %v", c.key, err)
+	}
+
+	logg.InfoCtxf(ctx, "overwrote data", "sessionId", c.sessionId, "key", c.key, "value", c.value)
+	return nil
+}
+
+// keysOf returns a list of keys from the symbolic map for error messages
+func keysOf(m map[string]storedb.DataTyp) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func (c *Cmd) parseCmdAdmin(cmd string, param string, more []string) (bool, error) {
 	if cmd == "admin" {
 		if param == "1" {
@@ -211,6 +261,19 @@ func (c *Cmd) parseCmdClone(cmd string, param string, more []string) (bool, erro
 		c.enable = false
 		c.param = param
 		c.exec = c.execClone
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *Cmd) parseCmdOverwrite(cmd string, param string, more []string) (bool, error) {
+	if cmd == "overwrite" {
+		if len(more) < 1 {
+			return false, fmt.Errorf("overwrite requires key and value")
+		}
+		c.key = param
+		c.value = more[0]
+		c.exec = c.execOverwrite
 		return true, nil
 	}
 	return false, nil
@@ -252,6 +315,14 @@ func (c *Cmd) Parse(args []string) error {
 	}
 
 	r, err = c.parseCmdClone(cmd, param, args)
+	if err != nil {
+		return err
+	}
+	if r {
+		return nil
+	}
+
+	r, err = c.parseCmdOverwrite(cmd, param, args)
 	if err != nil {
 		return err
 	}
