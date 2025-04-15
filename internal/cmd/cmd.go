@@ -203,6 +203,7 @@ func (c *Cmd) execOverwrite(ctx context.Context, ss storage.StorageService) erro
 		"yob":         storedb.DATA_YOB,
 		"location":    storedb.DATA_LOCATION,
 		"gender":      storedb.DATA_GENDER,
+		"offerings":   storedb.DATA_OFFERINGS,
 	}
 
 	// Lookup symbolic key
