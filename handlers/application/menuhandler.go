@@ -524,7 +524,15 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
 		return res, err
 	}
-
+	blockedPhoneStr := string(blockedPhonenumber)
+	//Trigger an SMS to inform a user that the  blocked account has been reset
+	if phone.IsValidPhoneNumber(blockedPhoneStr) {
+		err = h.sendPINResetSMS(ctx, sessionId, blockedPhoneStr)
+		if err != nil {
+			logg.DebugCtxf(ctx, "Failed to send PIN reset SMS", "error", err)
+			return res, nil
+		}
+	}
 	return res, nil
 }
 
@@ -2490,4 +2498,64 @@ func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, inpu
 		return res, err
 	}
 	return res, nil
+}
+
+// SendAddressSMS will triger an SMS when a user navigates to the my address node.The SMS will be sent to the associated phonenumber.
+func (h *MenuHandlers) SendAddressSMS(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	store := h.userdataStore
+
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+	originPhone, err := phone.FormatPhoneNumber(sessionId)
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to format origin phonenumber", "sessionid", sessionId)
+		return res, nil
+	}
+
+	if !phone.IsValidPhoneNumber(originPhone) {
+		logg.InfoCtxf(ctx, "Invalid origin phone number", "sessionid:", sessionId)
+		return res, nil
+	}
+	err = h.accountService.SendAddressSMS(ctx, string(publicKey), sessionId)
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to send address sms", "error", err)
+		return res, nil
+	}
+	return res, nil
+}
+
+// sendPINResetSMS will send an SMS to a user's phonenumber in the event that the associated account's PIN has been reset.
+func (h *MenuHandlers) sendPINResetSMS(ctx context.Context, adminPhoneNumber, blockedPhoneNumber string) error {
+	formattedAdminPhone, err := phone.FormatPhoneNumber(adminPhoneNumber)
+	if err != nil {
+		return fmt.Errorf("failed to format admin phone number: %w", err)
+	}
+
+	formattedBlockedPhone, err := phone.FormatPhoneNumber(blockedPhoneNumber)
+	if err != nil {
+		return fmt.Errorf("failed to format blocked phone number: %w", err)
+	}
+
+	if !phone.IsValidPhoneNumber(formattedAdminPhone) {
+		return fmt.Errorf("invalid admin phone number")
+	}
+	if !phone.IsValidPhoneNumber(formattedBlockedPhone) {
+		return fmt.Errorf("invalid blocked phone number")
+	}
+
+	err = h.accountService.SendPINResetSMS(ctx, formattedAdminPhone, formattedBlockedPhone)
+	if err != nil {
+		return fmt.Errorf("failed to send pin reset sms: %v", err)
+	}
+
+	return nil
 }
