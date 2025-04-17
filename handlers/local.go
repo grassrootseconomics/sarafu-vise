@@ -124,6 +124,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("get_suggested_alias", appHandlers.GetSuggestedAlias)
 	ls.DbRs.AddLocalFunc("confirm_new_alias", appHandlers.ConfirmNewAlias)
 	ls.DbRs.AddLocalFunc("check_account_created", appHandlers.CheckAccountCreated)
+	ls.DbRs.AddLocalFunc("send_address_sms", appHandlers.SendAddressSMS)
 
 	ls.first = appHandlers.Init
 
