@@ -1222,7 +1222,8 @@ func (h *MenuHandlers) ResetAccountAuthorized(ctx context.Context, sym string, i
 	return res, nil
 }
 
-// CheckIdentifier retrieves the PublicKey from the JSON data file.
+// CheckIdentifier retrieves the Public key from the userdatastore under the key: DATA_PUBLIC_KEY and triggers an sms that
+// will be sent to the associated session id
 func (h *MenuHandlers) CheckIdentifier(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -1230,9 +1231,18 @@ func (h *MenuHandlers) CheckIdentifier(ctx context.Context, sym string, input []
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	publicKey, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-
+	publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
 	res.Content = string(publicKey)
+	//trigger an address sms to be delivered to the associated session id
+	err = h.sendAddressSMS(ctx)
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to trigger an address sms", "error", err)
+		return res, nil
+	}
 
 	return res, nil
 }
@@ -2501,36 +2511,35 @@ func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, inpu
 }
 
 // SendAddressSMS will triger an SMS when a user navigates to the my address node.The SMS will be sent to the associated phonenumber.
-func (h *MenuHandlers) SendAddressSMS(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
+func (h *MenuHandlers) sendAddressSMS(ctx context.Context) error {
 	store := h.userdataStore
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
-		return res, fmt.Errorf("missing session")
+		return fmt.Errorf("missing session")
 	}
 
 	publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-		return res, err
+		return err
 	}
 	originPhone, err := phone.FormatPhoneNumber(sessionId)
 	if err != nil {
 		logg.DebugCtxf(ctx, "Failed to format origin phonenumber", "sessionid", sessionId)
-		return res, nil
+		return nil
 	}
 
 	if !phone.IsValidPhoneNumber(originPhone) {
-		logg.InfoCtxf(ctx, "Invalid origin phone number", "sessionid:", sessionId)
-		return res, nil
+		logg.InfoCtxf(ctx, "Invalid origin phone number", "origin phonenumber", originPhone)
+		return fmt.Errorf("invalid origin phone number")
 	}
 	err = h.accountService.SendAddressSMS(ctx, string(publicKey), sessionId)
 	if err != nil {
 		logg.DebugCtxf(ctx, "Failed to send address sms", "error", err)
-		return res, nil
+		return fmt.Errorf("Failed to send address sms: %v", err)
 	}
-	return res, nil
+	return nil
 }
 
 // sendPINResetSMS will send an SMS to a user's phonenumber in the event that the associated account's PIN has been reset.
