@@ -213,7 +213,7 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 		}
 		err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
 		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write log entry", "key", string(key), "value", value)
+			logg.DebugCtxf(ctx, "Failed to write log entry", "key", key, "value", value)
 		}
 	}
 	publicKeyNormalized, err := hex.NormalizeHex(publicKey)
@@ -432,7 +432,6 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
