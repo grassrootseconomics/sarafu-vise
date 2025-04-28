@@ -62,6 +62,25 @@ func InitializeTestStore(t *testing.T) (context.Context, *store.UserDataStore) {
 	return ctx, store
 }
 
+// InitializeTestLogdbStore sets up and returns an in-memory database and logdb store.
+func InitializeTestLogdbStore(t *testing.T) (context.Context, *store.UserDataStore) {
+	ctx := context.Background()
+
+	// Initialize memDb
+	db := memdb.NewMemDb()
+	err := db.Connect(ctx, "")
+	require.NoError(t, err, "Failed to connect to memDb")
+
+	// Create UserDataStore with memDb
+	logdb := &store.UserDataStore{Db: db}
+
+	t.Cleanup(func() {
+		db.Close(ctx) // Ensure the DB is closed after each test
+	})
+
+	return ctx, logdb
+}
+
 func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPrefixDb {
 	db := memdb.NewMemDb()
 	err := db.Connect(ctx, "")
@@ -76,7 +95,7 @@ func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPr
 
 func TestNewMenuHandlers(t *testing.T) {
 	_, store := InitializeTestStore(t)
-	logdb := memdb.NewMemDb()
+	_, logdb := InitializeTestLogdbStore(t)
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -193,9 +212,9 @@ func TestInit(t *testing.T) {
 
 func TestCreateAccount(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	logdb := memdb.NewMemDb()
+	_, logdb := InitializeTestLogdbStore(t)
 
 	logDb := store.LogDb{
 		Db: logdb,
@@ -232,9 +251,9 @@ func TestCreateAccount(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 
 			h := &MenuHandlers{
-				userdataStore:  store,
+				userdataStore:  userStore,
 				accountService: mockAccountService,
-				logDb: logDb,
+				logDb:          logDb,
 				flagManager:    fm,
 			}
 
@@ -272,8 +291,13 @@ func TestWithPersister_PanicWhenAlreadySet(t *testing.T) {
 
 func TestSaveFirstname(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -289,7 +313,7 @@ func TestSaveFirstname(t *testing.T) {
 	// Define test data
 	firstName := "John"
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -297,9 +321,10 @@ func TestSaveFirstname(t *testing.T) {
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
-		userdataStore: store,
+		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
+		logDb:         logDb,
 	}
 
 	// Call the method
@@ -310,14 +335,19 @@ func TestSaveFirstname(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_FIRST_NAME entry has been updated with the temporary value
-	storedFirstName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
+	storedFirstName, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
 	assert.Equal(t, firstName, string(storedFirstName))
 }
 
 func TestSaveFamilyname(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -335,15 +365,16 @@ func TestSaveFamilyname(t *testing.T) {
 	// Define test data
 	familyName := "Doeee"
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName)); err != nil {
 		t.Fatal(err)
 	}
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
-		userdataStore: store,
+		userdataStore: userStore,
 		st:            mockState,
 		flagManager:   fm,
+		logDb:         logDb,
 	}
 
 	// Call the method
@@ -354,14 +385,19 @@ func TestSaveFamilyname(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_FAMILY_NAME entry has been updated with the temporary value
-	storedFamilyName, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
+	storedFamilyName, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
 	assert.Equal(t, familyName, string(storedFamilyName))
 }
 
 func TestSaveYoB(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -377,7 +413,7 @@ func TestSaveYoB(t *testing.T) {
 	// Define test data
 	yob := "1980"
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -385,9 +421,10 @@ func TestSaveYoB(t *testing.T) {
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
-		userdataStore: store,
+		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
+		logDb:         logDb,
 	}
 
 	// Call the method
@@ -398,14 +435,19 @@ func TestSaveYoB(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_YOB entry has been updated with the temporary value
-	storedYob, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
+	storedYob, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_YOB)
 	assert.Equal(t, yob, string(storedYob))
 }
 
 func TestSaveLocation(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -421,7 +463,7 @@ func TestSaveLocation(t *testing.T) {
 	// Define test data
 	location := "Kilifi"
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -429,9 +471,10 @@ func TestSaveLocation(t *testing.T) {
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
-		userdataStore: store,
+		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
+		logDb:         logDb,
 	}
 
 	// Call the method
@@ -442,14 +485,19 @@ func TestSaveLocation(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_LOCATION entry has been updated with the temporary value
-	storedLocation, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
+	storedLocation, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_LOCATION)
 	assert.Equal(t, location, string(storedLocation))
 }
 
 func TestSaveOfferings(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -465,7 +513,7 @@ func TestSaveOfferings(t *testing.T) {
 	// Define test data
 	offerings := "Bananas"
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -473,9 +521,10 @@ func TestSaveOfferings(t *testing.T) {
 
 	// Create the MenuHandlers instance with the mock store
 	h := &MenuHandlers{
-		userdataStore: store,
+		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
+		logDb:         logDb,
 	}
 
 	// Call the method
@@ -486,14 +535,19 @@ func TestSaveOfferings(t *testing.T) {
 	assert.Equal(t, expectedResult, res)
 
 	// Verify that the DATA_OFFERINGS entry has been updated with the temporary value
-	storedOfferings, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
+	storedOfferings, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_OFFERINGS)
 	assert.Equal(t, offerings, string(storedOfferings))
 }
 
 func TestSaveGender(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -533,16 +587,17 @@ func TestSaveGender(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
+			if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tt.expectedGender)); err != nil {
 				t.Fatal(err)
 			}
 
 			mockState.ExecPath = append(mockState.ExecPath, tt.executingSymbol)
 			// Create the MenuHandlers instance with the mock store
 			h := &MenuHandlers{
-				userdataStore: store,
+				userdataStore: userStore,
 				st:            mockState,
 				flagManager:   fm,
+				logDb:         logDb,
 			}
 
 			expectedResult := resource.Result{}
@@ -557,7 +612,7 @@ func TestSaveGender(t *testing.T) {
 			assert.Equal(t, expectedResult, res)
 
 			// Verify that the DATA_GENDER entry has been updated with the temporary value
-			storedGender, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
+			storedGender, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_GENDER)
 			assert.Equal(t, tt.expectedGender, string(storedGender))
 		})
 	}
@@ -1957,8 +2012,13 @@ func TestManageVouchers(t *testing.T) {
 	sessionId := "session123"
 	publicKey := "0X13242618721"
 
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -1969,7 +2029,7 @@ func TestManageVouchers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2027,20 +2087,21 @@ func TestManageVouchers(t *testing.T) {
 			mockAccountService := new(mocks.MockAccountService)
 
 			h := &MenuHandlers{
-				userdataStore:  store,
+				userdataStore:  userStore,
 				accountService: mockAccountService,
 				flagManager:    fm,
+				logDb:          logDb,
 			}
 
 			mockAccountService.On("FetchVouchers", string(publicKey)).Return(tt.vouchersResp, nil)
 
 			// Store active voucher if needed
 			if tt.storedActiveVoucher != "" {
-				err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.storedActiveVoucher))
+				err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.storedActiveVoucher))
 				if err != nil {
 					t.Fatal(err)
 				}
-				err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
+				err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS, []byte("0x41c188D45rfg6ds"))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -2052,12 +2113,12 @@ func TestManageVouchers(t *testing.T) {
 
 			if tt.storedActiveVoucher != "" {
 				// Validate stored voucher symbols
-				voucherData, err := store.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
+				voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedVoucherSymbols, voucherData)
 
 				// Validate stored active contract address
-				updatedAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+				updatedAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedUpdatedAddress, updatedAddress)
 
@@ -2384,8 +2445,14 @@ func TestCheckTransactions(t *testing.T) {
 	sessionId := "session123"
 	publicKey := "0X13242618721"
 
-	ctx, store := InitializeTestStore(t)
+	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
+
 	spdb := InitializeTestSubPrefixDb(t, ctx)
 
 	fm, err := NewFlagManager(flagsPath)
@@ -2394,13 +2461,14 @@ func TestCheckTransactions(t *testing.T) {
 	}
 
 	h := &MenuHandlers{
-		userdataStore:  store,
+		userdataStore:  userStore,
 		accountService: mockAccountService,
 		prefixDb:       spdb,
+		logDb:          logDb,
 		flagManager:    fm,
 	}
 
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(publicKey))
 	if err != nil {
 		t.Fatal(err)
 	}
