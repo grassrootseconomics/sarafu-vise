@@ -29,6 +29,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/internal/sms"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -77,6 +78,7 @@ type MenuHandlers struct {
 	flagManager          *FlagManager
 	accountService       remote.AccountService
 	prefixDb             storedb.PrefixDb
+	smsService           sms.SmsService
 	profile              *profile.Profile
 	ReplaceSeparatorFunc func(string) string
 }
@@ -89,6 +91,10 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService 
 	userDb := &store.UserDataStore{
 		Db: userdataStore,
 	}
+	smsservice := sms.SmsService{
+		Accountservice: accountService,
+		Userdatastore:  *userDb,
+	}
 
 	// Instantiate the SubPrefixDb with "DATATYPE_USERDATA" prefix
 	prefix := storedb.ToBytes(db.DATATYPE_USERDATA)
@@ -98,6 +104,7 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService 
 		userdataStore:        userDb,
 		flagManager:          appFlags,
 		accountService:       accountService,
+		smsService:           smsservice,
 		prefixDb:             prefixDb,
 		profile:              &profile.Profile{Max: 6},
 		ReplaceSeparatorFunc: replaceSeparatorFunc,
@@ -502,7 +509,10 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 // 3. Resetting the DATA_INCORRECT_PIN_ATTEMPTS to 0 for the blocked phone number
 func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+
 	store := h.userdataStore
+	smsservice := h.smsService
+
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
@@ -524,7 +534,15 @@ func (h *MenuHandlers) ResetOthersPin(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
 		return res, err
 	}
-
+	blockedPhoneStr := string(blockedPhonenumber)
+	//Trigger an SMS to inform a user that the  blocked account has been reset
+	if phone.IsValidPhoneNumber(blockedPhoneStr) {
+		err = smsservice.SendPINResetSMS(ctx, sessionId, blockedPhoneStr)
+		if err != nil {
+			logg.DebugCtxf(ctx, "Failed to send PIN reset SMS", "error", err)
+			return res, nil
+		}
+	}
 	return res, nil
 }
 
@@ -1214,17 +1232,30 @@ func (h *MenuHandlers) ResetAccountAuthorized(ctx context.Context, sym string, i
 	return res, nil
 }
 
-// CheckIdentifier retrieves the PublicKey from the JSON data file.
+// CheckIdentifier retrieves the Public key from the userdatastore under the key: DATA_PUBLIC_KEY and triggers an sms that
+// will be sent to the associated session id
 func (h *MenuHandlers) CheckIdentifier(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+
+	smsservice := h.smsService
+
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
 	store := h.userdataStore
-	publicKey, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-
+	publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
 	res.Content = string(publicKey)
+	//trigger an address sms to be delivered to the associated session id
+	err = smsservice.SendAddressSMS(ctx)
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to trigger an address sms", "error", err)
+		return res, nil
+	}
 
 	return res, nil
 }
@@ -1621,6 +1652,7 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
+	smsservice := h.smsService
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -1642,7 +1674,7 @@ func (h *MenuHandlers) InviteValidRecipient(ctx context.Context, sym string, inp
 		return res, nil
 	}
 
-	_, err = h.accountService.SendUpsellSMS(ctx, sessionId, string(recipient))
+	_, err = smsservice.Accountservice.SendUpsellSMS(ctx, sessionId, string(recipient))
 	if err != nil {
 		res.Content = l.Get("Your invite request for %s to Sarafu Network failed. Please try again later.", string(recipient))
 		return res, nil
