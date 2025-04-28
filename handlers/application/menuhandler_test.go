@@ -76,6 +76,7 @@ func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPr
 
 func TestNewMenuHandlers(t *testing.T) {
 	_, store := InitializeTestStore(t)
+	logdb := memdb.NewMemDb()
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -86,7 +87,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for valid UserDataStore
 	t.Run("Valid UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, store, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, store, logdb, &accountService, mockReplaceSeparator)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -110,7 +111,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for nil UserDataStore
 	t.Run("Nil UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, nil, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, nil, logdb, &accountService, mockReplaceSeparator)
 		if err == nil {
 			t.Fatal("expected an error, got none")
 		}
@@ -194,6 +195,11 @@ func TestCreateAccount(t *testing.T) {
 	sessionId := "session123"
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+	logdb := memdb.NewMemDb()
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -228,6 +234,7 @@ func TestCreateAccount(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore:  store,
 				accountService: mockAccountService,
+				logDb: logDb,
 				flagManager:    fm,
 			}
 
@@ -2308,7 +2315,7 @@ func TestCheckBlockedStatus(t *testing.T) {
 		{
 			name:                    "Currently blocked account",
 			currentWrongPinAttempts: "4",
-			expectedResult:          resource.Result{
+			expectedResult: resource.Result{
 				FlagReset: []uint32{flag_account_pin_reset},
 			},
 		},
