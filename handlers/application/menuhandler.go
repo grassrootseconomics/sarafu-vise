@@ -406,10 +406,17 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 	}
 
 	store := h.userdataStore
+	logdb := h.logDb
+
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write temporaryAccountPIN entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
 		return res, err
+	}
+
+	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to write temporaryAccountPIN log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
 	}
 
 	return res, nil
@@ -439,6 +446,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 
 	store := h.userdataStore
+	logdb := h.logDb
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
@@ -462,6 +470,12 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "hashedPIN value", hashedTemporaryPin, "error", err)
 		return res, err
 	}
+
+	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to write AccountPIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
+	}
+
 	// set the DATA_SELF_PIN_RESET as 0
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET, []byte("0"))
 	if err != nil {
@@ -482,6 +496,7 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 
 	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
 	store := h.userdataStore
+	logdb := h.logDb
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
@@ -515,6 +530,11 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
 	if err != nil {
 		return res, nil
+	}
+
+	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to write blocked number log entry", "key", storedb.DATA_BLOCKED_NUMBER, "value", formattedNumber, "error", err)
 	}
 
 	return res, nil
@@ -643,6 +663,8 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	}
 
 	store := h.userdataStore
+	logdb := h.logDb
+
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
@@ -667,6 +689,11 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write DATA_ACCOUNT_PIN entry with", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
 		return res, err
+	}
+
+	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	if err != nil {
+		logg.DebugCtxf(ctx, "Failed to write DATA_ACCOUNT_PIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
 	}
 
 	return res, nil
