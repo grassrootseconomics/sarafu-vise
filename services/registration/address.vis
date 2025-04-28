@@ -1,5 +1,4 @@
 LOAD check_identifier 0
-RELOAD check_identifier
 MAP check_identifier
 MOUT back 0
 MOUT quit 9
