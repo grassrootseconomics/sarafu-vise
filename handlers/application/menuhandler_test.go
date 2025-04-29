@@ -623,8 +623,14 @@ func TestSaveGender(t *testing.T) {
 
 func TestSaveTemporaryPin(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+
+	ctx, userdatastore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	_, logdb := InitializeTestLogdbStore(t)
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -636,7 +642,8 @@ func TestSaveTemporaryPin(t *testing.T) {
 	// Create the MenuHandlers instance with the mock flag manager
 	h := &MenuHandlers{
 		flagManager:   fm,
-		userdataStore: store,
+		userdataStore: userdatastore,
+		logDb:         logDb,
 	}
 
 	// Define test cases
@@ -677,8 +684,14 @@ func TestSaveTemporaryPin(t *testing.T) {
 
 func TestCheckIdentifier(t *testing.T) {
 	sessionId := "session123"
-	ctx, store := InitializeTestStore(t)
+	ctx, userdatastore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
+
+	_, logdb := InitializeTestLogdbStore(t)
+
+	logDb := store.LogDb{
+		Db: logdb,
+	}
 
 	// Define test cases
 	tests := []struct {
@@ -699,14 +712,15 @@ func TestCheckIdentifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
+			err := userdatastore.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			// Create the MenuHandlers instance with the mock store
 			h := &MenuHandlers{
-				userdataStore: store,
+				userdataStore: userdatastore,
+				logDb:         logDb,
 			}
 
 			// Call the method
