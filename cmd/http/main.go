@@ -43,6 +43,7 @@ func main() {
 	var err error
 	var gettextDir string
 	var langs args.LangVar
+	var logDbConnStr string
 
 	flag.StringVar(&override.DbConn, "c", "?", "default connection string (replaces all unspecified strings)")
 	flag.StringVar(&override.UserConn, "userdata", "?", "userdata store connection string")
@@ -55,6 +56,7 @@ func main() {
 	flag.UintVar(&port, "p", config.Port(), "http port")
 	flag.StringVar(&gettextDir, "gettext", "", "use gettext translations from given directory")
 	flag.Var(&langs, "language", "add symbol resolution for language")
+	flag.StringVar(&logDbConnStr, "log-c", "db-logs", "log db connection string")
 	flag.Parse()
 
 	config.Apply(override)
@@ -103,6 +105,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	logdb, err := menuStorageService.GetLogDb(ctx, userdataStore, logDbConnStr, "user-data")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
+		os.Exit(1)
+	}
+
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
 		os.Exit(1)
@@ -110,6 +118,7 @@ func main() {
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userdataStore)
+	lhs.SetLogDb(&logdb)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
