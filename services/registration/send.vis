@@ -5,6 +5,7 @@ MOUT back 0
 HALT
 LOAD validate_recipient 50
 RELOAD validate_recipient
+CATCH api_failure flag_api_call_error  1
 CATCH invalid_recipient flag_invalid_recipient 1
 CATCH invite_recipient flag_invalid_recipient_with_invite 1
 INCMP _ 0

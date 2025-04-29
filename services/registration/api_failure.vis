@@ -1,5 +1,7 @@
+LOAD reset_api_call_failure 6
+RELOAD reset_api_call_failure
 MOUT retry 1
 MOUT quit 9
 HALT
-INCMP _ 1
+INCMP ^ 1
 INCMP quit 9

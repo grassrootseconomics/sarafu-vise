@@ -199,10 +199,16 @@ func (h *MenuHandlers) SetLanguage(ctx context.Context, sym string, input []byte
 // handles the account creation when no existing account is present for the session and stores associated data in the user data store.
 func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId string, res *resource.Result) error {
 	flag_account_created, _ := h.flagManager.GetFlag("flag_account_created")
+	flag_account_creation_failed, _ := h.flagManager.GetFlag("flag_account_creation_failed")
+
 	r, err := h.accountService.CreateAccount(ctx)
 	if err != nil {
-		return err
+		res.FlagSet = append(res.FlagSet, flag_account_creation_failed)
+		logg.ErrorCtxf(ctx, "failed to create an account", "error", err)
+		return nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_account_creation_failed)
+
 	trackingId := r.TrackingId
 	publicKey := r.PublicKey
 
@@ -427,6 +433,14 @@ func (h *MenuHandlers) ResetInvalidPIN(ctx context.Context, sym string, input []
 	var res resource.Result
 	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
 	res.FlagReset = append(res.FlagReset, flag_invalid_pin)
+	return res, nil
+}
+
+// ResetApiCallFailure resets the api call failure flag
+func (h *MenuHandlers) ResetApiCallFailure(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 	return res, nil
 }
 
@@ -1440,7 +1454,7 @@ func (h *MenuHandlers) CheckAccountStatus(ctx context.Context, sym string, input
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on TrackAccountStatus", "error", err)
-		return res, err
+		return res, nil
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_api_error)
@@ -1606,6 +1620,7 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 	}
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	recipient := string(input)
 
@@ -1679,10 +1694,13 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 					logg.InfoCtxf(ctx, "Resolving with fqdn alias", "alias", fqdn)
 					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
 					if err == nil {
+						res.FlagReset = append(res.FlagReset, flag_api_error)
 						AliasAddressResult = AliasAddress.Address
 						continue
 					} else {
+						res.FlagSet = append(res.FlagSet, flag_api_error)
 						logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
+						return res, nil
 					}
 				}
 			}
@@ -2004,6 +2022,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	}
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
@@ -2014,9 +2033,10 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	// Fetch vouchers from API
 	vouchersResp, err := h.accountService.FetchVouchers(ctx, string(publicKey))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
+		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	if len(vouchersResp) == 0 {
 		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
@@ -2231,6 +2251,7 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, nil
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	res.Content = fmt.Sprintf(
 		"Name: %s\nSymbol: %s\nCommodity: %s\nLocation: %s", voucherData.TokenName, voucherData.TokenSymbol, voucherData.TokenCommodity, voucherData.TokenLocation,
@@ -2265,6 +2286,7 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
 		return res, err
 	}
+	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	// Return if there are no transactions
 	if len(transactionsResp) == 0 {
@@ -2506,6 +2528,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		return res, nil
 	}
 
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+
 	store := h.userdataStore
 	aliasHint, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
@@ -2529,9 +2553,12 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		sanitizedInput := sanitizeAliasHint(string(input))
 		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 		if err != nil {
+			res.FlagSet = append(res.FlagSet, flag_api_error)
 			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
-			return res, fmt.Errorf("Failed to retrieve alias: %s", err.Error())
+			return res, nil
 		}
+		res.FlagReset = append(res.FlagReset, flag_api_error)
+
 		alias := aliasResult.Alias
 		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
 
