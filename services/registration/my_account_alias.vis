@@ -6,4 +6,4 @@ INCMP _ 0
 LOAD request_custom_alias 0
 RELOAD request_custom_alias
 CATCH api_failure flag_api_call_error 1
-INCMP  confirm_new_alias *
+INCMP confirm_new_alias *

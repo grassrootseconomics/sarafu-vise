@@ -21,7 +21,7 @@ RUN make VISE_PATH=/build/go-vise -B
 WORKDIR /build/sarafu-vise
 RUN echo "Building on $BUILDPLATFORM, building for $TARGETPLATFORM"
 RUN go mod download
-RUN go build -tags logwarn,online -o sarafu-at -ldflags="-X main.build=${BUILD} -s -w" cmd/africastalking/main.go
+RUN go build -tags logdebug,online -o sarafu-at -ldflags="-X main.build=${BUILD} -s -w" cmd/africastalking/main.go
 
 FROM debian:bookworm-slim
 

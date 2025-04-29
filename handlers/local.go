@@ -27,6 +27,7 @@ type LocalHandlerService struct {
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
+	LogDb         *db.Db
 	Cfg           engine.Config
 	Rs            resource.Resource
 	first         resource.EntryFunc
@@ -57,12 +58,16 @@ func (ls *LocalHandlerService) SetDataStore(db *db.Db) {
 	ls.UserdataStore = db
 }
 
+func (ls *LocalHandlerService) SetLogDb(db *db.Db) {
+	ls.LogDb = db
+}
+
 func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) (*application.MenuHandlers, error) {
 	replaceSeparatorFunc := func(input string) string {
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, *ls.LogDb, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +104,6 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("verify_yob", appHandlers.VerifyYob)
 	ls.DbRs.AddLocalFunc("reset_incorrect_date_format", appHandlers.ResetIncorrectYob)
 	ls.DbRs.AddLocalFunc("initiate_transaction", appHandlers.InitiateTransaction)
-	ls.DbRs.AddLocalFunc("verify_new_pin", appHandlers.VerifyNewPin)
 	ls.DbRs.AddLocalFunc("confirm_pin_change", appHandlers.ConfirmPinChange)
 	ls.DbRs.AddLocalFunc("quit_with_help", appHandlers.QuitWithHelp)
 	ls.DbRs.AddLocalFunc("fetch_community_balance", appHandlers.FetchCommunityBalance)
@@ -108,13 +112,10 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("view_voucher", appHandlers.ViewVoucher)
 	ls.DbRs.AddLocalFunc("set_voucher", appHandlers.SetVoucher)
 	ls.DbRs.AddLocalFunc("get_voucher_details", appHandlers.GetVoucherDetails)
-	ls.DbRs.AddLocalFunc("reset_valid_pin", appHandlers.ResetValidPin)
-	ls.DbRs.AddLocalFunc("check_pin_mismatch", appHandlers.CheckBlockedNumPinMisMatch)
 	ls.DbRs.AddLocalFunc("validate_blocked_number", appHandlers.ValidateBlockedNumber)
 	ls.DbRs.AddLocalFunc("retrieve_blocked_number", appHandlers.RetrieveBlockedNumber)
 	ls.DbRs.AddLocalFunc("reset_unregistered_number", appHandlers.ResetUnregisteredNumber)
 	ls.DbRs.AddLocalFunc("reset_others_pin", appHandlers.ResetOthersPin)
-	ls.DbRs.AddLocalFunc("save_others_temporary_pin", appHandlers.SaveOthersTemporaryPin)
 	ls.DbRs.AddLocalFunc("get_current_profile_info", appHandlers.GetCurrentProfileInfo)
 	ls.DbRs.AddLocalFunc("check_transactions", appHandlers.CheckTransactions)
 	ls.DbRs.AddLocalFunc("get_transactions", appHandlers.GetTransactionsList)

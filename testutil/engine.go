@@ -113,6 +113,12 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 		os.Exit(1)
 	}
 
+	logdb, err := menuStorageService.GetLogDb(ctx, userDataStore, "test-db-logs", "user-data")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
+		os.Exit(1)
+	}
+
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "dbresource cast error")
@@ -121,6 +127,7 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userDataStore)
+	lhs.SetLogDb(&logdb)
 	lhs.SetPersister(pe)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -154,6 +161,7 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 
 	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	cleanFn := func() {
+		logdb.Close(ctx)
 		err := en.Finish(ctx)
 		if err != nil {
 			logg.Errorf(err.Error())

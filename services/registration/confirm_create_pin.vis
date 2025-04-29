@@ -1,4 +1,7 @@
-LOAD save_temporary_pin 6
+MOUT back 0
 HALT
+INCMP _ 0
 LOAD verify_create_pin 8
+RELOAD verify_create_pin
+CATCH pin_mismatch flag_pin_mismatch 1
 INCMP account_creation *
