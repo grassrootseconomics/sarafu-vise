@@ -1,0 +1,4 @@
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH pin_entry flag_allow_update 0
+LOAD request_custom_alias 0
+MOVE confirm_new_alias
