@@ -130,6 +130,8 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("confirm_new_alias", appHandlers.ConfirmNewAlias)
 	ls.DbRs.AddLocalFunc("check_account_created", appHandlers.CheckAccountCreated)
 	ls.DbRs.AddLocalFunc("reset_api_call_failure", appHandlers.ResetApiCallFailure)
+	ls.DbRs.AddLocalFunc("save_alias_hint", appHandlers.SaveAliasHint)
+
 
 	ls.first = appHandlers.Init
 
