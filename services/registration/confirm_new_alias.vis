@@ -1,12 +1,10 @@
-LOAD reset_invalid_pin 6
-RELOAD reset_invalid_pin
 LOAD get_suggested_alias 0
 RELOAD get_suggested_alias
 MAP get_suggested_alias
-MOUT back 0
+MOUT ok 1
+MOUT cancel 2
+MOUT  quit 9
 HALT
-INCMP _ 0
-RELOAD authorize_account
-CATCH incorrect_pin flag_incorrect_pin 1
-CATCH invalid_pin flag_invalid_pin 1
-CATCH update_alias flag_allow_update 1
+INCMP update_alias 1
+INCMP ^ 2
+INCMP quit 9
