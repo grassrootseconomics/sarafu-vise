@@ -32,3 +32,4 @@ flag,flag_account_blocked,38,this is set when an account has been blocked after 
 flag,flag_invalid_pin,39,this is set when the given PIN is invalid(is  less than or more than 4 digits)
 flag,flag_alias_set,40,this is set when an account alias has been assigned to a user
 flag,flag_account_pin_reset,41,this is set on an account when an admin triggers a PIN reset for them
+flag,flag_invalid_alias_hint,42,this is set when the provided alias hint fails to meet the required criteria.
