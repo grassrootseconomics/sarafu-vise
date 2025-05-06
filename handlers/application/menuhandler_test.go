@@ -1716,40 +1716,58 @@ func TestValidateRecipient(t *testing.T) {
 
 	// Define test cases
 	tests := []struct {
-		name           string
-		input          []byte
-		expectedResult resource.Result
+		name              string
+		input             []byte
+		expectError       bool
+		expectedRecipient []byte
+		expectedResult    resource.Result
 	}{
 		{
-			name:  "Test with invalid recepient",
-			input: []byte("7?1234"),
+			name:        "Test with invalid recepient",
+			input:       []byte("7?1234"),
+			expectError: true,
 			expectedResult: resource.Result{
 				FlagSet: []uint32{flag_invalid_recipient},
 				Content: "7?1234",
 			},
 		},
 		{
-			name:  "Test with valid unregistered recepient",
-			input: []byte("0712345678"),
+			name:        "Test with valid unregistered recepient",
+			input:       []byte("0712345678"),
+			expectError: true,
 			expectedResult: resource.Result{
 				FlagSet: []uint32{flag_invalid_recipient_with_invite},
 				Content: "0712345678",
 			},
 		},
 		{
-			name:           "Test with valid registered recepient",
-			input:          []byte("0711223344"),
-			expectedResult: resource.Result{},
+			name:              "Test with valid registered recepient",
+			input:             []byte("0711223344"),
+			expectError:       false,
+			expectedRecipient: []byte(publicKey),
+			expectedResult:    resource.Result{},
 		},
 		{
-			name:           "Test with address",
-			input:          []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
-			expectedResult: resource.Result{},
+			name:              "Test with address",
+			input:             []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
+			expectError:       false,
+			expectedRecipient: []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
+			expectedResult:    resource.Result{},
 		},
 		{
-			name:           "Test with alias recepient",
-			input:          []byte("alias123.sarafu.local"),
-			expectedResult: resource.Result{},
+			name:              "Test with alias recepient",
+			input:             []byte("alias123.sarafu.local"),
+			expectError:       false,
+			expectedRecipient: []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
+			expectedResult:    resource.Result{},
+		},
+
+		{
+			name:              "Test for checksummed address",
+			input:             []byte("0x5523058cdffe5f3c1eadadd5015e55c6e00fb439"),
+			expectError:       false,
+			expectedRecipient: []byte("0x5523058cdFfe5F3c1EaDADD5015E55C6E00fb439"),
+			expectedResult:    resource.Result{},
 		},
 	}
 
@@ -1780,6 +1798,12 @@ func TestValidateRecipient(t *testing.T) {
 
 			if err != nil {
 				t.Error(err)
+			}
+
+			if !tt.expectError {
+				storedRecipientAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedRecipient, storedRecipientAddress)
 			}
 
 			// Assert that the Result FlagSet has the required flags after language switch
