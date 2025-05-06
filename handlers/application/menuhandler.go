@@ -1623,7 +1623,8 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
-	recipient := string(input)
+	// remove white spaces
+	recipient := strings.ReplaceAll(string(input), " ", "")
 
 	if recipient != "0" {
 		recipientType, err := identity.CheckRecipient(recipient)
