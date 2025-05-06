@@ -1761,12 +1761,18 @@ func TestValidateRecipient(t *testing.T) {
 			expectedRecipient: []byte("0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9"),
 			expectedResult:    resource.Result{},
 		},
-
 		{
 			name:              "Test for checksummed address",
 			input:             []byte("0x5523058cdffe5f3c1eadadd5015e55c6e00fb439"),
 			expectError:       false,
 			expectedRecipient: []byte("0x5523058cdFfe5F3c1EaDADD5015E55C6E00fb439"),
+			expectedResult:    resource.Result{},
+		},
+		{
+			name:              "Test with valid registered recepient that has white spaces",
+			input:             []byte("0711 22 33 44"),
+			expectError:       false,
+			expectedRecipient: []byte(publicKey),
 			expectedResult:    resource.Result{},
 		},
 	}
