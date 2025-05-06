@@ -33,6 +33,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/ethutils"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
@@ -1672,8 +1673,11 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 			}
 
 		case "address":
+			// checksum the address
+			address := ethutils.ChecksumAddress(recipient)
+
 			// Save the valid Ethereum address as the recipient
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(recipient))
+			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(address))
 			if err != nil {
 				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", recipient, "error", err)
 				return res, err
