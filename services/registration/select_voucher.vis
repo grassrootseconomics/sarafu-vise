@@ -3,14 +3,14 @@ LOAD get_vouchers 0
 MAP get_vouchers
 MOUT back 0
 MOUT quit 99
-MNEXT next 11
-MPREV prev 22
+MNEXT next 88
+MPREV prev 98
 HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
 LOAD view_voucher 80
 RELOAD view_voucher
 CATCH . flag_incorrect_voucher 1
-INCMP _ 0
-INCMP quit 99
-INCMP > 11
-INCMP < 22
 INCMP view_voucher *
