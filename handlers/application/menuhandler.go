@@ -2176,10 +2176,6 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
 
 	inputStr := string(input)
-	if inputStr == "0" || inputStr == "99" {
-		res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
-		return res, nil
-	}
 
 	metadata, err := store.GetVoucherData(ctx, h.userdataStore, sessionId, inputStr)
 	if err != nil {
