@@ -80,13 +80,13 @@ type MenuHandlers struct {
 	accountService       remote.AccountService
 	prefixDb             storedb.PrefixDb
 	smsService           sms.SmsService
-	logDb                store.LogDb
+	// logDb                store.LogDb
 	profile              *profile.Profile
 	ReplaceSeparatorFunc func(string) string
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}
@@ -98,9 +98,9 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, ac
 		Userdatastore:  *userDb,
 	}
 
-	logDb := store.LogDb{
-		Db: logdb,
-	}
+	// logDb := store.LogDb{
+	// 	Db: logdb,
+	// }
 
 	// Instantiate the SubPrefixDb with "DATATYPE_USERDATA" prefix
 	prefix := storedb.ToBytes(db.DATATYPE_USERDATA)
@@ -112,7 +112,7 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, ac
 		accountService:       accountService,
 		smsService:           smsservice,
 		prefixDb:             prefixDb,
-		logDb:                logDb,
+		// logDb:                logDb,
 		profile:              &profile.Profile{Max: 6},
 		ReplaceSeparatorFunc: replaceSeparatorFunc,
 	}
@@ -219,16 +219,16 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 		storedb.DATA_ACCOUNT_ALIAS: "",
 	}
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	for key, value := range data {
 		err = store.WriteEntry(ctx, sessionId, key, []byte(value))
 		if err != nil {
 			return err
 		}
-		err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write log entry", "key", key, "value", value)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write log entry", "key", key, "value", value)
+		// }
 	}
 	publicKeyNormalized, err := hex.NormalizeHex(publicKey)
 	if err != nil {
@@ -239,10 +239,10 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 		return err
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write log entry", "key", storedb.DATA_PUBLIC_KEY_REVERSE, "value", sessionId)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write log entry", "key", storedb.DATA_PUBLIC_KEY_REVERSE, "value", sessionId)
+	// }
 
 	res.FlagSet = append(res.FlagSet, flag_account_created)
 	return nil
@@ -413,7 +413,7 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
 	if err != nil {
@@ -421,10 +421,10 @@ func (h *MenuHandlers) SaveTemporaryPin(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write temporaryAccountPIN log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(hashedPIN))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write temporaryAccountPIN log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", accountPIN, "error", err)
+	// }
 
 	return res, nil
 }
@@ -461,7 +461,7 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read hashedTemporaryPin entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
@@ -486,10 +486,10 @@ func (h *MenuHandlers) ConfirmPinChange(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write AccountPIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write AccountPIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
+	// }
 
 	// set the DATA_SELF_PIN_RESET as 0
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SELF_PIN_RESET, []byte("0"))
@@ -511,7 +511,7 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 
 	flag_unregistered_number, _ := h.flagManager.GetFlag("flag_unregistered_number")
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
@@ -547,10 +547,10 @@ func (h *MenuHandlers) ValidateBlockedNumber(ctx context.Context, sym string, in
 		return res, nil
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write blocked number log entry", "key", storedb.DATA_BLOCKED_NUMBER, "value", formattedNumber, "error", err)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_BLOCKED_NUMBER, []byte(formattedNumber))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write blocked number log entry", "key", storedb.DATA_BLOCKED_NUMBER, "value", formattedNumber, "error", err)
+	// }
 
 	return res, nil
 }
@@ -678,7 +678,7 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	hashedTemporaryPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
@@ -706,10 +706,10 @@ func (h *MenuHandlers) VerifyCreatePin(ctx context.Context, sym string, input []
 		return res, err
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write DATA_ACCOUNT_PIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte(hashedTemporaryPin))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write DATA_ACCOUNT_PIN log entry", "key", storedb.DATA_ACCOUNT_PIN, "value", hashedTemporaryPin, "error", err)
+	// }
 
 	return res, nil
 }
@@ -725,7 +725,7 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 	firstName := string(input)
 
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_firstname_set, _ := h.flagManager.GetFlag("flag_firstname_set")
@@ -745,10 +745,10 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName)
+		// }
 	} else {
 		if firstNameSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName))
@@ -774,7 +774,7 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	familyName := string(input)
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
@@ -795,10 +795,10 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 		}
 		res.FlagSet = append(res.FlagSet, flag_familyname_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName)
+		// }
 	} else {
 		if familyNameSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName))
@@ -855,7 +855,7 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 	}
 	yob := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_yob_set, _ := h.flagManager.GetFlag("flag_yob_set")
@@ -876,10 +876,10 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 		}
 		res.FlagSet = append(res.FlagSet, flag_yob_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_YOB, []byte(temporaryYob))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write yob db log entry", "key", storedb.DATA_YOB, "value", temporaryYob)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_YOB, []byte(temporaryYob))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write yob db log entry", "key", storedb.DATA_YOB, "value", temporaryYob)
+		// }
 	} else {
 		if yobSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob))
@@ -905,7 +905,7 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 	}
 	location := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_location_set, _ := h.flagManager.GetFlag("flag_location_set")
@@ -925,10 +925,10 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 		}
 		res.FlagSet = append(res.FlagSet, flag_location_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write location db log entry", "key", storedb.DATA_LOCATION, "value", temporaryLocation)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write location db log entry", "key", storedb.DATA_LOCATION, "value", temporaryLocation)
+		// }
 	} else {
 		if locationSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location))
@@ -956,7 +956,7 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 	}
 	gender := strings.Split(symbol, "_")[1]
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_gender_set, _ := h.flagManager.GetFlag("flag_gender_set")
 
@@ -976,10 +976,10 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 		}
 		res.FlagSet = append(res.FlagSet, flag_gender_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_GENDER, []byte(temporaryGender))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write gender db log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryGender)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_GENDER, []byte(temporaryGender))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write gender db log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryGender)
+		// }
 
 	} else {
 		if genderSet {
@@ -1007,7 +1007,7 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 
 	offerings := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_offerings_set, _ := h.flagManager.GetFlag("flag_offerings_set")
@@ -1028,10 +1028,10 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryOfferings))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write offerings db log entry", "key", storedb.DATA_OFFERINGS, "value", offerings)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryOfferings))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write offerings db log entry", "key", storedb.DATA_OFFERINGS, "value", offerings)
+		// }
 	} else {
 		if offeringsSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings))
@@ -2019,7 +2019,7 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	userStore := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -2076,10 +2076,10 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 					logg.ErrorCtxf(ctx, "Failed to write active voucher data", "key", key, "error", err)
 					return res, err
 				}
-				err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-				if err != nil {
-					logg.DebugCtxf(ctx, "Failed to write voucher db log entry", "key", key, "value", value)
-				}
+				// err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
+				// if err != nil {
+				// 	logg.DebugCtxf(ctx, "Failed to write voucher db log entry", "key", key, "value", value)
+				// }
 			}
 
 			logg.InfoCtxf(ctx, "Default voucher set", "symbol", defaultSym, "balance", defaultBal, "decimals", defaultDec, "address", defaultAddr)
@@ -2277,7 +2277,7 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
 	userStore := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
@@ -2318,10 +2318,10 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 			logg.ErrorCtxf(ctx, "failed to write to prefixDb", "error", err)
 			return res, err
 		}
-		err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write tx db log entry", "key", key, "value", value)
-		}
+		// err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
+		// if err != nil {
+		// 	logg.DebugCtxf(ctx, "Failed to write tx db log entry", "key", key, "value", value)
+		// }
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_no_transfers)
@@ -2609,7 +2609,7 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
-	logdb := h.logDb
+	// logdb := h.logDb
 
 	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
 
@@ -2628,10 +2628,10 @@ func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []
 		return res, err
 	}
 
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(newAlias))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write account alias db log entry", "key", storedb.DATA_ACCOUNT_ALIAS, "value", newAlias)
-	}
+	// err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(newAlias))
+	// if err != nil {
+	// 	logg.DebugCtxf(ctx, "Failed to write account alias db log entry", "key", storedb.DATA_ACCOUNT_ALIAS, "value", newAlias)
+	// }
 
 	res.FlagSet = append(res.FlagSet, flag_alias_set)
 	return res, nil
