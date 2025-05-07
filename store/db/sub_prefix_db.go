@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"git.defalsify.org/vise.git/db"
+	"github.com/grassrootseconomics/go-vise/db"
 )
 
 // PrefixDb interface abstracts the database operations.

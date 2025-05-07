@@ -1,20 +1,24 @@
 module git.grassecon.net/grassrootseconomics/sarafu-vise
 
-go 1.23.4
+go 1.24
+
+toolchain go1.24.2
 
 require (
-	git.defalsify.org/vise.git v0.3.2-0.20250425131748-8b84f59792ce
+	git.defalsify.org/vise.git v0.2.3-0.20250120121301-10739fb4a8c9
 	git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250428082711-5d221b8d565f
-	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306
+	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250507100938-d07f95e1b4ad
 	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/grassrootseconomics/ethutils v1.3.1
+	github.com/grassrootseconomics/go-vise v0.4.1
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta
-	github.com/jackc/pgx/v5 v5.7.1
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.38.0
 	gopkg.in/leonelquinteros/gotext.v1 v1.3.1
 )
 
@@ -40,7 +44,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grassrootseconomics/eth-custodial v1.3.0-beta // indirect
-	github.com/grassrootseconomics/ethutils v1.3.1 // indirect
 	github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
@@ -59,9 +62,9 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect

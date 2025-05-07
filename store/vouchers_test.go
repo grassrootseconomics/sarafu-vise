@@ -8,8 +8,8 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/stretchr/testify/require"
 
-	memdb "git.defalsify.org/vise.git/db/mem"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	memdb "github.com/grassrootseconomics/go-vise/db/mem"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 

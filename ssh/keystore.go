@@ -11,7 +11,6 @@ import (
 	"git.defalsify.org/vise.git/db"
 
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
-	dbstorage "git.grassecon.net/grassrootseconomics/visedriver/storage/db/gdbm"
 )
 
 type SshKeyStore struct {
@@ -21,7 +20,7 @@ type SshKeyStore struct {
 func NewSshKeyStore(ctx context.Context, dbDir string) (*SshKeyStore, error) {
 	keyStore := &SshKeyStore{}
 	keyStoreFile := path.Join(dbDir, "ssh_authorized_keys.gdbm")
-	keyStore.store = dbstorage.NewThreadGdbmDb()
+	// keyStore.store = dbstorage.NewThreadGdbmDb()
 	err := keyStore.store.Connect(ctx, keyStoreFile)
 	if err != nil {
 		return nil, err

@@ -9,15 +9,15 @@ import (
 	"path"
 	"syscall"
 
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/args"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/logging"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 var (
@@ -112,11 +112,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	logdb, err := menuStorageService.GetLogDb(ctx, userdatastore, logDbConnStr, "user-data")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
-		os.Exit(1)
-	}
+	// logdb, err := menuStorageService.GetLogDb(ctx, userdatastore, logDbConnStr, "user-data")
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
+	// 	os.Exit(1)
+	// }
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -126,7 +126,7 @@ func main() {
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userdatastore)
-	lhs.SetLogDb(&logdb)
+	// lhs.SetLogDb(&logdb)
 	lhs.SetPersister(pe)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "localhandler service error: %v\n", err)

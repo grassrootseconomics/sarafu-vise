@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/persist"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/logging"
+	"github.com/grassrootseconomics/go-vise/persist"
 )
 
 var (

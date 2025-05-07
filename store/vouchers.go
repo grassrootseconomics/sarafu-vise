@@ -6,8 +6,8 @@ import (
 	"math/big"
 	"strings"
 
-	"git.defalsify.org/vise.git/logging"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/logging"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 

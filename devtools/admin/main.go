@@ -7,7 +7,7 @@ import (
 	"os"
 	"path"
 
-	"git.defalsify.org/vise.git/logging"
+	"github.com/grassrootseconomics/go-vise/logging"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"

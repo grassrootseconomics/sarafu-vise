@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/resource"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/logging"
+	"github.com/grassrootseconomics/go-vise/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
@@ -80,10 +80,10 @@ func main() {
 	pfp := path.Join(scriptDir, "pp.csv")
 
 	cfg := engine.Config{
-		Root:          "root",
-		OutputSize:    uint32(size),
-		FlagCount:     uint32(128),
-		MenuSeparator: menuSeparator,
+		Root:              "root",
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
+		MenuSeparator:     menuSeparator,
 		ResetOnEmptyInput: true,
 	}
 
@@ -105,11 +105,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	logdb, err := menuStorageService.GetLogDb(ctx, userdataStore, logDbConnStr, "user-data")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
-		os.Exit(1)
-	}
+	// logdb, err := menuStorageService.GetLogDb(ctx, userdataStore, logDbConnStr, "user-data")
+	// if err != nil {
+	// 	fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
+	// 	os.Exit(1)
+	// }
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -118,7 +118,7 @@ func main() {
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userdataStore)
-	lhs.SetLogDb(&logdb)
+	// lhs.SetLogDb(&logdb)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())

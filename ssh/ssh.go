@@ -12,13 +12,13 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/services"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/logging"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 )
 
 var (
@@ -181,8 +181,8 @@ func (s *SshRunner) GetEngine(sessionId string) (engine.Engine, func(), error) {
 	accountService := services.New(ctx, menuStorageService)
 	_, err = lhs.GetHandler(accountService)
 	if err != nil {
-	       fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
-	       os.Exit(1)
+		fmt.Fprintf(os.Stderr, "get accounts service handler: %v\n", err)
+		os.Exit(1)
 	}
 	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	closer := func() {

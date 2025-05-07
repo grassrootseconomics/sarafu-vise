@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/logging"
 )
 
 var (

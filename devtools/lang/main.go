@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/logging"
 )
 
 const (

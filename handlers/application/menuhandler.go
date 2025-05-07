@@ -12,14 +12,6 @@ import (
 
 	"gopkg.in/leonelquinteros/gotext.v1"
 
-	"git.defalsify.org/vise.git/asm"
-	"git.defalsify.org/vise.git/cache"
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/common/hex"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
@@ -34,6 +26,14 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/grassrootseconomics/ethutils"
+	"github.com/grassrootseconomics/go-vise/asm"
+	"github.com/grassrootseconomics/go-vise/cache"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/logging"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 

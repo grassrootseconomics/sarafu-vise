@@ -10,11 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"git.defalsify.org/vise.git/cache"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/common/pin"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
@@ -22,14 +17,19 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/cache"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 
 	"github.com/alecthomas/assert/v2"
 
 	testdataloader "github.com/peteole/testdata-loader"
 	"github.com/stretchr/testify/require"
 
-	visedb "git.defalsify.org/vise.git/db"
-	memdb "git.defalsify.org/vise.git/db/mem"
+	visedb "github.com/grassrootseconomics/go-vise/db"
+	memdb "github.com/grassrootseconomics/go-vise/db/mem"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
