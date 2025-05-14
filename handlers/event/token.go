@@ -49,9 +49,8 @@ func (eu *EventsUpdater) updateToken(ctx context.Context, identity identity.Iden
 
 // set default token to given symbol.
 func (eu *EventsUpdater) updateDefaultToken(ctx context.Context, identity identity.Identity, userStore *store.UserDataStore, activeSym string) error {
-	pfxDb := toPrefixDb(userStore, identity.SessionId)
 	// TODO: the activeSym input should instead be newline separated list?
-	tokenData, err := store.GetVoucherData(ctx, pfxDb, activeSym)
+	tokenData, err := store.GetVoucherData(ctx, userStore, identity.SessionId, activeSym)
 	if err != nil {
 		return err
 	}

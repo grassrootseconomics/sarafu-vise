@@ -8,7 +8,6 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/stretchr/testify/require"
 
-	visedb "git.defalsify.org/vise.git/db"
 	memdb "git.defalsify.org/vise.git/db/mem"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -77,16 +76,8 @@ func TestProcessVouchers(t *testing.T) {
 }
 
 func TestGetVoucherData(t *testing.T) {
-	ctx := context.Background()
-
-	db := memdb.NewMemDb()
-	err := db.Connect(ctx, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
-	spdb := storedb.NewSubPrefixDb(db, prefix)
+	ctx, store := InitializeTestDb(t)
+	sessionId := "session123"
 
 	// Test voucher data
 	mockData := map[storedb.DataTyp][]byte{
@@ -98,13 +89,13 @@ func TestGetVoucherData(t *testing.T) {
 
 	// Put the data
 	for key, value := range mockData {
-		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
+		err := store.WriteEntry(ctx, sessionId, key, []byte(value))
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	result, err := GetVoucherData(ctx, spdb, "1")
+	result, err := GetVoucherData(ctx, store, sessionId, "1")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "SRF", result.TokenSymbol)

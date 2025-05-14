@@ -1,12 +1,12 @@
 LOAD reset_transaction_amount 0
-LOAD max_amount 10
+LOAD max_amount 40
 RELOAD max_amount
 MAP max_amount
 MOUT back 0
 HALT
 LOAD validate_amount 64
 RELOAD validate_amount
-CATCH api_failure flag_api_call_error  1
+CATCH api_failure flag_api_call_error 1
 CATCH invalid_amount flag_invalid_amount 1
 INCMP _ 0
 LOAD get_recipient 0

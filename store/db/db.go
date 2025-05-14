@@ -63,6 +63,10 @@ const (
 	DATA_INITIAL_LANGUAGE_CODE
 	//Fully qualified account alias string
 	DATA_ACCOUNT_ALIAS
+	//currently suggested alias by the api awaiting user's confirmation as accepted account alias
+	DATA_SUGGESTED_ALIAS
+	//Key used to store a value of 1 for a user to reset their own PIN once they access the menu. 
+	DATA_SELF_PIN_RESET
 	// Holds the active pool contract address for the swap
 	DATA_ACTIVE_POOL_ADDRESS
 	// Currently active swap from symbol for the swap
@@ -173,7 +177,8 @@ func StringToDataTyp(str string) (DataTyp, error) {
 		return DATA_GENDER, nil
 	case "DATA_OFFERINGS":
 		return DATA_OFFERINGS, nil
-
+	case "DATA_ACCOUNT_ALIAS":
+		return DATA_ACCOUNT_ALIAS, nil
 	default:
 		return 0, errors.New("invalid DataTyp string")
 	}

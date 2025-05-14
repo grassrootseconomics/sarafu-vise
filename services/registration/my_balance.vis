@@ -1,6 +1,6 @@
 LOAD reset_incorrect 6
 LOAD check_balance 0
-CATCH api_failure  flag_api_call_error  1
+CATCH api_failure flag_api_call_error 1
 MAP check_balance
 CATCH incorrect_pin flag_incorrect_pin 1
 CATCH pin_entry flag_account_authorized 0

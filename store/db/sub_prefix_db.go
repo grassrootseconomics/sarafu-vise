@@ -33,11 +33,14 @@ func (s *SubPrefixDb) toKey(k []byte) []byte {
 func (s *SubPrefixDb) Get(ctx context.Context, key []byte) ([]byte, error) {
 	s.store.SetPrefix(db.DATATYPE_USERDATA)
 	key = s.toKey(key)
+	logg.InfoCtxf(ctx, "SubPrefixDb Get log", "key", string(key))
+
 	return s.store.Get(ctx, key)
 }
 
 func (s *SubPrefixDb) Put(ctx context.Context, key []byte, val []byte) error {
 	s.store.SetPrefix(db.DATATYPE_USERDATA)
 	key = s.toKey(key)
+	logg.InfoCtxf(ctx, "SubPrefixDb Put log", "key", string(key))
 	return s.store.Put(ctx, key, val)
 }

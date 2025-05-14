@@ -1,0 +1,7 @@
+LOAD confirm_new_alias 0
+RELOAD confirm_new_alias
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP ^ 0
+INCMP quit 9

@@ -1,0 +1,6 @@
+LOAD reset_invalid_pin 6
+HALT
+LOAD save_temporary_pin 1
+RELOAD save_temporary_pin
+CATCH invalid_pin flag_invalid_pin 1
+INCMP confirm_pin_change * 
