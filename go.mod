@@ -13,7 +13,7 @@ require (
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ethutils v1.3.1
-	github.com/grassrootseconomics/go-vise v0.4.1
+	github.com/grassrootseconomics/go-vise v0.4.2
 	github.com/grassrootseconomics/ussd-data-service v1.2.0-beta
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/peteole/testdata-loader v0.3.0
