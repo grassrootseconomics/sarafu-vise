@@ -1,7 +1,0 @@
-LOAD swap_from_list 0
-CATCH _ flag_incorrect_pool 1
-MAP swap_from_list
-MOUT back 0
-HALT
-INCMP _ 0
-INCMP swap_to_list *

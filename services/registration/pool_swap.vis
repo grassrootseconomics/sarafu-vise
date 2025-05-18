@@ -1,8 +1,0 @@
-LOAD get_pools 100
-MAP get_pools
-MOUT back 0
-MOUT quit 99
-HALT
-INCMP _ 0
-INCMP quit 99
-INCMP swap_from_list *
