@@ -1,4 +1,5 @@
 LOAD swap_to_list 0
+RELOAD swap_to_list
 MAP swap_to_list
 CATCH missing_voucher flag_incorrect_voucher 1
 MOUT back 0
