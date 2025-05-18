@@ -1,15 +1,10 @@
 package store
 
 import (
-	"context"
 	"testing"
 
-	visedb "git.defalsify.org/vise.git/db"
-	memdb "git.defalsify.org/vise.git/db/mem"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
-	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
-	"github.com/stretchr/testify/require"
 )
 
 func TestReadSwapData(t *testing.T) {
@@ -95,16 +90,8 @@ func TestReadSwapPreviewData(t *testing.T) {
 }
 
 func TestGetSwapFromVoucherData(t *testing.T) {
-	ctx := context.Background()
-
-	db := memdb.NewMemDb()
-	err := db.Connect(ctx, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
-	spdb := storedb.NewSubPrefixDb(db, prefix)
+	sessionId := "session123"
+	ctx, store := InitializeTestDb(t)
 
 	// Test pool swap data
 	mockData := map[storedb.DataTyp][]byte{
@@ -116,13 +103,12 @@ func TestGetSwapFromVoucherData(t *testing.T) {
 
 	// Put the data
 	for key, value := range mockData {
-		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
-		if err != nil {
+		if err := store.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	result, err := GetSwapFromVoucherData(ctx, spdb, "1")
+	result, err := GetSwapFromVoucherData(ctx, store, sessionId, "1")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "AMANI", result.TokenSymbol)
@@ -131,54 +117,9 @@ func TestGetSwapFromVoucherData(t *testing.T) {
 	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe", result.ContractAddress)
 }
 
-func TestUpdateSwapFromVoucherData(t *testing.T) {
-	ctx, store := InitializeTestDb(t)
-	sessionId := "session123"
-
-	// New swap from voucher data
-	newData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "AMANI",
-		TokenDecimals:   "6",
-		ContractAddress: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
-	}
-
-	// Old temporary data
-	tempData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "OLD",
-		TokenDecimals:   "8",
-		ContractAddress: "0xold",
-	}
-	require.NoError(t, StoreTemporaryVoucher(ctx, store, sessionId, tempData))
-
-	// Execute update
-	err := UpdateSwapFromVoucherData(ctx, store, sessionId, newData)
-	require.NoError(t, err)
-
-	// Verify active swap from data was stored correctly
-	activeEntries := map[storedb.DataTyp][]byte{
-		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     []byte(newData.TokenSymbol),
-		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: []byte(newData.TokenDecimals),
-		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: []byte(newData.ContractAddress),
-	}
-
-	for key, expectedValue := range activeEntries {
-		storedValue, err := store.ReadEntry(ctx, sessionId, key)
-		require.NoError(t, err)
-		require.Equal(t, expectedValue, storedValue, "Active swap from data mismatch for key %v", key)
-	}
-}
-
 func TestGetSwapToVoucherData(t *testing.T) {
-	ctx := context.Background()
-
-	db := memdb.NewMemDb()
-	err := db.Connect(ctx, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	prefix := storedb.ToBytes(visedb.DATATYPE_USERDATA)
-	spdb := storedb.NewSubPrefixDb(db, prefix)
+	sessionId := "session123"
+	ctx, store := InitializeTestDb(t)
 
 	// Test pool swap data
 	mockData := map[storedb.DataTyp][]byte{
@@ -190,13 +131,12 @@ func TestGetSwapToVoucherData(t *testing.T) {
 
 	// Put the data
 	for key, value := range mockData {
-		err = spdb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value))
-		if err != nil {
+		if err := store.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	result, err := GetSwapToVoucherData(ctx, spdb, "1")
+	result, err := GetSwapToVoucherData(ctx, store, sessionId, "1")
 
 	assert.NoError(t, err)
 	assert.Equal(t, "cUSD", result.TokenSymbol)
