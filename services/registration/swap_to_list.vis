@@ -1,6 +1,6 @@
 LOAD swap_to_list 0
-CATCH _ flag_incorrect_voucher 1
 MAP swap_to_list
+CATCH missing_voucher flag_incorrect_voucher 1
 MOUT back 0
 HALT
 LOAD swap_max_limit 64
