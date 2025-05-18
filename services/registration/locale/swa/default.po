@@ -36,3 +36,6 @@ msgstr "Ombi lako limetumwa. Utapokea SMS wakati %s %s yako itakapobadilishwa ku
 
 msgid "%s balance: %s\n"
 msgstr "%s salio: %s\n"
+
+msgid "%s is not in the KENYA ROLA POOL. Please update your voucher and try again."
+msgstr "%s haipo kwenye BWAWA LA KENYA ROLA. Tafadhali badilisha sarafu yako na ujaribu tena."
