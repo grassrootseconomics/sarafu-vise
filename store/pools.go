@@ -23,8 +23,8 @@ func ProcessPools(pools []dataserviceapi.PoolDetails) PoolsMetadata {
 
 	for i, p := range pools {
 		poolNames = append(poolNames, fmt.Sprintf("%d:%s", i+1, p.PoolName))
-		poolSymbols = append(poolSymbols, fmt.Sprintf("%d:%s", i+1,  p.PoolSymbol))
-		poolContractAdrresses = append(poolContractAdrresses, fmt.Sprintf("%d:%s", i+1,  p.PoolContractAdrress))
+		poolSymbols = append(poolSymbols, fmt.Sprintf("%d:%s", i+1, p.PoolSymbol))
+		poolContractAdrresses = append(poolContractAdrresses, fmt.Sprintf("%d:%s", i+1, p.PoolContractAdrress))
 	}
 
 	data.PoolNames = strings.Join(poolNames, "\n")
@@ -36,7 +36,7 @@ func ProcessPools(pools []dataserviceapi.PoolDetails) PoolsMetadata {
 
 // GetPoolData retrieves and matches pool data
 // if no match is found, it fetches the API with the symbol
-func GetPoolData(ctx context.Context, db storedb.PrefixDb, input string) (*dataserviceapi.PoolDetails, error) {
+func GetPoolData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.PoolDetails, error) {
 	keys := []storedb.DataTyp{
 		storedb.DATA_POOL_NAMES,
 		storedb.DATA_POOL_SYMBOLS,
@@ -45,9 +45,9 @@ func GetPoolData(ctx context.Context, db storedb.PrefixDb, input string) (*datas
 	data := make(map[storedb.DataTyp]string)
 
 	for _, key := range keys {
-		value, err := db.Get(ctx, storedb.ToBytes(key))
+		value, err := store.ReadEntry(ctx, sessionId, key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get prefix key %x: %v", storedb.ToBytes(key), err)
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
 		}
 		data[key] = string(value)
 	}
@@ -63,9 +63,9 @@ func GetPoolData(ctx context.Context, db storedb.PrefixDb, input string) (*datas
 	}
 
 	return &dataserviceapi.PoolDetails{
-		PoolName:     string(name),
-		PoolSymbol:         string(symbol),
-		PoolContractAdrress:   string(address),
+		PoolName:            string(name),
+		PoolSymbol:          string(symbol),
+		PoolContractAdrress: string(address),
 	}, nil
 }
 
