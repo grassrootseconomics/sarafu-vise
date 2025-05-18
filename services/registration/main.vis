@@ -15,7 +15,7 @@ MOUT help 5
 MOUT quit 9
 HALT
 INCMP send 1
-INCMP pool_swap 2
+INCMP swap_to_list 2
 INCMP my_vouchers 3
 INCMP my_account 4
 INCMP help 5
