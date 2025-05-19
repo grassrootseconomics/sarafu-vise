@@ -1,0 +1,12 @@
+LOAD swap_to_list 0
+RELOAD swap_to_list
+MAP swap_to_list
+CATCH missing_voucher flag_incorrect_voucher 1
+MOUT back 0
+HALT
+LOAD swap_max_limit 64
+RELOAD swap_max_limit
+CATCH . flag_incorrect_voucher 1
+CATCH low_swap_amount flag_low_swap_amount 1
+INCMP _ 0
+INCMP swap_limit *

@@ -130,7 +130,10 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("confirm_new_alias", appHandlers.ConfirmNewAlias)
 	ls.DbRs.AddLocalFunc("check_account_created", appHandlers.CheckAccountCreated)
 	ls.DbRs.AddLocalFunc("reset_api_call_failure", appHandlers.ResetApiCallFailure)
-
+    ls.DbRs.AddLocalFunc("swap_to_list", appHandlers.LoadSwapToList)
+	ls.DbRs.AddLocalFunc("swap_max_limit", appHandlers.SwapMaxLimit)
+	ls.DbRs.AddLocalFunc("swap_preview", appHandlers.SwapPreview)
+	ls.DbRs.AddLocalFunc("initiate_swap", appHandlers.InitiateSwap)
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil

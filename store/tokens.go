@@ -64,7 +64,7 @@ func ReadTransactionData(ctx context.Context, store DataStore, sessionId string)
 			return data, errors.New("invalid struct field: " + fieldName)
 		}
 
-		value, err := readStringEntry(ctx, store, sessionId, key)
+		value, err := ReadStringEntry(ctx, store, sessionId, key)
 		if err != nil {
 			return data, err
 		}
@@ -74,7 +74,7 @@ func ReadTransactionData(ctx context.Context, store DataStore, sessionId string)
 	return data, nil
 }
 
-func readStringEntry(ctx context.Context, store DataStore, sessionId string, key storedb.DataTyp) (string, error) {
+func ReadStringEntry(ctx context.Context, store DataStore, sessionId string, key storedb.DataTyp) (string, error) {
 	entry, err := store.ReadEntry(ctx, sessionId, key)
 	if err != nil {
 		return "", err
