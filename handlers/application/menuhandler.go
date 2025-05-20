@@ -2762,6 +2762,8 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, err
 	}
 
+	logg.InfoCtxf(ctx, "CheckTokenInPool", "response", r, "active_pool_address", activePoolAddress, "address", activeAddress)
+
 	if !r.CanSwapFrom {
 		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
 		res.Content = l.Get(
