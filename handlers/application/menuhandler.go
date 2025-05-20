@@ -2738,9 +2738,9 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	}
 
 	defaultPool := dataserviceapi.PoolDetails{
-		PoolName:            "Kenya ROLA Pool",
-		PoolSymbol:          "ROLA",
-		PoolContractAdrress: "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
+		PoolName:            config.DefaultPoolName(),
+		PoolSymbol:          config.DefaultPoolSymbol(),
+		PoolContractAdrress: config.DefaultPoolAddress(),
 		LimiterAddress:      "",
 		VoucherRegistry:     "",
 	}
@@ -2765,8 +2765,9 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	if !r.CanSwapFrom {
 		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
 		res.Content = l.Get(
-			"%s is not in the KENYA ROLA POOL. Please update your voucher and try again.",
+			"%s is not in %s. Please update your voucher and try again.",
 			activeSym,
+			config.DefaultPoolName(),
 		)
 		return res, nil
 	}
