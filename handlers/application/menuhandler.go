@@ -2707,11 +2707,6 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	}
 
 	userStore := h.userdataStore
-	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-		return res, err
-	}
 
 	// get the active address and symbol
 	activeAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
@@ -2776,8 +2771,8 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
 
-	// call the api using the activePoolAddress and publicKey to get a list of SwapToSymbolsData
-	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(activePoolAddress), string(publicKey))
+	// call the api using the activePoolAddress to get a list of SwapToSymbolsData
+	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(activePoolAddress))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
