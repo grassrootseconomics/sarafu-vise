@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strconv"
 
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -129,8 +130,8 @@ func GetSwapFromVoucherData(ctx context.Context, store DataStore, sessionId stri
 	}, nil
 }
 
-// GetSwapToVoucherData retrieves and matches voucher data
-func GetSwapToVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
+// GetSwapToVoucherData retrieves and matches token data
+func GetSwapToVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenDetails, error) {
 	keys := []storedb.DataTyp{
 		storedb.DATA_POOL_TO_SYMBOLS,
 		storedb.DATA_POOL_TO_BALANCES,
@@ -147,7 +148,7 @@ func GetSwapToVoucherData(ctx context.Context, store DataStore, sessionId string
 		data[key] = string(value)
 	}
 
-	symbol, balance, decimal, address := MatchVoucher(input,
+	symbol, _, decimal, address := MatchVoucher(input,
 		data[storedb.DATA_POOL_TO_SYMBOLS],
 		data[storedb.DATA_POOL_TO_BALANCES],
 		data[storedb.DATA_POOL_TO_DECIMALS],
@@ -158,22 +159,27 @@ func GetSwapToVoucherData(ctx context.Context, store DataStore, sessionId string
 		return nil, nil
 	}
 
-	return &dataserviceapi.TokenHoldings{
-		TokenSymbol:     string(symbol),
-		Balance:         string(balance),
-		TokenDecimals:   string(decimal),
-		ContractAddress: string(address),
+	decimalInt, err := strconv.ParseUint(decimal, 0, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to parse decimal to Uint:", "sessionId", sessionId, "decimal", decimal, "error", err)
+		return nil, nil
+	}
+
+	return &dataserviceapi.TokenDetails{
+		TokenSymbol:   string(symbol),
+		TokenDecimals: uint8(decimalInt),
+		TokenAddress:  string(address),
 	}, nil
 }
 
 // UpdateSwapToVoucherData updates the active swap to voucher data in the DataStore.
-func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
-	logg.TraceCtxf(ctx, "dtal", "data", data)
+func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenDetails) error {
+	logg.TraceCtxf(ctx, "UpdateSwapToVoucherData", "data", data)
 	// Active swap to voucher data entries
 	activeEntries := map[storedb.DataTyp][]byte{
 		storedb.DATA_ACTIVE_SWAP_TO_SYM:     []byte(data.TokenSymbol),
-		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL: []byte(data.TokenDecimals),
-		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: []byte(data.ContractAddress),
+		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL: []byte{data.TokenDecimals},
+		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: []byte(data.TokenAddress),
 	}
 
 	// Write active data
