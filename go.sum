@@ -16,6 +16,8 @@ git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250520125035-
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250520125035-81fbc2574c30/go.mod h1:R7+mt27mhm4/LCutAHHv87pOsLxXEPO93KXnhP8H6W0=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250521124206-343d30a2f27c h1:c2cA5hcYnLgs7kR4fF5tp42W6VQClTukbfKoaeskZu0=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250521124206-343d30a2f27c/go.mod h1:R7+mt27mhm4/LCutAHHv87pOsLxXEPO93KXnhP8H6W0=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250521141246-6c3719e3b652 h1:MmUQRL6Fjq/jlL53h+cUbJ7WwQ+q/yNy/zT05c7bgNg=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250521141246-6c3719e3b652/go.mod h1:wKHPy1mpOCr9ahkRltwm1yi9qH/3m9xb8hMCX5C0L1o=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306 h1:Jo+yWysWw/N5BJQtAyEMN8ePVvAyPHv+JG4lQti+1N4=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306/go.mod h1:FdLwYtzsjOIcDiW4uDgDYnB4Wdzq12uJUe0QHSSPbSo=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694 h1:DjJlBSz0S13acft5XZDWk7ZYnzElym0xLMYEVgyNJ+E=
@@ -78,6 +80,8 @@ github.com/grassrootseconomics/ussd-data-service v1.4.0-beta h1:4fMd/3h2ZIhRg4Gd
 github.com/grassrootseconomics/ussd-data-service v1.4.0-beta/go.mod h1:9sGnorpKaK76FmOGXoh/xv7x5siSFNYdXxQo9BKW4DI=
 github.com/grassrootseconomics/ussd-data-service v1.4.4-beta h1:turlyo0i3OLj29mWpWNoB/3Qao8qEngT/5d1jDWTZE4=
 github.com/grassrootseconomics/ussd-data-service v1.4.4-beta/go.mod h1:9sGnorpKaK76FmOGXoh/xv7x5siSFNYdXxQo9BKW4DI=
+github.com/grassrootseconomics/ussd-data-service v1.4.7-beta h1:yAe1YaOBsdxW2m20jnVU4F0kLmFr+mK/gHCWEdHmE90=
+github.com/grassrootseconomics/ussd-data-service v1.4.7-beta/go.mod h1:9sGnorpKaK76FmOGXoh/xv7x5siSFNYdXxQo9BKW4DI=
 github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4 h1:U4kkNYryi/qfbBF8gh7Vsbuz+cVmhf5kt6pE9bYYyLo=
 github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4/go.mod h1:zpZDgZFzeq9s0MIeB1P50NIEWDFFHSFBohI/NbaTD/Y=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
