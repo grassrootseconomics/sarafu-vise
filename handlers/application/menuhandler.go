@@ -2784,12 +2784,11 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	data := store.ProcessVouchers(swapToList)
+	data := store.ProcessTokens(swapToList)
 
-	// Store all to list voucher data
+	// Store all swap_to tokens data
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
-		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
 		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
 		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
 	}
