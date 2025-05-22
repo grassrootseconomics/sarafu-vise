@@ -22,6 +22,7 @@ type SwapData struct {
 }
 
 type SwapPreviewData struct {
+	TemporaryValue        string
 	PublicKey             string
 	ActiveSwapMaxAmount   string
 	ActiveSwapFromDecimal string
@@ -65,6 +66,7 @@ func ReadSwapData(ctx context.Context, store DataStore, sessionId string) (SwapD
 func ReadSwapPreviewData(ctx context.Context, store DataStore, sessionId string) (SwapPreviewData, error) {
 	data := SwapPreviewData{}
 	fieldToKey := map[string]storedb.DataTyp{
+		"TemporaryValue":        storedb.DATA_TEMPORARY_VALUE,
 		"PublicKey":             storedb.DATA_PUBLIC_KEY,
 		"ActiveSwapMaxAmount":   storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT,
 		"ActiveSwapFromDecimal": storedb.DATA_ACTIVE_DECIMAL,

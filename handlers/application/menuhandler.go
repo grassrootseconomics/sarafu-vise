@@ -2940,6 +2940,12 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
+	// store the user's input amount in the temporary value
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		return res, err
+	}
 
 	// call the API to get the quote
 	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
@@ -3015,7 +3021,7 @@ func (h *MenuHandlers) InitiateSwap(ctx context.Context, sym string, input []byt
 
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when your %s %s has been swapped for %s.",
-		swapAmountStr,
+		swapData.TemporaryValue,
 		swapData.ActiveSwapFromSym,
 		swapData.ActiveSwapToSym,
 	)
