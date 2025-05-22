@@ -7,7 +7,6 @@ LOAD authorize_account 6
 HALT
 RELOAD authorize_account
 CATCH incorrect_pin flag_incorrect_pin 1
-CATCH . flag_account_authorized 0
 INCMP _ 0
 INCMP quit 9
 INCMP swap_initiated *
