@@ -1,3 +1,4 @@
+CATCH no_voucher flag_no_active_voucher 1
 LOAD swap_to_list 0
 RELOAD swap_to_list
 MAP swap_to_list
