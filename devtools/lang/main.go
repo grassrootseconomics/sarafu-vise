@@ -15,7 +15,7 @@ import (
 
 const (
 	changeHeadSrc = `LOAD reset_account_authorized 0
-LOAD reset_incorrect 0
+LOAD reset_incorrect_pin 0
 CATCH incorrect_pin flag_incorrect_pin 1
 CATCH pin_entry flag_account_authorized 0
 `

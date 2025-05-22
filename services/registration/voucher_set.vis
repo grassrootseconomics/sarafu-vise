@@ -1,4 +1,4 @@
-LOAD reset_incorrect 6
+LOAD reset_incorrect_pin 6
 CATCH incorrect_pin flag_incorrect_pin 1
 CATCH _ flag_account_authorized 0
 LOAD set_voucher 12
