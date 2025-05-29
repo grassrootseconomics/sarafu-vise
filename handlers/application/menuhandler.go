@@ -2789,6 +2789,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	// Store all swap_to tokens data
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
+		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
 		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
 		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
 	}
