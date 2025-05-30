@@ -2803,8 +2803,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 	flag_low_swap_amount, _ := h.flagManager.GetFlag("flag_low_swap_amount")
 
-	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
-	res.FlagReset = append(res.FlagSet, flag_low_swap_amount)
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher, flag_low_swap_amount)
 
 	inputStr := string(input)
 	if inputStr == "0" {
