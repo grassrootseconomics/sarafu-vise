@@ -1371,7 +1371,13 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
-	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
+	
+	pinInput := string(input)
+
+	if !pin.IsValidPIN(pinInput) {
+		res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_allow_update)
+		return res, nil
+	}
 
 	store := h.userdataStore
 	AccountPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
@@ -1379,40 +1385,28 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
 		return res, err
 	}
-	str := string(input)
-	_, err = strconv.Atoi(str)
-	if len(input) == 4 && err == nil {
-		if pin.VerifyPIN(string(AccountPin), string(input)) {
-			if h.st.MatchFlag(flag_account_authorized, false) {
-				res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
-				res.FlagSet = append(res.FlagSet, flag_allow_update, flag_account_authorized)
-				err := h.resetIncorrectPINAttempts(ctx, sessionId)
-				if err != nil {
-					return res, err
-				}
-			} else {
-				res.FlagSet = append(res.FlagSet, flag_allow_update)
-				res.FlagReset = append(res.FlagReset, flag_account_authorized)
-				err := h.resetIncorrectPINAttempts(ctx, sessionId)
-				if err != nil {
-					return res, err
-				}
-			}
-		} else {
-			err = h.incrementIncorrectPINAttempts(ctx, sessionId)
-			if err != nil {
-				return res, err
-			}
-			res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
-			res.FlagReset = append(res.FlagReset, flag_account_authorized)
-			return res, nil
+
+	// verify that the user provided the correct PIN
+	if pin.VerifyPIN(string(AccountPin), pinInput) {
+		// set the required flags for a valid PIN
+		res.FlagSet = append(res.FlagSet, flag_allow_update, flag_account_authorized)
+		res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+		err := h.resetIncorrectPINAttempts(ctx, sessionId)
+		if err != nil {
+			return res, err
 		}
 	} else {
-		if string(input) != "0" {
-			res.FlagSet = append(res.FlagSet, flag_invalid_pin)
+		// set the required flags for an incorrect PIN
+		res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
+		res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_allow_update)
+
+		err = h.incrementIncorrectPINAttempts(ctx, sessionId)
+		if err != nil {
+			return res, err
 		}
-		return res, nil
 	}
+
 	return res, nil
 }
 
