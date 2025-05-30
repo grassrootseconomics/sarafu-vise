@@ -630,20 +630,10 @@ func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessio
 // resetIncorrectPINAttempts resets the number of incorrect PIN attempts after a correct PIN entry
 func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId string) error {
 	store := h.userdataStore
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
 	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
+		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
 		return err
-	}
-	currentWrongPinAttemptsCount, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	if currentWrongPinAttemptsCount <= uint64(pin.AllowedPINAttempts) {
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
-		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pin.AllowedPINAttempts, "error", err)
-			return err
-		}
 	}
 	return nil
 }
@@ -1371,7 +1361,7 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
-	
+
 	pinInput := string(input)
 
 	if !pin.IsValidPIN(pinInput) {
