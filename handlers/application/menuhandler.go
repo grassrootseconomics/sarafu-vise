@@ -630,20 +630,10 @@ func (h *MenuHandlers) incrementIncorrectPINAttempts(ctx context.Context, sessio
 // resetIncorrectPINAttempts resets the number of incorrect PIN attempts after a correct PIN entry
 func (h *MenuHandlers) resetIncorrectPINAttempts(ctx context.Context, sessionId string) error {
 	store := h.userdataStore
-	currentWrongPinAttempts, err := store.ReadEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS)
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
 	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
+		logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "error", err)
 		return err
-	}
-	currentWrongPinAttemptsCount, _ := strconv.ParseUint(string(currentWrongPinAttempts), 0, 64)
-	if currentWrongPinAttemptsCount <= uint64(pin.AllowedPINAttempts) {
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(string("0")))
-		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to reset incorrect PIN attempts ", "key", storedb.DATA_INCORRECT_PIN_ATTEMPTS, "value", pin.AllowedPINAttempts, "error", err)
-			return err
-		}
 	}
 	return nil
 }
@@ -1371,7 +1361,13 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
-	flag_invalid_pin, _ := h.flagManager.GetFlag("flag_invalid_pin")
+
+	pinInput := string(input)
+
+	if !pin.IsValidPIN(pinInput) {
+		res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_allow_update)
+		return res, nil
+	}
 
 	store := h.userdataStore
 	AccountPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
@@ -1379,40 +1375,28 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
 		return res, err
 	}
-	str := string(input)
-	_, err = strconv.Atoi(str)
-	if len(input) == 4 && err == nil {
-		if pin.VerifyPIN(string(AccountPin), string(input)) {
-			if h.st.MatchFlag(flag_account_authorized, false) {
-				res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
-				res.FlagSet = append(res.FlagSet, flag_allow_update, flag_account_authorized)
-				err := h.resetIncorrectPINAttempts(ctx, sessionId)
-				if err != nil {
-					return res, err
-				}
-			} else {
-				res.FlagSet = append(res.FlagSet, flag_allow_update)
-				res.FlagReset = append(res.FlagReset, flag_account_authorized)
-				err := h.resetIncorrectPINAttempts(ctx, sessionId)
-				if err != nil {
-					return res, err
-				}
-			}
-		} else {
-			err = h.incrementIncorrectPINAttempts(ctx, sessionId)
-			if err != nil {
-				return res, err
-			}
-			res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
-			res.FlagReset = append(res.FlagReset, flag_account_authorized)
-			return res, nil
+
+	// verify that the user provided the correct PIN
+	if pin.VerifyPIN(string(AccountPin), pinInput) {
+		// set the required flags for a valid PIN
+		res.FlagSet = append(res.FlagSet, flag_allow_update, flag_account_authorized)
+		res.FlagReset = append(res.FlagReset, flag_incorrect_pin)
+
+		err := h.resetIncorrectPINAttempts(ctx, sessionId)
+		if err != nil {
+			return res, err
 		}
 	} else {
-		if string(input) != "0" {
-			res.FlagSet = append(res.FlagSet, flag_invalid_pin)
+		// set the required flags for an incorrect PIN
+		res.FlagSet = append(res.FlagSet, flag_incorrect_pin)
+		res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_allow_update)
+
+		err = h.incrementIncorrectPINAttempts(ctx, sessionId)
+		if err != nil {
+			return res, err
 		}
-		return res, nil
 	}
+
 	return res, nil
 }
 
@@ -2789,6 +2773,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	// Store all swap_to tokens data
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
+		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
 		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
 		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
 	}
@@ -2818,8 +2803,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 	flag_low_swap_amount, _ := h.flagManager.GetFlag("flag_low_swap_amount")
 
-	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
-	res.FlagReset = append(res.FlagSet, flag_low_swap_amount)
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher, flag_low_swap_amount)
 
 	inputStr := string(input)
 	if inputStr == "0" {
