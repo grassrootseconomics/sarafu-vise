@@ -39,3 +39,6 @@ msgstr "%s salio: %s\n"
 
 msgid "%s is not in %s. Please update your voucher and try again."
 msgstr "%s haipo kwenye %s. Tafadhali badilisha sarafu yako na ujaribu tena."
+
+msgid "Name: %s\nSymbol: %s"
+msgstr "Jina: %s\nSarafu: %s"
