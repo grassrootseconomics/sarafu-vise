@@ -15,5 +15,6 @@ INCMP _ 0
 INCMP quit 99
 LOAD view_pool 80
 RELOAD view_pool
+CATCH api_failure flag_api_call_error 1
 CATCH . flag_incorrect_pool 1
 INCMP view_pool *
