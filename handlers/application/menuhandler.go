@@ -2302,8 +2302,8 @@ func (h *MenuHandlers) ViewPool(ctx context.Context, sym string, input []byte) (
 			res.FlagSet = append(res.FlagSet, flag_api_error)
 			return res, nil
 		}
-		
-		if (poolResp == &dataserviceapi.PoolDetails{}) {
+
+		if len(poolResp.PoolSymbol) == 0 {
 			// If the API does not return the data, set the flag
 			res.FlagSet = append(res.FlagSet, flag_incorrect_pool)
 			return res, nil
