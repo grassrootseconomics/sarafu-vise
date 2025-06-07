@@ -1,0 +1,10 @@
+LOAD reset_incorrect_pin 6
+CATCH _ flag_account_authorized 0
+LOAD set_pool 20
+MAP set_pool
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP ^ 0
+INCMP quit 9
+INCMP ^ *
