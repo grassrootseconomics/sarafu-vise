@@ -2820,25 +2820,27 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	defaultPool := dataserviceapi.PoolDetails{
-		PoolName:            config.DefaultPoolName(),
-		PoolSymbol:          config.DefaultPoolSymbol(),
-		PoolContractAdrress: config.DefaultPoolAddress(),
-		LimiterAddress:      "",
-		VoucherRegistry:     "",
-	}
-
-	activePoolAddress := defaultPool.PoolContractAdrress
-
-	// set the active pool contract address
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, []byte(activePoolAddress))
+	// Get active pool address or fall back to default
+	var activePoolAddress []byte
+	activePoolAddress, err = userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write active PoolContractAdrress entry with", "key", storedb.DATA_ACTIVE_POOL_ADDRESS, "value", activePoolAddress, "error", err)
-		return res, err
+		if db.IsNotFound(err) {
+			defaultPoolAddress := config.DefaultPoolAddress()
+			// store the default as the active pool address
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, []byte(defaultPoolAddress))
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed to write default PoolContractAdrress", "key", storedb.DATA_ACTIVE_POOL_ADDRESS, "value", defaultPoolAddress, "error", err)
+				return res, err
+			}
+			activePoolAddress = []byte(defaultPoolAddress)
+		} else {
+			logg.ErrorCtxf(ctx, "failed to read active PoolContractAdrress", "key", storedb.DATA_ACTIVE_POOL_ADDRESS, "error", err)
+			return res, err
+		}
 	}
 
 	// call the api using the ActivePoolAddress and ActiveVoucherAddress to check if it is part of the pool
-	r, err := h.accountService.CheckTokenInPool(ctx, activePoolAddress, string(activeAddress))
+	r, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
