@@ -1,0 +1,3 @@
+Chagua nambari au ishara kuweka bwawa la sarafu:
+La sasa: {{.get_default_pool}}
+{{.get_pools}}
