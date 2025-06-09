@@ -85,6 +85,10 @@ const (
 	DATA_ACTIVE_SWAP_MAX_AMOUNT
 	// Holds the active swap amount for the swap
 	DATA_ACTIVE_SWAP_AMOUNT
+	// Holds the active pool name for the swap
+	DATA_ACTIVE_POOL_NAME
+	// Holds the active pool symbol for the swap
+	DATA_ACTIVE_POOL_SYM
 )
 
 const (

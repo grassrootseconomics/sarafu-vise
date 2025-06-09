@@ -1,0 +1,3 @@
+Enter number or symbol to set the default pool:
+Current: {{.get_default_pool}}
+{{.get_pools}}
