@@ -31,7 +31,7 @@
                     },
                     {
                         "input": "1234",
-                        "expectedContent": "Your account is being created...Thank you for using Sarafu. Goodbye!"
+                        "expectedContent": "Your account is being created. Thank you for using Sarafu. Goodbye!"
                     }
                 ]
             },
