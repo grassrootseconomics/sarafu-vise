@@ -1,6 +1,6 @@
-LOAD reset_incorrect 0
-RELOAD reset_incorrect
-MAP reset_incorrect
+LOAD reset_incorrect_pin 0
+RELOAD reset_incorrect_pin
+MAP reset_incorrect_pin
 CATCH blocked_account flag_account_blocked 1
 MOUT retry 1
 MOUT quit 9

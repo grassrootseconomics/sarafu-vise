@@ -1,4 +1,4 @@
-RELOAD reset_incorrect
+RELOAD reset_incorrect_pin
 MOUT back 0
 HALT
 INCMP _ 0

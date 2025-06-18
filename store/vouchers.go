@@ -47,6 +47,24 @@ func ProcessVouchers(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 	return data
 }
 
+// ProcessTokens converts swappable tokens into formatted strings
+func ProcessTokens(holdings []dataserviceapi.TokenDetails) VoucherMetadata {
+	var data VoucherMetadata
+	var symbols, decimals, addresses []string
+
+	for i, h := range holdings {
+		symbols = append(symbols, fmt.Sprintf("%d:%s", i+1, h.TokenSymbol))
+		decimals = append(decimals, fmt.Sprintf("%d:%d", i+1, h.TokenDecimals))
+		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.TokenAddress))
+	}
+
+	data.Symbols = strings.Join(symbols, "\n")
+	data.Decimals = strings.Join(decimals, "\n")
+	data.Addresses = strings.Join(addresses, "\n")
+
+	return data
+}
+
 func ScaleDownBalance(balance, decimals string) string {
 	// Convert balance and decimals to big.Float
 	bal := new(big.Float)

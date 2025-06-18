@@ -1,5 +1,4 @@
-LOAD reset_incorrect 6
-CATCH incorrect_pin flag_incorrect_pin 1
+LOAD reset_incorrect_pin 6
 CATCH _ flag_account_authorized 0
 RELOAD get_amount
 MAP get_amount

@@ -1,0 +1,20 @@
+CATCH no_voucher flag_no_active_voucher 1
+LOAD get_pools 0
+MAP get_pools
+LOAD get_default_pool 20
+RELOAD get_default_pool
+MAP get_default_pool
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
+LOAD view_pool 80
+RELOAD view_pool
+CATCH api_failure flag_api_call_error 1
+CATCH . flag_incorrect_pool 1
+INCMP view_pool *

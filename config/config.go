@@ -25,7 +25,7 @@ const (
 	defaultSSHHost  string = "127.0.0.1"
 	defaultSSHPort  uint   = 7122
 	defaultHTTPHost string = "127.0.0.1"
-	defaultHTTPPort uint     = 7123
+	defaultHTTPPort uint   = 7123
 	defaultDomain          = "sarafu.local"
 )
 
@@ -52,7 +52,6 @@ func SearchDomains() []string {
 	return ParsedDomains
 }
 
-
 func Language() string {
 	return viseconfig.DefaultLanguage
 }
@@ -75,4 +74,16 @@ func PortSSH() uint {
 
 func ATEndpoint() string {
 	return env.GetEnv("AT_ENDPOINT", "/")
+}
+
+func DefaultPoolAddress() string {
+	return env.GetEnv("DEFAULT_POOL_CONTRACT_ADDRESS", "")
+}
+
+func DefaultPoolName() string {
+	return env.GetEnv("DEFAULT_POOL_NAME", "")
+}
+
+func DefaultPoolSymbol() string {
+	return env.GetEnv("DEFAULT_POOL_SYMBOL", "")
 }

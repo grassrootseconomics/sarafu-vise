@@ -1,1 +1,1 @@
-Incorrect PIN. You have: {{.reset_incorrect}} remaining attempt(s).
+Incorrect PIN. You have: {{.reset_incorrect_pin}} remaining attempt(s).
