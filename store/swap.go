@@ -176,7 +176,7 @@ func GetSwapToVoucherData(ctx context.Context, store DataStore, sessionId string
 
 // UpdateSwapToVoucherData updates the active swap to voucher data in the DataStore.
 func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenDetails) error {
-	logg.TraceCtxf(ctx, "UpdateSwapToVoucherData", "data", data)
+	logg.InfoCtxf(ctx, "UpdateSwapToVoucherData", "data", data)
 
 	// Convert TokenDecimals (uint8) to string
 	tokenDecimalsStr := strconv.FormatUint(uint64(data.TokenDecimals), 10)
