@@ -2265,8 +2265,8 @@ func (h *MenuHandlers) GetDefaultPool(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read the activePoolSym entry with", "key", storedb.DATA_ACTIVE_POOL_SYM, "error", err)
 		return res, err
 	}
-	
-	res.Content = string(activePoolSym) 
+
+	res.Content = string(activePoolSym)
 
 	return res, nil
 }
@@ -2943,6 +2943,8 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
 		return res, nil
 	}
+
+	logg.InfoCtxf(ctx, "Metadata from GetSwapToVoucherData:", "metadata", metadata)
 
 	// Store the active swap_to data
 	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, metadata); err != nil {
