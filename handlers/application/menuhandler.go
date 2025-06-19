@@ -2820,7 +2820,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	// Get active pool address or fall back to default
+	// Get active pool address and symbol or fall back to default
 	var activePoolAddress []byte
 	activePoolAddress, err = userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
 	if err != nil {
@@ -2839,6 +2839,24 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		}
 	}
 
+	var activePoolSymbol []byte
+	activePoolSymbol, err = userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_SYM)
+	if err != nil {
+		if db.IsNotFound(err) {
+			defaultPoolSym := config.DefaultPoolName()
+			// store the default as the active pool symbol
+			err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_SYM, []byte(defaultPoolSym))
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed to write default Pool Symbol", "key", storedb.DATA_ACTIVE_POOL_SYM, "value", defaultPoolSym, "error", err)
+				return res, err
+			}
+			activePoolSymbol = []byte(defaultPoolSym)
+		} else {
+			logg.ErrorCtxf(ctx, "failed to read active Pool symbol", "key", storedb.DATA_ACTIVE_POOL_SYM, "error", err)
+			return res, err
+		}
+	}
+
 	// call the api using the ActivePoolAddress and ActiveVoucherAddress to check if it is part of the pool
 	r, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
 	if err != nil {
@@ -2847,14 +2865,14 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, err
 	}
 
-	logg.InfoCtxf(ctx, "CheckTokenInPool", "response", r, "active_pool_address", activePoolAddress, "address", activeAddress)
+	logg.InfoCtxf(ctx, "CheckTokenInPool", "response", r, "active_pool_address", string(activePoolAddress), "active_symbol_address", string(activeAddress))
 
 	if !r.CanSwapFrom {
 		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
 		res.Content = l.Get(
 			"%s is not in %s. Please update your voucher and try again.",
 			activeSym,
-			config.DefaultPoolName(),
+			activePoolSymbol,
 		)
 		return res, nil
 	}
@@ -2938,10 +2956,11 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	}
 
 	// call the api using the ActivePoolAddress, ActiveSwapFromAddress, ActiveSwapToAddress and PublicKey to get the swap max limit
+	logg.InfoCtxf(ctx, "Call GetSwapFromTokenMaxLimit with:", "ActivePoolAddress", swapData.ActivePoolAddress, "ActiveSwapFromAddress", swapData.ActiveSwapFromAddress, "ActiveSwapToAddress", swapData.ActiveSwapToAddress, "publicKey", swapData.PublicKey)
 	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, swapData.PublicKey)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
-		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
 		return res, err
 	}
 

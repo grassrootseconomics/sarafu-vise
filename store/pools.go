@@ -123,7 +123,7 @@ func GetTemporaryPoolData(ctx context.Context, store DataStore, sessionId string
 
 // UpdatePoolData updates the active pool data in the DataStore.
 func UpdatePoolData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.PoolDetails) error {
-	logg.TraceCtxf(ctx, "dtal", "data", data)
+	logg.InfoCtxf(ctx, "UpdatePoolData", "data", data)
 	// Active pool data entry
 	activeEntries := map[storedb.DataTyp][]byte{
 		storedb.DATA_ACTIVE_POOL_NAME:     []byte(data.PoolName),
