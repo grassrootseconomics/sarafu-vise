@@ -2887,12 +2887,16 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, err
 	}
 
+	logg.InfoCtxf(ctx, "GetPoolSwappableVouchers", "swapToList", swapToList)
+
 	// Return if there are no vouchers
 	if len(swapToList) == 0 {
 		return res, nil
 	}
 
 	data := store.ProcessTokens(swapToList)
+
+	logg.InfoCtxf(ctx, "ProcessTokens", "data", data)
 
 	// Store all swap_to tokens data
 	dataMap := map[storedb.DataTyp]string{
