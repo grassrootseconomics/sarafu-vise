@@ -11,7 +11,7 @@
                     },
                     {
                         "input": "1",
-                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/pages/terms-and-conditions\n\n1:Yes\n2:No"
+                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/tos\n\n1:Yes\n2:No"
                     },
                     {
                         "input": "1",
@@ -31,7 +31,7 @@
                     },
                     {
                         "input": "1234",
-                        "expectedContent": "Your account is being created...Thank you for using Sarafu. Goodbye!"
+                        "expectedContent": "Your account is being created. Thank you for using Sarafu. Goodbye!"
                     }
                 ]
             },
@@ -44,7 +44,7 @@
                     },
                     {
                         "input": "1",
-                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/pages/terms-and-conditions\n\n1:Yes\n2:No"
+                        "expectedContent": "Do you agree to terms and conditions?\nhttps://grassecon.org/tos\n\n1:Yes\n2:No"
                     },
                     {
                         "input": "2",
