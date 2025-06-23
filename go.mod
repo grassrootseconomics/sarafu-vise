@@ -5,12 +5,13 @@ go 1.23.4
 require (
 	git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66
 	git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e
-	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250606194235-b5ccaea57560
+	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250623063234-c1797e7a32b5
 	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306
 	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/grassrootseconomics/ussd-data-service v1.4.7-beta
+	github.com/grassrootseconomics/ethutils v1.3.1
+	github.com/grassrootseconomics/ussd-data-service v1.5.0-beta
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.9.0
@@ -40,7 +41,6 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grassrootseconomics/eth-custodial v1.3.0-beta // indirect
-	github.com/grassrootseconomics/ethutils v1.3.1 // indirect
 	github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect

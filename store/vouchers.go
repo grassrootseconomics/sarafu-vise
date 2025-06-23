@@ -48,14 +48,14 @@ func ProcessVouchers(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 }
 
 // ProcessTokens converts swappable tokens into formatted strings
-func ProcessTokens(holdings []dataserviceapi.TokenDetails) VoucherMetadata {
+func ProcessTokens(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 	var data VoucherMetadata
 	var symbols, decimals, addresses []string
 
 	for i, h := range holdings {
 		symbols = append(symbols, fmt.Sprintf("%d:%s", i+1, h.TokenSymbol))
 		decimals = append(decimals, fmt.Sprintf("%d:%d", i+1, h.TokenDecimals))
-		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.TokenAddress))
+		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.ContractAddress))
 	}
 
 	data.Symbols = strings.Join(symbols, "\n")
