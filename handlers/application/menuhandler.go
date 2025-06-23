@@ -1082,6 +1082,7 @@ func (h *MenuHandlers) GetCurrentProfileInfo(ctx context.Context, sym string, in
 	parts := strings.SplitN(sm, "_", 2)
 	filename := parts[1]
 	dbKeyStr := "DATA_" + strings.ToUpper(filename)
+	logg.InfoCtxf(ctx, "GetCurrentProfileInfo", "filename", filename, "dbKeyStr:", dbKeyStr)
 	dbKey, err := storedb.StringToDataTyp(dbKeyStr)
 
 	if err != nil {
