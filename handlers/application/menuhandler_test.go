@@ -2107,10 +2107,10 @@ func TestManageVouchers(t *testing.T) {
 			name: "Set default voucher when no active voucher is set",
 			vouchersResp: []dataserviceapi.TokenHoldings{
 				{
-					ContractAddress: "0x123",
-					TokenSymbol:     "TOKEN1",
-					TokenDecimals:   "18",
-					Balance:         "100",
+					TokenAddress:  "0x123",
+					TokenSymbol:   "TOKEN1",
+					TokenDecimals: "18",
+					Balance:       "100",
 				},
 			},
 			expectedVoucherSymbols: []byte("1:TOKEN1"),
@@ -2122,8 +2122,8 @@ func TestManageVouchers(t *testing.T) {
 		{
 			name: "Check and update active voucher balance",
 			vouchersResp: []dataserviceapi.TokenHoldings{
-				{ContractAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100"},
-				{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
+				{TokenAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100"},
+				{TokenAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200"},
 			},
 			storedActiveVoucher:    "SRF",
 			expectedVoucherSymbols: []byte("1:SRF\n2:MILO"),
@@ -2255,13 +2255,13 @@ func TestSetVoucher(t *testing.T) {
 
 	// Define the temporary voucher data
 	tempData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "SRF",
-		Balance:         "200",
-		TokenDecimals:   "6",
-		ContractAddress: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
+		TokenSymbol:   "SRF",
+		Balance:       "200",
+		TokenDecimals: "6",
+		TokenAddress:  "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 	}
 
-	expectedData := fmt.Sprintf("%s,%s,%s,%s", tempData.TokenSymbol, tempData.Balance, tempData.TokenDecimals, tempData.ContractAddress)
+	expectedData := fmt.Sprintf("%s,%s,%s,%s", tempData.TokenSymbol, tempData.Balance, tempData.TokenDecimals, tempData.TokenAddress)
 
 	// store the expectedData
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(expectedData)); err != nil {
@@ -2529,11 +2529,11 @@ func TestCheckTransactions(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
 		},
 	}
@@ -2585,11 +2585,11 @@ func TestGetTransactionsList(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 	}
@@ -2654,11 +2654,11 @@ func TestViewTransactionStatement(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", TokenAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 	}

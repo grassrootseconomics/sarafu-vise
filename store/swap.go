@@ -125,10 +125,10 @@ func GetSwapFromVoucherData(ctx context.Context, store DataStore, sessionId stri
 	}
 
 	return &dataserviceapi.TokenHoldings{
-		TokenSymbol:     string(symbol),
-		Balance:         string(balance),
-		TokenDecimals:   string(decimal),
-		ContractAddress: string(address),
+		TokenSymbol:   string(symbol),
+		Balance:       string(balance),
+		TokenDecimals: string(decimal),
+		TokenAddress:  string(address),
 	}, nil
 }
 

@@ -2044,7 +2044,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 			defaultSym := firstVoucher.TokenSymbol
 			defaultBal := firstVoucher.Balance
 			defaultDec := firstVoucher.TokenDecimals
-			defaultAddr := firstVoucher.ContractAddress
+			defaultAddr := firstVoucher.TokenAddress
 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)

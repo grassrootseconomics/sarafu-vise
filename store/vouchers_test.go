@@ -59,8 +59,8 @@ func TestMatchVoucher(t *testing.T) {
 
 func TestProcessVouchers(t *testing.T) {
 	holdings := []dataserviceapi.TokenHoldings{
-		{ContractAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100000000"},
-		{ContractAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200000000"},
+		{TokenAddress: "0xd4c288865Ce", TokenSymbol: "SRF", TokenDecimals: "6", Balance: "100000000"},
+		{TokenAddress: "0x41c188d63Qa", TokenSymbol: "MILO", TokenDecimals: "4", Balance: "200000000"},
 	}
 
 	expectedResult := VoucherMetadata{
@@ -101,7 +101,7 @@ func TestGetVoucherData(t *testing.T) {
 	assert.Equal(t, "SRF", result.TokenSymbol)
 	assert.Equal(t, "100", result.Balance)
 	assert.Equal(t, "6", result.TokenDecimals)
-	assert.Equal(t, "0xd4c288865Ce", result.ContractAddress)
+	assert.Equal(t, "0xd4c288865Ce", result.TokenAddress)
 }
 
 func TestStoreTemporaryVoucher(t *testing.T) {
@@ -110,10 +110,10 @@ func TestStoreTemporaryVoucher(t *testing.T) {
 
 	// Test data
 	voucherData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "SRF",
-		Balance:         "200",
-		TokenDecimals:   "6",
-		ContractAddress: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
+		TokenSymbol:   "SRF",
+		Balance:       "200",
+		TokenDecimals: "6",
+		TokenAddress:  "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 	}
 
 	// Execute the function being tested
@@ -134,10 +134,10 @@ func TestGetTemporaryVoucherData(t *testing.T) {
 
 	// Test voucher data
 	tempData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "SRF",
-		Balance:         "200",
-		TokenDecimals:   "6",
-		ContractAddress: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
+		TokenSymbol:   "SRF",
+		Balance:       "200",
+		TokenDecimals: "6",
+		TokenAddress:  "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 	}
 
 	// Store the data
@@ -156,18 +156,18 @@ func TestUpdateVoucherData(t *testing.T) {
 
 	// New voucher data
 	newData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "SRF",
-		Balance:         "200",
-		TokenDecimals:   "6",
-		ContractAddress: "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
+		TokenSymbol:   "SRF",
+		Balance:       "200",
+		TokenDecimals: "6",
+		TokenAddress:  "0xd4c288865Ce0985a481Eef3be02443dF5E2e4Ea9",
 	}
 
 	// Old temporary data
 	tempData := &dataserviceapi.TokenHoldings{
-		TokenSymbol:     "OLD",
-		Balance:         "100",
-		TokenDecimals:   "8",
-		ContractAddress: "0xold",
+		TokenSymbol:   "OLD",
+		Balance:       "100",
+		TokenDecimals: "8",
+		TokenAddress:  "0xold",
 	}
 	require.NoError(t, StoreTemporaryVoucher(ctx, store, sessionId, tempData))
 
@@ -180,7 +180,7 @@ func TestUpdateVoucherData(t *testing.T) {
 		storedb.DATA_ACTIVE_SYM:     []byte(newData.TokenSymbol),
 		storedb.DATA_ACTIVE_BAL:     []byte(newData.Balance),
 		storedb.DATA_ACTIVE_DECIMAL: []byte(newData.TokenDecimals),
-		storedb.DATA_ACTIVE_ADDRESS: []byte(newData.ContractAddress),
+		storedb.DATA_ACTIVE_ADDRESS: []byte(newData.TokenAddress),
 	}
 
 	for key, expectedValue := range activeEntries {

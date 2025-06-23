@@ -36,7 +36,7 @@ func ProcessVouchers(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 
 		balances = append(balances, fmt.Sprintf("%d:%s", i+1, scaledBalance))
 		decimals = append(decimals, fmt.Sprintf("%d:%s", i+1, h.TokenDecimals))
-		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.ContractAddress))
+		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.TokenAddress))
 	}
 
 	data.Symbols = strings.Join(symbols, "\n")
@@ -55,7 +55,7 @@ func ProcessTokens(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 	for i, h := range holdings {
 		symbols = append(symbols, fmt.Sprintf("%d:%s", i+1, h.TokenSymbol))
 		decimals = append(decimals, fmt.Sprintf("%d:%d", i+1, h.TokenDecimals))
-		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.ContractAddress))
+		addresses = append(addresses, fmt.Sprintf("%d:%s", i+1, h.TokenAddress))
 	}
 
 	data.Symbols = strings.Join(symbols, "\n")
@@ -115,10 +115,10 @@ func GetVoucherData(ctx context.Context, store DataStore, sessionId string, inpu
 	}
 
 	return &dataserviceapi.TokenHoldings{
-		TokenSymbol:     string(symbol),
-		Balance:         string(balance),
-		TokenDecimals:   string(decimal),
-		ContractAddress: string(address),
+		TokenSymbol:   string(symbol),
+		Balance:       string(balance),
+		TokenDecimals: string(decimal),
+		TokenAddress:  string(address),
 	}, nil
 }
 
@@ -152,7 +152,7 @@ func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol,
 
 // StoreTemporaryVoucher saves voucher metadata as temporary entries in the DataStore.
 func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
-	tempData := fmt.Sprintf("%s,%s,%s,%s", data.TokenSymbol, data.Balance, data.TokenDecimals, data.ContractAddress)
+	tempData := fmt.Sprintf("%s,%s,%s,%s", data.TokenSymbol, data.Balance, data.TokenDecimals, data.TokenAddress)
 
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tempData)); err != nil {
 		return err
@@ -175,7 +175,7 @@ func GetTemporaryVoucherData(ctx context.Context, store DataStore, sessionId str
 	data.TokenSymbol = values[0]
 	data.Balance = values[1]
 	data.TokenDecimals = values[2]
-	data.ContractAddress = values[3]
+	data.TokenAddress = values[3]
 
 	return data, nil
 }
@@ -188,7 +188,7 @@ func UpdateVoucherData(ctx context.Context, store DataStore, sessionId string, d
 		storedb.DATA_ACTIVE_SYM:     []byte(data.TokenSymbol),
 		storedb.DATA_ACTIVE_BAL:     []byte(data.Balance),
 		storedb.DATA_ACTIVE_DECIMAL: []byte(data.TokenDecimals),
-		storedb.DATA_ACTIVE_ADDRESS: []byte(data.ContractAddress),
+		storedb.DATA_ACTIVE_ADDRESS: []byte(data.TokenAddress),
 	}
 
 	// Write active data

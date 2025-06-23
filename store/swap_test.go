@@ -114,7 +114,7 @@ func TestGetSwapFromVoucherData(t *testing.T) {
 	assert.Equal(t, "AMANI", result.TokenSymbol)
 	assert.Equal(t, "", result.Balance)
 	assert.Equal(t, "6", result.TokenDecimals)
-	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe", result.ContractAddress)
+	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe", result.TokenAddress)
 }
 
 func TestGetSwapToVoucherData(t *testing.T) {
@@ -142,5 +142,5 @@ func TestGetSwapToVoucherData(t *testing.T) {
 	assert.Equal(t, "cUSD", result.TokenSymbol)
 	assert.Equal(t, "", result.Balance)
 	assert.Equal(t, "6", result.TokenDecimals)
-	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621", result.ContractAddress)
+	assert.Equal(t, "0xc7B78Ac9ACB9E025C8234621", result.TokenAddress)
 }
