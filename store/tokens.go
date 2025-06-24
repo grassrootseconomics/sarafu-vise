@@ -38,11 +38,8 @@ func ParseAndScaleAmount(storedAmount, activeDecimal string) (string, error) {
 	multiplier := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tokenDecimal)), nil))
 	finalAmount := new(big.Float).Mul(amount, multiplier)
 
-	// Convert finalAmount to a string
-	finalAmountStr := new(big.Int)
-	finalAmount.Int(finalAmountStr)
-
-	return finalAmountStr.String(), nil
+	// Return finalAmount as a string with 0 decimal places (rounded)
+	return finalAmount.Text('f', 0), nil
 }
 
 func ReadTransactionData(ctx context.Context, store DataStore, sessionId string) (TransactionData, error) {
