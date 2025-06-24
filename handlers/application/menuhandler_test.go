@@ -1678,6 +1678,14 @@ func TestValidateAmount(t *testing.T) {
 				Content: "0.02ms",
 			},
 		},
+		{
+			name:      "Test with valid decimal amount",
+			input:     []byte("0.149"),
+			activeBal: []byte("5"),
+			expectedResult: resource.Result{
+				Content: "0.14",
+			},
+		},
 	}
 
 	for _, tt := range tests {
