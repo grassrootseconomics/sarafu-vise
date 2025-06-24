@@ -1861,8 +1861,11 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	// Format the amount with 2 decimal places before saving
-	formattedAmount := fmt.Sprintf("%.2f", inputAmount)
+	// Format the amount to 2 decimal places before saving (truncated)
+	cents := int((inputAmount + 1e-9) * 100)
+	truncated := float64(cents) / 100
+	formattedAmount := fmt.Sprintf("%.2f", truncated)
+
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(formattedAmount))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write amount entry with", "key", storedb.DATA_AMOUNT, "value", formattedAmount, "error", err)
