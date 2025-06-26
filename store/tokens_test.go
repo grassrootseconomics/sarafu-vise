@@ -64,6 +64,20 @@ func TestParseAndScaleAmount(t *testing.T) {
 			want:        "0",
 			expectError: false,
 		},
+		{
+			name:        "high decimals",
+			amount:      "1.85",
+			decimals:    "18",
+			want:        "1850000000000000000",
+			expectError: false,
+		},
+		{
+			name:        "6 d.p",
+			amount:      "2.32",
+			decimals:    "6",
+			want:        "2320000",
+			expectError: false,
+		},
 	}
 
 	for _, tt := range tests {
