@@ -2561,52 +2561,6 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 	return h.persistInitialLanguageCode(ctx, sessionId, code)
 }
 
-// constructAccountAlias retrieves and alias based on the first and family name
-// and writes the result in DATA_ACCOUNT_ALIAS
-func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
-	var alias string
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return fmt.Errorf("missing session")
-	}
-	firstName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	familyName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
-	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", aliasInput, "error_alias_request", err)
-		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
-	}
-	alias = aliasResult.Alias
-	//Store the alias
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_ACCOUNT_ALIAS, "value", alias, "error", err)
-		return err
-	}
-	return nil
-}
-
 // RequestCustomAlias requests an ENS based alias name based on a user's input,then saves it as temporary value
 func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
