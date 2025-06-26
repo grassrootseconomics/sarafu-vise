@@ -7,6 +7,109 @@ import (
 	"github.com/alecthomas/assert/v2"
 )
 
+func TestTruncateDecimalString(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		decimalPlaces int
+		want          string
+		expectError   bool
+	}{
+		{
+			name:          "whole number",
+			input:         "4",
+			decimalPlaces: 2,
+			want:          "4.00",
+			expectError:   false,
+		},
+		{
+			name:          "single decimal",
+			input:         "4.1",
+			decimalPlaces: 2,
+			want:          "4.10",
+			expectError:   false,
+		},
+		{
+			name:          "one decimal place",
+			input:         "4.19",
+			decimalPlaces: 1,
+			want:          "4.1",
+			expectError:   false,
+		},
+		{
+			name:          "truncates to 2 dp",
+			input:         "0.149",
+			decimalPlaces: 2,
+			want:          "0.14",
+			expectError:   false,
+		},
+		{
+			name:          "does not round",
+			input:         "1.8599999999",
+			decimalPlaces: 2,
+			want:          "1.85",
+			expectError:   false,
+		},
+		{
+			name:          "high precision input",
+			input:         "123.456789",
+			decimalPlaces: 4,
+			want:          "123.4567",
+			expectError:   false,
+		},
+		{
+			name:          "zero",
+			input:         "0",
+			decimalPlaces: 2,
+			want:          "0.00",
+			expectError:   false,
+		},
+		{
+			name:          "invalid input string",
+			input:         "abc",
+			decimalPlaces: 2,
+			want:          "",
+			expectError:   true,
+		},
+		{
+			name:          "edge rounding case",
+			input:         "4.99999999",
+			decimalPlaces: 2,
+			want:          "4.99",
+			expectError:   false,
+		},
+		{
+			name:          "small value",
+			input:         "0.0001",
+			decimalPlaces: 2,
+			want:          "0.00",
+			expectError:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := TruncateDecimalString(tt.input, tt.decimalPlaces)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("TruncateDecimalString(%q, %d) expected error, got nil", tt.input, tt.decimalPlaces)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("TruncateDecimalString(%q, %d) unexpected error: %v", tt.input, tt.decimalPlaces, err)
+				return
+			}
+
+			if got != tt.want {
+				t.Errorf("TruncateDecimalString(%q, %d) = %q, want %q", tt.input, tt.decimalPlaces, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestParseAndScaleAmount(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -62,6 +165,20 @@ func TestParseAndScaleAmount(t *testing.T) {
 			amount:      "0",
 			decimals:    "2",
 			want:        "0",
+			expectError: false,
+		},
+		{
+			name:        "high decimals",
+			amount:      "1.85",
+			decimals:    "18",
+			want:        "1850000000000000000",
+			expectError: false,
+		},
+		{
+			name:        "6 d.p",
+			amount:      "2.32",
+			decimals:    "6",
+			want:        "2320000",
 			expectError: false,
 		},
 	}

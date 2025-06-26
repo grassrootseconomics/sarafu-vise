@@ -1678,6 +1678,22 @@ func TestValidateAmount(t *testing.T) {
 				Content: "0.02ms",
 			},
 		},
+		{
+			name:      "Test with valid decimal amount",
+			input:     []byte("0.149"),
+			activeBal: []byte("5"),
+			expectedResult: resource.Result{
+				Content: "0.14",
+			},
+		},
+		{
+			name:      "Test with valid large decimal amount",
+			input:     []byte("1.8599999999"),
+			activeBal: []byte("5"),
+			expectedResult: resource.Result{
+				Content: "1.85",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2529,11 +2545,11 @@ func TestCheckTransactions(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "100", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "200", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: time.Now(), TokenSymbol: "SRF", TokenDecimals: "6",
 		},
 	}
@@ -2585,11 +2601,11 @@ func TestGetTransactionsList(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 	}
@@ -2654,11 +2670,11 @@ func TestViewTransactionStatement(t *testing.T) {
 
 	mockTXResponse := []dataserviceapi.Last10TxResponse{
 		{
-			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0X13242618721", Recipient: "0x41c188d63Qa", TransferValue: "1000", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0x123wefsf34rf", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 		{
-			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", TokenAddress: "0X1324262343rfdGW23",
+			Sender: "0x41c188d63Qa", Recipient: "0X13242618721", TransferValue: "2000", ContractAddress: "0X1324262343rfdGW23",
 			TxHash: "0xq34wresfdb44", DateBlock: dateBlock, TokenSymbol: "SRF", TokenDecimals: "2",
 		},
 	}

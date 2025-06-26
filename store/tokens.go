@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -18,6 +19,27 @@ type TransactionData struct {
 	Recipient      string
 	ActiveDecimal  string
 	ActiveAddress  string
+}
+
+// TruncateDecimalString safely truncates the input amount to the specified decimal places
+func TruncateDecimalString(input string, decimalPlaces int) (string, error) {
+	num, ok := new(big.Float).SetString(input)
+	if !ok {
+		return "", fmt.Errorf("invalid input")
+	}
+
+	// Multiply by 10^decimalPlaces
+	scale := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimalPlaces)), nil))
+	scaled := new(big.Float).Mul(num, scale)
+
+	// Truncate by converting to int (chops off decimals)
+	intPart, _ := scaled.Int(nil)
+
+	// Divide back to get truncated float
+	truncated := new(big.Float).Quo(new(big.Float).SetInt(intPart), scale)
+
+	// Format with fixed decimals
+	return truncated.Text('f', decimalPlaces), nil
 }
 
 func ParseAndScaleAmount(storedAmount, activeDecimal string) (string, error) {
@@ -38,11 +60,8 @@ func ParseAndScaleAmount(storedAmount, activeDecimal string) (string, error) {
 	multiplier := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(tokenDecimal)), nil))
 	finalAmount := new(big.Float).Mul(amount, multiplier)
 
-	// Convert finalAmount to a string
-	finalAmountStr := new(big.Int)
-	finalAmount.Int(finalAmountStr)
-
-	return finalAmountStr.String(), nil
+	// Return finalAmount as a string with 0 decimal places (rounded)
+	return finalAmount.Text('f', 0), nil
 }
 
 func ReadTransactionData(ctx context.Context, store DataStore, sessionId string) (TransactionData, error) {
