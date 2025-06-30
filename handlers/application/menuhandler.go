@@ -2630,6 +2630,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			logg.InfoCtxf(ctx, "Suggested alias", "alias", alias)
 		}
 		//Store the returned alias,wait for user to confirm it as new account alias
+		logg.InfoCtxf(ctx, "Final suggested alias", "alias", alias)
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
 		if err != nil {
 			logg.ErrorCtxf(ctx, "failed to write suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "value", alias, "error", err)
@@ -2660,7 +2661,8 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 		return res, fmt.Errorf("missing session")
 	}
 	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
-	if err != nil {
+	if err != nil && len(suggestedAlias) <= 0 {
+		logg.ErrorCtxf(ctx, "failed to read suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "error", err)
 		return res, nil
 	}
 	res.Content = string(suggestedAlias)
