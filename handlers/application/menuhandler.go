@@ -2605,6 +2605,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		// Check if an alias already exists
 		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
 		if err == nil && len(existingAlias) > 0 {
+			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
 			// Update existing alias
 			aliasResult, err := h.accountService.UpdateAlias(ctx, sanitizedInput, string(pubKey))
 			if err != nil {
@@ -2615,6 +2616,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			alias := aliasResult.Alias
 			logg.InfoCtxf(ctx, "Updated alias", "alias", alias)
 		} else {
+			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
 			// Register a new alias
 			aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
 			if err != nil {
