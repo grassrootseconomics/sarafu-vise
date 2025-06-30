@@ -2603,7 +2603,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
 		// Check if an alias already exists
-		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
+		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
 		if err == nil && len(existingAlias) > 0 {
 			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
 			// Update existing alias
