@@ -2613,7 +2613,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 				logg.ErrorCtxf(ctx, "failed to update alias", "alias", sanitizedInput, "error", err)
 				return res, nil
 			}
-			alias := aliasResult.Alias
+			alias = aliasResult.Alias
 			logg.InfoCtxf(ctx, "Updated alias", "alias", alias)
 		} else {
 			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
@@ -2626,7 +2626,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			}
 			res.FlagReset = append(res.FlagReset, flag_api_error)
 
-			alias := aliasResult.Alias
+			alias = aliasResult.Alias
 			logg.InfoCtxf(ctx, "Suggested alias", "alias", alias)
 		}
 		//Store the returned alias,wait for user to confirm it as new account alias
