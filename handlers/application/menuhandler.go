@@ -1830,12 +1830,12 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
-	store := h.userdataStore
+	userStore := h.userdataStore
 
 	var balanceValue float64
 
 	// retrieve the active balance
-	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
+	activeBal, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
@@ -1861,9 +1861,15 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	// Format the amount with 2 decimal places before saving
-	formattedAmount := fmt.Sprintf("%.2f", inputAmount)
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(formattedAmount))
+	// Format the amount to 2 decimal places before saving (truncated)
+	formattedAmount, err := store.TruncateDecimalString(amountStr, 2)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = amountStr
+		return res, nil
+	}
+
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(formattedAmount))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write amount entry with", "key", storedb.DATA_AMOUNT, "value", formattedAmount, "error", err)
 		return res, err
@@ -3000,7 +3006,15 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(inputStr, swapData.ActiveSwapFromDecimal)
+	// Format the amount to 2 decimal places
+	formattedAmount, err := store.TruncateDecimalString(inputStr, 2)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapFromDecimal)
 	if err != nil {
 		return res, err
 	}
