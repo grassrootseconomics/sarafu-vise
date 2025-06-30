@@ -2595,7 +2595,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		if err != nil {
 			return res, err
 		}
-		pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+		publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 		if err != nil {
 			if db.IsNotFound(err) {
 				return res, nil
@@ -2607,7 +2607,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		if err == nil && len(existingAlias) > 0 {
 			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
 			// Update existing alias
-			aliasResult, err := h.accountService.UpdateAlias(ctx, sanitizedInput, string(pubKey))
+			aliasResult, err := h.accountService.UpdateAlias(ctx, sanitizedInput, string(publicKey))
 			if err != nil {
 				res.FlagSet = append(res.FlagSet, flag_api_error)
 				logg.ErrorCtxf(ctx, "failed to update alias", "alias", sanitizedInput, "error", err)
@@ -2618,7 +2618,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		} else {
 			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
 			// Register a new alias
-			aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
+			aliasResult, err := h.accountService.RequestAlias(ctx, string(publicKey), sanitizedInput)
 			if err != nil {
 				res.FlagSet = append(res.FlagSet, flag_api_error)
 				logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", sanitizedInput, "error_alias_request", err)
