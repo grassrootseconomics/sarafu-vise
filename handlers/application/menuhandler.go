@@ -2575,55 +2575,10 @@ func (h *MenuHandlers) persistLanguageCode(ctx context.Context, code string) err
 	return h.persistInitialLanguageCode(ctx, sessionId, code)
 }
 
-// constructAccountAlias retrieves and alias based on the first and family name
-// and writes the result in DATA_ACCOUNT_ALIAS
-func (h *MenuHandlers) constructAccountAlias(ctx context.Context) error {
-	var alias string
-	store := h.userdataStore
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return fmt.Errorf("missing session")
-	}
-	firstName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FIRST_NAME)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	familyName, err := store.ReadEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
-	if err != nil {
-		if db.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	aliasInput := fmt.Sprintf("%s%s", firstName, familyName)
-	aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), aliasInput)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", aliasInput, "error_alias_request", err)
-		return fmt.Errorf("Failed to retrieve alias: %s", err.Error())
-	}
-	alias = aliasResult.Alias
-	//Store the alias
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_ACCOUNT_ALIAS, "value", alias, "error", err)
-		return err
-	}
-	return nil
-}
-
 // RequestCustomAlias requests an ENS based alias name based on a user's input,then saves it as temporary value
 func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
+	var alias string
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
@@ -2648,28 +2603,45 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		if err != nil {
 			return res, err
 		}
-		pubKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+		publicKey, err := store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 		if err != nil {
 			if db.IsNotFound(err) {
 				return res, nil
 			}
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
-		aliasResult, err := h.accountService.RequestAlias(ctx, string(pubKey), sanitizedInput)
-		if err != nil {
-			res.FlagSet = append(res.FlagSet, flag_api_error)
-			logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", string(aliasHint), "error_alias_request", err)
-			return res, nil
+		// Check if an alias already exists
+		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
+		if err == nil && len(existingAlias) > 0 {
+			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
+			// Update existing alias
+			aliasResult, err := h.accountService.UpdateAlias(ctx, sanitizedInput, string(publicKey))
+			if err != nil {
+				res.FlagSet = append(res.FlagSet, flag_api_error)
+				logg.ErrorCtxf(ctx, "failed to update alias", "alias", sanitizedInput, "error", err)
+				return res, nil
+			}
+			alias = aliasResult.Alias
+			logg.InfoCtxf(ctx, "Updated alias", "alias", alias)
+		} else {
+			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
+			// Register a new alias
+			aliasResult, err := h.accountService.RequestAlias(ctx, string(publicKey), sanitizedInput)
+			if err != nil {
+				res.FlagSet = append(res.FlagSet, flag_api_error)
+				logg.ErrorCtxf(ctx, "failed to retrieve alias", "alias", sanitizedInput, "error_alias_request", err)
+				return res, nil
+			}
+			res.FlagReset = append(res.FlagReset, flag_api_error)
+
+			alias = aliasResult.Alias
+			logg.InfoCtxf(ctx, "Suggested alias", "alias", alias)
 		}
-		res.FlagReset = append(res.FlagReset, flag_api_error)
-
-		alias := aliasResult.Alias
-		logg.InfoCtxf(ctx, "Suggested alias ", "alias", alias)
-
 		//Store the returned alias,wait for user to confirm it as new account alias
+		logg.InfoCtxf(ctx, "Final suggested alias", "alias", alias)
 		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_TEMPORARY_VALUE, "value", alias, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "value", alias, "error", err)
 			return res, err
 		}
 	}
@@ -2697,7 +2669,8 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 		return res, fmt.Errorf("missing session")
 	}
 	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
-	if err != nil {
+	if err != nil && len(suggestedAlias) <= 0 {
+		logg.ErrorCtxf(ctx, "failed to read suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "error", err)
 		return res, nil
 	}
 	res.Content = string(suggestedAlias)
