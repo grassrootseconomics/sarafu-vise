@@ -2208,20 +2208,25 @@ func TestGetVoucherList(t *testing.T) {
 		ReplaceSeparatorFunc: mockReplaceSeparator,
 	}
 
-	mockSyms := []byte("1:SRF\n2:MILO")
+	mockSymbols := []byte("1:SRF\n2:MILO")
+	mockBalances := []byte("1:10.099999\n2:40.7")
 
-	// Put voucher sym data from the store
-	err := store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS, mockSyms)
+	// Put voucher symnols and balances data to the store
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS, mockSymbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_BALANCES, mockBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expectedSyms := []byte("1: SRF\n2: MILO")
+	expectedList := []byte("1: SRF 10.09\n2: MILO 40.70")
 
 	res, err := h.GetVoucherList(ctx, "", []byte(""))
 
 	assert.NoError(t, err)
-	assert.Equal(t, res.Content, string(expectedSyms))
+	assert.Equal(t, res.Content, string(expectedList))
 }
 
 func TestViewVoucher(t *testing.T) {

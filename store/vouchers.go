@@ -182,3 +182,30 @@ func UpdateVoucherData(ctx context.Context, store DataStore, sessionId string, d
 
 	return nil
 }
+
+// FormatVoucherList combines the voucher symbols with their balances (SRF 0.11)
+func FormatVoucherList(ctx context.Context, symbolsData, balancesData string) []string {
+	symbols := strings.Split(symbolsData, "\n")
+	balances := strings.Split(balancesData, "\n")
+
+	var combined []string
+	for i := 0; i < len(symbols) && i < len(balances); i++ {
+		symbolParts := strings.SplitN(symbols[i], ":", 2)
+		balanceParts := strings.SplitN(balances[i], ":", 2)
+
+		if len(symbolParts) == 2 && len(balanceParts) == 2 {
+			index := strings.TrimSpace(symbolParts[0])
+			symbol := strings.TrimSpace(symbolParts[1])
+			rawBalance := strings.TrimSpace(balanceParts[1])
+
+			formattedBalance, err := TruncateDecimalString(rawBalance, 2)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed to format balance", "balance", rawBalance, "error", err)
+				formattedBalance = rawBalance
+			}
+
+			combined = append(combined, fmt.Sprintf("%s: %s %s", index, symbol, formattedBalance))
+		}
+	}
+	return combined
+}
