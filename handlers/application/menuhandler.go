@@ -3,7 +3,6 @@ package application
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"path"
 	"strconv"
@@ -1504,17 +1503,14 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
-	balFloat, err := strconv.ParseFloat(balance, 64)
+	// Format the balance to 2 decimal places or default to 0.00
+	formattedAmount, err := store.TruncateDecimalString(balance, 2)
 	if err != nil {
-		//Only exclude ErrSyntax error to avoid returning an error if the active bal is not available yet
-		if !errors.Is(err, strconv.ErrSyntax) {
-			logg.ErrorCtxf(ctx, "failed to parse activeBal as float", "value", balance, "error", err)
-			return "", err
-		}
-		balFloat = 0.00
+		formattedAmount = "0.00"
 	}
-	// Format to 2 decimal places
-	balStr := fmt.Sprintf("%.2f %s", balFloat, activeSym)
+
+	// format the final output
+	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
 	if alias != "" {
 		content = l.Get("%s balance: %s\n", alias, balStr)
 	} else {
