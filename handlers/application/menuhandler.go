@@ -2088,8 +2088,9 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 
 		if activeData == nil {
-			logg.ErrorCtxf(ctx, "activeSym not found in vouchers", "activeSym", activeSymStr)
-			return res, fmt.Errorf("activeSym %s not found in vouchers", activeSymStr)
+			logg.ErrorCtxf(ctx, "activeSym not found in vouchers, setting the first voucher as the default", "activeSym", activeSymStr)
+			firstVoucher := vouchersResp[0]
+			activeData = &firstVoucher
 		}
 
 		// Scale down the balance
