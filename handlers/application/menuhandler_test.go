@@ -1840,18 +1840,40 @@ func TestCheckBalance(t *testing.T) {
 		name           string
 		sessionId      string
 		publicKey      string
+		alias          string
 		activeSym      string
 		activeBal      string
 		expectedResult resource.Result
 		expectError    bool
 	}{
 		{
+			name:           "User with no active sym",
+			sessionId:      "session123",
+			publicKey:      "0X98765432109",
+			alias:          "",
+			activeSym:      "",
+			activeBal:      "",
+			expectedResult: resource.Result{Content: "Balance: 0.00 \n"},
+			expectError:    false,
+		},
+		{
 			name:           "User with active sym",
 			sessionId:      "session123",
 			publicKey:      "0X98765432109",
+			alias:          "",
 			activeSym:      "ETH",
 			activeBal:      "1.5",
 			expectedResult: resource.Result{Content: "Balance: 1.50 ETH\n"},
+			expectError:    false,
+		},
+		{
+			name:           "User with active sym and alias",
+			sessionId:      "session123",
+			publicKey:      "0X98765432109",
+			alias:          "user72",
+			activeSym:      "SRF",
+			activeBal:      "10.967",
+			expectedResult: resource.Result{Content: "user72 balance: 10.96 SRF\n"},
 			expectError:    false,
 		},
 	}
@@ -1866,13 +1888,25 @@ func TestCheckBalance(t *testing.T) {
 				accountService: mockAccountService,
 			}
 
-			err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.activeSym))
-			if err != nil {
-				t.Fatal(err)
+			if tt.alias != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(tt.alias))
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
-			err = store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
-			if err != nil {
-				t.Fatal(err)
+
+			if tt.activeSym != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.activeSym))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if tt.activeBal != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			res, err := h.CheckBalance(ctx, "check_balance", []byte(""))
