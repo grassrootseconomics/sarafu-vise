@@ -13,52 +13,6 @@ import (
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
-// GetPools fetches a list of 5 top pools
-func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	userStore := h.userdataStore
-
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
-
-	// call the api to get a list of top 5 pools sorted by swaps
-	topPools, err := h.accountService.FetchTopPools(ctx)
-	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
-		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
-		return res, err
-	}
-
-	// Return if there are no pools
-	if len(topPools) == 0 {
-		return res, nil
-	}
-
-	data := store.ProcessPools(topPools)
-
-	// Store all Pool data
-	dataMap := map[storedb.DataTyp]string{
-		storedb.DATA_POOL_NAMES:     data.PoolNames,
-		storedb.DATA_POOL_SYMBOLS:   data.PoolSymbols,
-		storedb.DATA_POOL_ADDRESSES: data.PoolContractAdrresses,
-	}
-
-	// Write data entries
-	for key, value := range dataMap {
-		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
-			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
-			continue
-		}
-	}
-
-	res.Content = h.ReplaceSeparatorFunc(data.PoolSymbols)
-
-	return res, nil
-}
-
 // LoadSwapFromList returns a list of possible vouchers to swap to
 func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
