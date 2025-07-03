@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
@@ -101,8 +102,9 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 
 		if activeData == nil {
-			logg.ErrorCtxf(ctx, "activeSym not found in vouchers", "activeSym", activeSymStr)
-			return res, fmt.Errorf("activeSym %s not found in vouchers", activeSymStr)
+			logg.ErrorCtxf(ctx, "activeSym not found in vouchers, setting the first voucher as the default", "activeSym", activeSymStr)
+			firstVoucher := vouchersResp[0]
+			activeData = &firstVoucher
 		}
 
 		// Scale down the balance
@@ -150,17 +152,25 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 
 	// Read vouchers from the store
 	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
-	logg.InfoCtxf(ctx, "reading GetVoucherList entries for sessionId: %s", sessionId, "key", storedb.DATA_VOUCHER_SYMBOLS, "voucherData", voucherData)
+	logg.InfoCtxf(ctx, "reading voucherData in GetVoucherList", "sessionId", sessionId, "key", storedb.DATA_VOUCHER_SYMBOLS, "voucherData", voucherData)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
 	}
 
-	formattedData := h.ReplaceSeparatorFunc(string(voucherData))
+	voucherBalances, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_BALANCES)
+	logg.InfoCtxf(ctx, "reading voucherBalances in GetVoucherList", "sessionId", sessionId, "key", storedb.DATA_VOUCHER_BALANCES, "voucherBalances", voucherBalances)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_BALANCES, "error", err)
+		return res, err
+	}
 
-	logg.InfoCtxf(ctx, "final output for sessionId: %s", sessionId, "key", storedb.DATA_VOUCHER_SYMBOLS, "formattedData", formattedData)
+	formattedVoucherList := store.FormatVoucherList(ctx, string(voucherData), string(voucherBalances))
+	finalOutput := strings.Join(formattedVoucherList, "\n")
 
-	res.Content = string(formattedData)
+	logg.InfoCtxf(ctx, "final output for GetVoucherList", "sessionId", sessionId, "finalOutput", finalOutput)
+
+	res.Content = finalOutput
 
 	return res, nil
 }
