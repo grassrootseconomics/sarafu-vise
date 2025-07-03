@@ -1840,18 +1840,40 @@ func TestCheckBalance(t *testing.T) {
 		name           string
 		sessionId      string
 		publicKey      string
+		alias          string
 		activeSym      string
 		activeBal      string
 		expectedResult resource.Result
 		expectError    bool
 	}{
 		{
+			name:           "User with no active sym",
+			sessionId:      "session123",
+			publicKey:      "0X98765432109",
+			alias:          "",
+			activeSym:      "",
+			activeBal:      "",
+			expectedResult: resource.Result{Content: "Balance: 0.00 \n"},
+			expectError:    false,
+		},
+		{
 			name:           "User with active sym",
 			sessionId:      "session123",
 			publicKey:      "0X98765432109",
+			alias:          "",
 			activeSym:      "ETH",
 			activeBal:      "1.5",
 			expectedResult: resource.Result{Content: "Balance: 1.50 ETH\n"},
+			expectError:    false,
+		},
+		{
+			name:           "User with active sym and alias",
+			sessionId:      "session123",
+			publicKey:      "0X98765432109",
+			alias:          "user72",
+			activeSym:      "SRF",
+			activeBal:      "10.967",
+			expectedResult: resource.Result{Content: "user72 balance: 10.96 SRF\n"},
 			expectError:    false,
 		},
 	}
@@ -1866,13 +1888,25 @@ func TestCheckBalance(t *testing.T) {
 				accountService: mockAccountService,
 			}
 
-			err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.activeSym))
-			if err != nil {
-				t.Fatal(err)
+			if tt.alias != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(tt.alias))
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
-			err = store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
-			if err != nil {
-				t.Fatal(err)
+
+			if tt.activeSym != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_SYM, []byte(tt.activeSym))
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if tt.activeBal != "" {
+				err := store.WriteEntry(ctx, tt.sessionId, storedb.DATA_ACTIVE_BAL, []byte(tt.activeBal))
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			res, err := h.CheckBalance(ctx, "check_balance", []byte(""))
@@ -2208,20 +2242,25 @@ func TestGetVoucherList(t *testing.T) {
 		ReplaceSeparatorFunc: mockReplaceSeparator,
 	}
 
-	mockSyms := []byte("1:SRF\n2:MILO")
+	mockSymbols := []byte("1:SRF\n2:MILO")
+	mockBalances := []byte("1:10.099999\n2:40.7")
 
-	// Put voucher sym data from the store
-	err := store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS, mockSyms)
+	// Put voucher symnols and balances data to the store
+	err := store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS, mockSymbols)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_VOUCHER_BALANCES, mockBalances)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	expectedSyms := []byte("1: SRF\n2: MILO")
+	expectedList := []byte("1: SRF 10.09\n2: MILO 40.70")
 
 	res, err := h.GetVoucherList(ctx, "", []byte(""))
 
 	assert.NoError(t, err)
-	assert.Equal(t, res.Content, string(expectedSyms))
+	assert.Equal(t, res.Content, string(expectedList))
 }
 
 func TestViewVoucher(t *testing.T) {
@@ -3168,97 +3207,6 @@ func TestResetUnregisteredNumber(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, expectedResult, res)
-}
-
-func TestConstructAccountAlias(t *testing.T) {
-	ctx, store := InitializeTestStore(t)
-	sessionId := "session123"
-	mockAccountService := new(mocks.MockAccountService)
-
-	ctx = context.WithValue(ctx, "SessionId", sessionId)
-
-	h := &MenuHandlers{
-		userdataStore:  store,
-		accountService: mockAccountService,
-	}
-
-	tests := []struct {
-		name          string
-		firstName     string
-		familyName    string
-		publicKey     string
-		expectedAlias string
-		aliasResponse *models.RequestAliasResult
-		aliasError    error
-		expectedError error
-	}{
-		{
-			name:          "Valid alias construction",
-			firstName:     "John",
-			familyName:    "Doe",
-			publicKey:     "pubkey123",
-			expectedAlias: "JohnDoeAlias",
-			aliasResponse: &models.RequestAliasResult{Alias: "JohnDoeAlias"},
-			aliasError:    nil,
-			expectedError: nil,
-		},
-		{
-			name:          "Account service fails to return alias",
-			firstName:     "Jane",
-			familyName:    "Smith",
-			publicKey:     "pubkey456",
-			expectedAlias: "",
-			aliasResponse: nil,
-			aliasError:    fmt.Errorf("service unavailable"),
-			expectedError: fmt.Errorf("Failed to retrieve alias: service unavailable"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.firstName != "" {
-				err := store.WriteEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(tt.firstName))
-				require.NoError(t, err)
-			}
-
-			if tt.familyName != "" {
-				err := store.WriteEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(tt.familyName))
-				require.NoError(t, err)
-			}
-
-			if tt.publicKey != "" {
-				err := store.WriteEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY, []byte(tt.publicKey))
-				require.NoError(t, err)
-			}
-
-			aliasInput := fmt.Sprintf("%s%s", tt.firstName, tt.familyName)
-
-			// Mock service behavior
-			mockAccountService.On(
-				"RequestAlias",
-				tt.publicKey,
-				aliasInput,
-			).Return(tt.aliasResponse, tt.aliasError)
-
-			// Call the function under test
-			err := h.constructAccountAlias(ctx)
-
-			// Assertions
-			if tt.expectedError != nil {
-				assert.EqualError(t, err, tt.expectedError.Error())
-			} else {
-				assert.NoError(t, err)
-				if tt.expectedAlias != "" {
-					storedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
-					require.NoError(t, err)
-					assert.Equal(t, tt.expectedAlias, string(storedAlias))
-				}
-			}
-
-			// Ensure mock expectations were met
-			mockAccountService.AssertExpectations(t)
-		})
-	}
 }
 
 func TestInsertProfileItems(t *testing.T) {
