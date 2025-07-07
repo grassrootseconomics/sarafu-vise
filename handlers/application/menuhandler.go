@@ -2703,38 +2703,6 @@ func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input 
 	return res, nil
 }
 
-// ConfirmNewAlias  reads  the suggested alias from the [DATA_SUGGECTED_ALIAS] key and confirms it  as the new account alias.
-func (h *MenuHandlers) ConfirmNewAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	store := h.userdataStore
-	logdb := h.logDb
-
-	flag_alias_set, _ := h.flagManager.GetFlag("flag_alias_set")
-
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	newAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
-	if err != nil {
-		return res, nil
-	}
-	logg.InfoCtxf(ctx, "Confirming new alias", "alias", string(newAlias))
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(string(newAlias)))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to clear DATA_ACCOUNT_ALIAS_VALUE entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "value", "empty", "error", err)
-		return res, err
-	}
-
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(newAlias))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write account alias db log entry", "key", storedb.DATA_ACCOUNT_ALIAS, "value", newAlias)
-	}
-
-	res.FlagSet = append(res.FlagSet, flag_alias_set)
-	return res, nil
-}
-
 // ClearTemporaryValue empties the DATA_TEMPORARY_VALUE at the main menu to prevent
 // previously stored data from being accessed
 func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, input []byte) (resource.Result, error) {
