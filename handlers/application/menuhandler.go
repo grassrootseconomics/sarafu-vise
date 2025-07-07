@@ -2685,24 +2685,6 @@ func sanitizeAliasHint(input string) string {
 	return input
 }
 
-// GetSuggestedAlias loads and displays the suggested alias name from the temporary value
-func (h *MenuHandlers) GetSuggestedAlias(ctx context.Context, sym string, input []byte) (resource.Result, error) {
-	var res resource.Result
-	store := h.userdataStore
-
-	sessionId, ok := ctx.Value("SessionId").(string)
-	if !ok {
-		return res, fmt.Errorf("missing session")
-	}
-	suggestedAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
-	if err != nil && len(suggestedAlias) <= 0 {
-		logg.ErrorCtxf(ctx, "failed to read suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "error", err)
-		return res, nil
-	}
-	res.Content = string(suggestedAlias)
-	return res, nil
-}
-
 // ClearTemporaryValue empties the DATA_TEMPORARY_VALUE at the main menu to prevent
 // previously stored data from being accessed
 func (h *MenuHandlers) ClearTemporaryValue(ctx context.Context, sym string, input []byte) (resource.Result, error) {
