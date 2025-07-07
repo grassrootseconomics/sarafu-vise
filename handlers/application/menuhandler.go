@@ -2585,6 +2585,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 	}
 
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	flag_alias_unavailable, _ := h.flagManager.GetFlag("flag_alias_unavailable")
 
 	store := h.userdataStore
 	aliasHint, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
@@ -2608,9 +2609,22 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		}
 		sanitizedInput := sanitizeAliasHint(string(input))
 		// Check if an alias already exists
-		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS)
+		existingAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
 		if err == nil && len(existingAlias) > 0 {
 			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
+
+			// Call the alias resolver to check if the preferred alias is available
+			fqdn := fmt.Sprintf("%s.%s", sanitizedInput, "sarafu.eth")
+			logg.InfoCtxf(ctx, "Checking if the fqdn alias is taken", "fqdn", fqdn)
+			AliasAddress, err := h.accountService.CheckAliasAddress(ctx, fqdn)
+			if err == nil && len(AliasAddress.Address) > 0 { // if the alias exists / is not available
+				res.FlagSet = append(res.FlagSet, flag_alias_unavailable)
+				res.FlagReset = append(res.FlagReset, flag_api_error)
+				return res, nil
+			}
+
+			res.FlagReset = append(res.FlagReset, flag_alias_unavailable)
+
 			// Update existing alias
 			aliasResult, err := h.accountService.UpdateAlias(ctx, sanitizedInput, string(publicKey))
 			if err != nil {
@@ -2622,6 +2636,19 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			logg.InfoCtxf(ctx, "Updated alias", "alias", alias)
 		} else {
 			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
+
+			// Call the alias resolver to check if the preferred alias is available
+			fqdn := fmt.Sprintf("%s.%s", sanitizedInput, "sarafu.eth")
+			logg.InfoCtxf(ctx, "Checking if the fqdn alias is taken", "fqdn", fqdn)
+			_, err = h.accountService.CheckAliasAddress(ctx, fqdn)
+			if err == nil { // if the alias exists / is not available
+				res.FlagSet = append(res.FlagSet, flag_alias_unavailable)
+				res.FlagReset = append(res.FlagReset, flag_api_error)
+				return res, nil
+			}
+
+			res.FlagReset = append(res.FlagReset, flag_alias_unavailable)
+
 			// Register a new alias
 			aliasResult, err := h.accountService.RequestAlias(ctx, string(publicKey), sanitizedInput)
 			if err != nil {
@@ -2634,14 +2661,16 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			alias = aliasResult.Alias
 			logg.InfoCtxf(ctx, "Suggested alias", "alias", alias)
 		}
-		//Store the returned alias,wait for user to confirm it as new account alias
-		logg.InfoCtxf(ctx, "Final suggested alias", "alias", alias)
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_SUGGESTED_ALIAS, []byte(alias))
+
+		//Store the new account alias
+		logg.InfoCtxf(ctx, "Final registered alias", "alias", alias)
+		err = store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS, []byte(alias))
 		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write suggested alias", "key", storedb.DATA_SUGGESTED_ALIAS, "value", alias, "error", err)
+			logg.ErrorCtxf(ctx, "failed to write account alias", "key", storedb.DATA_ACCOUNT_ALIAS, "value", alias, "error", err)
 			return res, err
 		}
 	}
+
 	return res, nil
 }
 
