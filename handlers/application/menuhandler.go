@@ -1512,7 +1512,7 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 	// format the final output
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
 	if alias != "" {
-		content = l.Get("%s\n Balance: %s\n", alias, balStr)
+		content = l.Get("%s\nBalance: %s\n", alias, balStr)
 	} else {
 		content = l.Get("Balance: %s\n", balStr)
 	}
