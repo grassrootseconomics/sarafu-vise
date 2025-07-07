@@ -2613,11 +2613,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		if err == nil && len(existingAlias) > 0 {
 			logg.InfoCtxf(ctx, "Current alias", "alias", string(existingAlias))
 
-			// Call the alias resolver to check if the preferred alias is available
-			fqdn := fmt.Sprintf("%s.%s", sanitizedInput, "sarafu.eth")
-			logg.InfoCtxf(ctx, "Checking if the fqdn alias is taken", "fqdn", fqdn)
-			AliasAddress, err := h.accountService.CheckAliasAddress(ctx, fqdn)
-			if err == nil && len(AliasAddress.Address) > 0 { // if the alias exists / is not available
+			unavailable, err := h.isAliasUnavailable(ctx, sanitizedInput)
+			if err == nil && unavailable {
 				res.FlagSet = append(res.FlagSet, flag_alias_unavailable)
 				res.FlagReset = append(res.FlagReset, flag_api_error)
 				return res, nil
@@ -2637,11 +2634,8 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 		} else {
 			logg.InfoCtxf(ctx, "Registering a new alias", "err", err)
 
-			// Call the alias resolver to check if the preferred alias is available
-			fqdn := fmt.Sprintf("%s.%s", sanitizedInput, "sarafu.eth")
-			logg.InfoCtxf(ctx, "Checking if the fqdn alias is taken", "fqdn", fqdn)
-			_, err = h.accountService.CheckAliasAddress(ctx, fqdn)
-			if err == nil { // if the alias exists / is not available
+			unavailable, err := h.isAliasUnavailable(ctx, sanitizedInput)
+			if err == nil && unavailable {
 				res.FlagSet = append(res.FlagSet, flag_alias_unavailable)
 				res.FlagReset = append(res.FlagReset, flag_api_error)
 				return res, nil
@@ -2659,7 +2653,7 @@ func (h *MenuHandlers) RequestCustomAlias(ctx context.Context, sym string, input
 			res.FlagReset = append(res.FlagReset, flag_api_error)
 
 			alias = aliasResult.Alias
-			logg.InfoCtxf(ctx, "Suggested alias", "alias", alias)
+			logg.InfoCtxf(ctx, "Registered alias", "alias", alias)
 		}
 
 		//Store the new account alias
@@ -2683,6 +2677,21 @@ func sanitizeAliasHint(input string) string {
 	}
 	// If no special character is found, return the whole input
 	return input
+}
+
+func (h *MenuHandlers) isAliasUnavailable(ctx context.Context, alias string) (bool, error) {
+	fqdn := fmt.Sprintf("%s.%s", alias, "sarafu.eth")
+	logg.InfoCtxf(ctx, "Checking if the fqdn alias is taken", "fqdn", fqdn)
+
+	aliasAddress, err := h.accountService.CheckAliasAddress(ctx, fqdn)
+	if err != nil {
+		return false, err
+	}
+	if len(aliasAddress.Address) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 // ClearTemporaryValue empties the DATA_TEMPORARY_VALUE at the main menu to prevent
