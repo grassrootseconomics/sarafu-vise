@@ -34,4 +34,4 @@ flag,flag_alias_set,40,this is set when an account alias has been assigned to a 
 flag,flag_account_pin_reset,41,this is set on an account when an admin triggers a PIN reset for themflag,flag_incorrect_pool,39,this is set when the user selects an invalid pool
 flag,flag_incorrect_pool,42,this is set when the user selects an invalid pool
 flag,flag_low_swap_amount,43,this is set when the swap max limit is less than 0.1
-
+flag,flag_alias_unavailable,44,this is set when the preferred alias is not available

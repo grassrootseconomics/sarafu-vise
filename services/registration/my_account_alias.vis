@@ -1,3 +1,7 @@
+LOAD reset_account_authorized 0
+LOAD reset_incorrect_pin 0
+CATCH incorrect_pin flag_incorrect_pin 1
+CATCH pin_entry flag_account_authorized 0
 LOAD get_current_profile_info 0
 MAP get_current_profile_info
 MOUT back 0
@@ -5,5 +9,7 @@ HALT
 INCMP _ 0
 LOAD request_custom_alias 0
 RELOAD request_custom_alias
+MAP request_custom_alias
+CATCH unavailable_alias flag_alias_unavailable 1
 CATCH api_failure flag_api_call_error 1
-INCMP confirm_new_alias *
+INCMP alias_updated *
