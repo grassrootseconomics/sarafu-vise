@@ -1,0 +1,8 @@
+MAP request_custom_alias
+MOUT back 0
+MOUT home 9
+MOUT quit 99
+HALT
+INCMP _ 0
+INCMP ^ 9
+INCMP quit 99
