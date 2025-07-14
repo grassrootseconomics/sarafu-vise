@@ -7,3 +7,4 @@ cmd/.state/
 id_*
 *.gdbm
 *.log
+user-data
