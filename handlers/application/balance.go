@@ -3,7 +3,6 @@ package application
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
@@ -18,7 +17,6 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	var (
 		res     resource.Result
 		err     error
-		alias   string
 		content string
 	)
 
@@ -53,11 +51,8 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 			logg.ErrorCtxf(ctx, "failed to read account alias entry with", "key", storedb.DATA_ACCOUNT_ALIAS, "error", err)
 			return res, err
 		}
-	} else {
-		alias = strings.Split(string(accAlias), ".")[0]
 	}
-
-	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), alias)
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias))
 	if err != nil {
 		return res, err
 	}
@@ -66,7 +61,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 	return res, nil
 }
 
-// loadUserContent loads the main user content in the main menu: the alias,balance associated with active voucher
+// loadUserContent loads the main user content in the main menu: the alias, balance and active symbol associated with active voucher
 func loadUserContent(ctx context.Context, activeSym string, balance string, alias string) (string, error) {
 	var content string
 
@@ -83,7 +78,7 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 	// format the final output
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
 	if alias != "" {
-		content = l.Get("%s balance: %s\n", alias, balStr)
+		content = l.Get("%s\nBalance: %s\n", alias, balStr)
 	} else {
 		content = l.Get("Balance: %s\n", balStr)
 	}
