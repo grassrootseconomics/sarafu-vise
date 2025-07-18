@@ -100,6 +100,10 @@ func (h *MenuHandlers) ViewPool(ctx context.Context, sym string, input []byte) (
 	flag_incorrect_pool, _ := h.flagManager.GetFlag("flag_incorrect_pool")
 
 	inputStr := string(input)
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
+		res.FlagReset = append(res.FlagReset, flag_incorrect_pool)
+		return res, nil
+	}
 
 	poolData, err := store.GetPoolData(ctx, h.userdataStore, sessionId, inputStr)
 	if err != nil {
