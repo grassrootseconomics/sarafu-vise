@@ -9,14 +9,16 @@ MAP check_balance
 MOUT send 1
 MOUT swap 2
 MOUT vouchers 3
-MOUT account 4
-MOUT help 5
+MOUT select_pool 4
+MOUT account 5
+MOUT help 6
 MOUT quit 9
 HALT
 INCMP send 1
 INCMP swap_to_list 2
 INCMP my_vouchers 3
-INCMP my_account 4
-INCMP help 5
+INCMP select_pool 4
+INCMP my_account 5
+INCMP help 6
 INCMP quit 9
 INCMP . *
