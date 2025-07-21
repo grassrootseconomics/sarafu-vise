@@ -17,5 +17,4 @@ RELOAD swap_max_limit
 CATCH api_failure flag_api_call_error 1
 CATCH . flag_incorrect_voucher 1
 CATCH low_swap_amount flag_low_swap_amount 1
-INCMP _ 0
 INCMP swap_limit *
