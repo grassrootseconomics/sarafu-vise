@@ -224,8 +224,16 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, err
 	}
 
+	// Format the balance to 2 decimal places
+	formattedAmount, err := store.TruncateDecimalString(metadata.Balance, 2)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to TruncateDecimalString on ViewVoucher", "error", err)
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
-	res.Content = l.Get("Symbol: %s\nBalance: %s", metadata.TokenSymbol, metadata.Balance)
+	res.Content = l.Get("Symbol: %s\nBalance: %s", metadata.TokenSymbol, formattedAmount)
 
 	return res, nil
 }
