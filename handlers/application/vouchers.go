@@ -51,6 +51,9 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
 
+	// add a variable to filter out the active voucher
+	activeSymStr := ""
+
 	// Check if user has an active voucher with proper error handling
 	activeSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
@@ -61,6 +64,8 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 			defaultBal := firstVoucher.Balance
 			defaultDec := firstVoucher.TokenDecimals
 			defaultAddr := firstVoucher.TokenAddress
+
+			activeSymStr = defaultSym
 
 			// Scale down the balance
 			scaledBalance := store.ScaleDownBalance(defaultBal, defaultDec)
@@ -89,10 +94,8 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 			return res, err
 		}
 	} else {
-		// Update active voucher balance
-		activeSymStr := string(activeSym)
-
 		// Find the matching voucher data
+		activeSymStr = string(activeSym)
 		var activeData *dataserviceapi.TokenHoldings
 		for _, voucher := range vouchersResp {
 			if voucher.TokenSymbol == activeSymStr {
@@ -102,9 +105,10 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 
 		if activeData == nil {
-			logg.ErrorCtxf(ctx, "activeSym not found in vouchers, setting the first voucher as the default", "activeSym", activeSymStr)
+			logg.InfoCtxf(ctx, "activeSym not found in vouchers, setting the first voucher as the default", "activeSym", activeSymStr)
 			firstVoucher := vouchersResp[0]
 			activeData = &firstVoucher
+			activeSymStr = string(activeData.TokenSymbol)
 		}
 
 		// Scale down the balance
@@ -120,8 +124,17 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Store all voucher data
-	data := store.ProcessVouchers(vouchersResp)
+	// Filter out the active voucher from vouchersResp
+	filteredVouchers := make([]dataserviceapi.TokenHoldings, 0, len(vouchersResp))
+	for _, v := range vouchersResp {
+		if v.TokenSymbol != activeSymStr {
+			filteredVouchers = append(filteredVouchers, v)
+		}
+	}
+
+	// Store all voucher data (excluding the current active voucher)
+	data := store.ProcessVouchers(filteredVouchers)
+
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
 		storedb.DATA_VOUCHER_BALANCES:  data.Balances,
