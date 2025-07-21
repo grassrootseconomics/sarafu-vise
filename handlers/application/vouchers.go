@@ -140,7 +140,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	return res, nil
 }
 
-// GetVoucherList fetches the list of vouchers and formats them.
+// GetVoucherList fetches the list of vouchers from the store and formats them.
 func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
