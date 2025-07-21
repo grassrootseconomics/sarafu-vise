@@ -161,7 +161,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher, flag_low_swap_amount)
 
 	inputStr := string(input)
-	if inputStr == "0" {
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
 		return res, nil
 	}
 
