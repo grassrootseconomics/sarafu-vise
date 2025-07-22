@@ -10,6 +10,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
@@ -121,7 +122,16 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	data := store.ProcessVouchers(swapToList)
+	// Filter out the active voucher from swapToList
+	filteredSwapToList := make([]dataserviceapi.TokenHoldings, 0, len(swapToList))
+	for _, s := range swapToList {
+		if s.TokenSymbol != string(activeSym) {
+			filteredSwapToList = append(filteredSwapToList, s)
+		}
+	}
+
+	// Store filtered swap to list data (excluding the current active voucher)
+	data := store.ProcessVouchers(filteredSwapToList)
 
 	logg.InfoCtxf(ctx, "ProcessVouchers", "data", data)
 
@@ -161,7 +171,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher, flag_low_swap_amount)
 
 	inputStr := string(input)
-	if inputStr == "0" {
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
 		return res, nil
 	}
 

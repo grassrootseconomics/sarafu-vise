@@ -9,6 +9,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
@@ -36,9 +37,26 @@ func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (
 		return res, nil
 	}
 
-	data := store.ProcessPools(topPools)
+	activePoolSymStr := ""
 
-	// Store all Pool data
+	activePoolSym, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_SYM)
+	if err != nil {
+		activePoolSymStr = config.DefaultPoolSymbol()
+	} else {
+		activePoolSymStr = string(activePoolSym)
+	}
+
+	// Filter out the active pool from topPools
+	filteredPools := make([]dataserviceapi.PoolDetails, 0, len(topPools))
+	for _, p := range topPools {
+		if p.PoolSymbol != activePoolSymStr {
+			filteredPools = append(filteredPools, p)
+		}
+	}
+
+	data := store.ProcessPools(filteredPools)
+
+	// Store the filtered Pool data
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_POOL_NAMES:     data.PoolNames,
 		storedb.DATA_POOL_SYMBOLS:   data.PoolSymbols,
