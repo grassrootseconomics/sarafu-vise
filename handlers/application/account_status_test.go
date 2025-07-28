@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"git.defalsify.org/vise.git/resource"
+	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -93,16 +94,24 @@ func TestCheckBlockedStatus(t *testing.T) {
 	}
 	flag_account_blocked, _ := fm.GetFlag("flag_account_blocked")
 	flag_account_pin_reset, _ := fm.GetFlag("flag_account_pin_reset")
+	flag_pin_set, _ := fm.GetFlag("flag_pin_set")
+	flag_language_set, _ := fm.GetFlag("flag_language_set")
+
+	// Set the flag in the State
+	mockState := state.NewState(128)
 
 	h := &MenuHandlers{
 		userdataStore: store,
 		flagManager:   fm,
+		st:            mockState,
 	}
 
 	tests := []struct {
 		name                    string
 		currentWrongPinAttempts string
 		expectedResult          resource.Result
+		languageSet             bool
+		PinSet                  bool
 	}{
 		{
 			name:                    "Currently blocked account",
@@ -118,12 +127,34 @@ func TestCheckBlockedStatus(t *testing.T) {
 				FlagReset: []uint32{flag_account_pin_reset, flag_account_blocked},
 			},
 		},
+		{
+			name:                    "Valid account with reset language and PIN flags",
+			currentWrongPinAttempts: "0",
+			languageSet:             true,
+			PinSet:                  true,
+			expectedResult: resource.Result{
+				FlagReset: []uint32{flag_account_pin_reset, flag_account_blocked},
+				FlagSet:   []uint32{flag_pin_set, flag_language_set},
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if err := store.WriteEntry(ctx, sessionId, storedb.DATA_INCORRECT_PIN_ATTEMPTS, []byte(tt.currentWrongPinAttempts)); err != nil {
 				t.Fatal(err)
+			}
+
+			if tt.languageSet {
+				if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE, []byte("eng")); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			if tt.PinSet {
+				if err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN, []byte("hasedPinValue")); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			res, err := h.CheckBlockedStatus(ctx, "", []byte(""))
