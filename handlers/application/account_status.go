@@ -83,6 +83,7 @@ func (h *MenuHandlers) CheckAccountCreated(ctx context.Context, sym string, inpu
 // CheckBlockedStatus:
 // 1. Checks whether the DATA_SELF_PIN_RESET is 1 and sets the flag_account_pin_reset
 // 2. resets the account blocked flag if the PIN attempts have been reset by an admin.
+// 3. Sets key flags (language and PIN) if the data exists
 func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	store := h.userdataStore
@@ -90,9 +91,28 @@ func (h *MenuHandlers) CheckBlockedStatus(ctx context.Context, sym string, input
 	flag_account_blocked, _ := h.flagManager.GetFlag("flag_account_blocked")
 	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
+	flag_pin_set, _ := h.flagManager.GetFlag("flag_pin_set")
+	flag_language_set, _ := h.flagManager.GetFlag("flag_language_set")
+	pinFlagSet := h.st.MatchFlag(flag_pin_set, true)
+	languageFlagSet := h.st.MatchFlag(flag_language_set, true)
+
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
+	}
+
+	// only check the data if the flag isn't set
+	if !pinFlagSet {
+		accountPin, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
+		if len(accountPin) > 0 {
+			res.FlagSet = append(res.FlagSet, flag_pin_set)
+		}
+	}
+	if !languageFlagSet {
+		languageCode, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_SELECTED_LANGUAGE_CODE)
+		if len(languageCode) > 0 {
+			res.FlagSet = append(res.FlagSet, flag_language_set)
+		}
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_account_pin_reset)
