@@ -189,7 +189,7 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 	return res, nil
 }
 
-// MaxAmount gets the current balance from the API and sets it as
+// MaxAmount gets the current sender's balance from the store and sets it as
 // the result content.
 func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
