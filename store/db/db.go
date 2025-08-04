@@ -93,6 +93,8 @@ const (
 	DATA_SEND_TRANSACTION_TYPE
 	// Holds the recipient active token (RAT)
 	DATA_RECIPIENT_ACTIVE_TOKEN
+	// Holds the recipient formatted phone number
+	DATA_RECIPIENT_PHONE_NUMBER
 )
 
 const (
