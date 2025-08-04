@@ -211,6 +211,11 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, []byte(""))
+	if err != nil {
+		return res, nil
+	}
+
 	res.FlagReset = append(res.FlagReset, flag_invalid_recipient, flag_invalid_recipient_with_invite)
 
 	return res, nil
