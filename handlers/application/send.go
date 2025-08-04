@@ -10,7 +10,6 @@ import (
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	"git.grassecon.net/grassrootseconomics/common/phone"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -19,123 +18,168 @@ import (
 )
 
 // ValidateRecipient validates that the given input is valid.
-//
-// TODO: split up functino
 func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
-	var AliasAddressResult string
-	var AliasAddress *models.AliasAddress
 	store := h.userdataStore
+	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
-	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// remove white spaces
 	recipient := strings.ReplaceAll(string(input), " ", "")
+	if recipient == "0" {
+		return res, nil
+	}
 
-	if recipient != "0" {
-		recipientType, err := identity.CheckRecipient(recipient)
-		if err != nil {
-			// Invalid recipient format (not a phone number, address, or valid alias format)
-			res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
+	recipientType, err := identity.CheckRecipient(recipient)
+	if err != nil {
+		// Invalid recipient format (not a phone number, address, or valid alias format)
+		res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
+		res.Content = recipient
+
+		return res, nil
+	}
+
+	// save the recipient as the temporaryRecipient
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recipient))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
+		return res, err
+	}
+
+	switch recipientType {
+	case "phone number":
+		return h.handlePhoneNumber(ctx, sessionId, recipient, &res)
+	case "address":
+		return h.handleAddress(ctx, sessionId, recipient, &res)
+	case "alias":
+		return h.handleAlias(ctx, sessionId, recipient, &res)
+	}
+
+	return res, nil
+}
+
+func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
+	store := h.userdataStore
+	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
+
+	formattedNumber, err := phone.FormatPhoneNumber(recipient)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to format phone number", "recipient", recipient, "error", err)
+		return *res, err
+	}
+
+	publicKey, err := store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		if db.IsNotFound(err) {
+			logg.InfoCtxf(ctx, "Unregistered phone number", "recipient", recipient)
+			res.FlagSet = append(res.FlagSet, flag_invalid_recipient_with_invite)
 			res.Content = recipient
-
-			return res, nil
+			return *res, nil
 		}
+		logg.ErrorCtxf(ctx, "Failed to read publicKey", "error", err)
+		return *res, err
+	}
 
-		// save the recipient as the temporaryRecipient
-		err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recipient))
-		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
-			return res, err
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, publicKey); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write recipient", "value", string(publicKey), "error", err)
+		return *res, err
+	}
+
+	senderSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read sender activeSym", "error", err)
+		return *res, err
+	}
+	recipientActiveToken, err := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_SYM)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read recipient activeSym", "error", err)
+		return *res, err
+	}
+
+	txType := "swap"
+	if senderSym != nil && recipientActiveToken != nil && string(senderSym) == string(recipientActiveToken) {
+		txType = "normal"
+	}
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write tx type", "type", txType, "error", err)
+		return *res, err
+	}
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, recipientActiveToken); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write recipient active token", "error", err)
+		return *res, err
+	}
+
+	return *res, nil
+}
+
+func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
+	store := h.userdataStore
+
+	address := ethutils.ChecksumAddress(recipient)
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(address)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write recipient address", "error", err)
+		return *res, err
+	}
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte("normal")); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write tx type for address", "error", err)
+		return *res, err
+	}
+
+	return *res, nil
+}
+
+func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
+	store := h.userdataStore
+	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+
+	var AliasAddressResult string
+
+	if strings.Contains(recipient, ".") {
+		alias, err := h.accountService.CheckAliasAddress(ctx, recipient)
+		if err == nil {
+			AliasAddressResult = alias.Address
+		} else {
+			logg.ErrorCtxf(ctx, "Failed to resolve alias", "alias", recipient, "error", err)
 		}
+	} else {
+		for _, domain := range config.SearchDomains() {
+			fqdn := fmt.Sprintf("%s.%s", recipient, domain)
+			logg.InfoCtxf(ctx, "Trying alias", "fqdn", fqdn)
 
-		switch recipientType {
-		case "phone number":
-			// format the phone number
-			formattedNumber, err := phone.FormatPhoneNumber(recipient)
-			if err != nil {
-				logg.ErrorCtxf(ctx, "Failed to format the phone number: %s", recipient, "error", err)
-				return res, err
-			}
-
-			// Check if the phone number is registered
-			publicKey, err := store.ReadEntry(ctx, formattedNumber, storedb.DATA_PUBLIC_KEY)
-			if err != nil {
-				if db.IsNotFound(err) {
-					logg.InfoCtxf(ctx, "Unregistered phone number: %s", recipient)
-					res.FlagSet = append(res.FlagSet, flag_invalid_recipient_with_invite)
-					res.Content = recipient
-					return res, nil
-				}
-
-				logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
-				return res, err
-			}
-
-			// Save the publicKey as the recipient
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, publicKey)
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", string(publicKey), "error", err)
-				return res, err
-			}
-
-		case "address":
-			// checksum the address
-			address := ethutils.ChecksumAddress(recipient)
-
-			// Save the valid Ethereum address as the recipient
-			err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(address))
-			if err != nil {
-				logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", recipient, "error", err)
-				return res, err
-			}
-
-		case "alias":
-			if strings.Contains(recipient, ".") {
-				AliasAddress, err = h.accountService.CheckAliasAddress(ctx, recipient)
-				if err == nil {
-					AliasAddressResult = AliasAddress.Address
-				} else {
-					logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
-				}
+			alias, err := h.accountService.CheckAliasAddress(ctx, fqdn)
+			if err == nil {
+				res.FlagReset = append(res.FlagReset, flag_api_error)
+				AliasAddressResult = alias.Address
+				break
 			} else {
-				//Perform a search for each search domain,break on first match
-				for _, domain := range config.SearchDomains() {
-					fqdn := fmt.Sprintf("%s.%s", recipient, domain)
-					logg.InfoCtxf(ctx, "Resolving with fqdn alias", "alias", fqdn)
-					AliasAddress, err = h.accountService.CheckAliasAddress(ctx, fqdn)
-					if err == nil {
-						res.FlagReset = append(res.FlagReset, flag_api_error)
-						AliasAddressResult = AliasAddress.Address
-						continue
-					} else {
-						res.FlagSet = append(res.FlagSet, flag_api_error)
-						logg.ErrorCtxf(ctx, "failed to resolve alias", "alias", recipient, "error_alias_check", err)
-						return res, nil
-					}
-				}
-			}
-			if AliasAddressResult == "" {
-				res.Content = recipient
-				res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
-				return res, nil
-			} else {
-				err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(AliasAddressResult))
-				if err != nil {
-					logg.ErrorCtxf(ctx, "failed to write recipient entry with", "key", storedb.DATA_RECIPIENT, "value", AliasAddressResult, "error", err)
-					return res, err
-				}
+				res.FlagSet = append(res.FlagSet, flag_api_error)
+				logg.ErrorCtxf(ctx, "Alias resolution failed", "alias", fqdn, "error", err)
+				return *res, nil
 			}
 		}
 	}
 
-	return res, nil
+	if AliasAddressResult == "" {
+		res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
+		res.Content = recipient
+		return *res, nil
+	}
+
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(AliasAddressResult)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to store alias recipient", "error", err)
+		return *res, err
+	}
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte("normal")); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write tx type for alias", "error", err)
+		return *res, err
+	}
+
+	return *res, nil
 }
 
 // TransactionReset resets the previous transaction data (Recipient and Amount)
@@ -158,6 +202,11 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 	}
 
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(""))
+	if err != nil {
+		return res, nil
+	}
+
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(""))
 	if err != nil {
 		return res, nil
 	}
@@ -283,7 +332,7 @@ func (h *MenuHandlers) GetRecipient(ctx context.Context, sym string, input []byt
 	recipient, _ := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if len(recipient) == 0 {
 		logg.ErrorCtxf(ctx, "recipient is empty", "key", storedb.DATA_TEMPORARY_VALUE)
-		return res, fmt.Errorf("Data error encountered")
+		return res, fmt.Errorf("data error encountered")
 	}
 
 	res.Content = string(recipient)
