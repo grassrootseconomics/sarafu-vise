@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 )
 
 var (
-	logg = logging.NewVanilla().WithDomain("cmd").WithContextKey("SessionId")
+	logg = slogging.Get().With("component", "cmd")
 )
 
 type Cmd struct {

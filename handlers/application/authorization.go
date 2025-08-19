@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/pin"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 // Authorize attempts to unlock the next sequential nodes by verifying the provided PIN against the already set PIN.

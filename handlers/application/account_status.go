@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 // CheckAccountStatus queries the API using the TrackingId and sets flags

@@ -6,11 +6,11 @@ import (
 	"log"
 	"testing"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 func TestValidateRecipient(t *testing.T) {

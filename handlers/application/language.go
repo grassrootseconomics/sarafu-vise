@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
-	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	commonlang "git.grassecon.net/grassrootseconomics/common/lang"
+	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 )
 
 // SetLanguage sets the language across the menu.

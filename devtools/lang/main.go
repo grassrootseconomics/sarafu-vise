@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/visedriver/config"
+	"github.com/grassrootseconomics/go-vise/lang"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 )
 
 const (
@@ -28,7 +28,7 @@ MOVE language_changed
 )
 
 var (
-	logg   = logging.NewVanilla()
+	logg   = slogging.Get()
 	mouts  string
 	incmps string
 )

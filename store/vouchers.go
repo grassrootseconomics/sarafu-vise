@@ -6,13 +6,13 @@ import (
 	"math/big"
 	"strings"
 
-	"git.defalsify.org/vise.git/logging"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
 var (
-	logg = logging.NewVanilla().WithDomain("vouchers").WithContextKey("SessionId")
+	logg = slogging.Get().With("component", "vouchers")
 )
 
 // VoucherMetadata helps organize data fields

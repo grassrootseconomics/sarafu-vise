@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
 )
 
 // execute all

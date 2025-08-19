@@ -4,16 +4,16 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/persist"
 	apievent "git.grassecon.net/grassrootseconomics/sarafu-api/event"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/persist"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 )
 
 var (
-	logg = logging.NewVanilla().WithDomain("sarafu-vise.handlers.event")
+	logg = slogging.Get().With("component", "sarafu-vise.handlers.event")
 )
 
 type EventsUpdater struct {

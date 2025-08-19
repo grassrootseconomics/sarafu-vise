@@ -3,9 +3,9 @@ package store
 import (
 	"context"
 
-	visedb "git.defalsify.org/vise.git/db"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	visedb "github.com/grassrootseconomics/go-vise/db"
 )
 
 type LogDb struct {

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
@@ -20,7 +20,6 @@ import (
 func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	userStore := h.userdataStore
-	logdb := h.logDb
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -81,10 +80,6 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 				if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 					logg.ErrorCtxf(ctx, "Failed to write active voucher data", "key", key, "error", err)
 					return res, err
-				}
-				err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-				if err != nil {
-					logg.DebugCtxf(ctx, "Failed to write voucher db log entry", "key", key, "value", value)
 				}
 			}
 

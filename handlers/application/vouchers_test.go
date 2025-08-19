@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
@@ -20,11 +19,6 @@ func TestManageVouchers(t *testing.T) {
 
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -102,7 +96,6 @@ func TestManageVouchers(t *testing.T) {
 				userdataStore:  userStore,
 				accountService: mockAccountService,
 				flagManager:    fm,
-				logDb:          logDb,
 			}
 
 			mockAccountService.On("FetchVouchers", string(publicKey)).Return(tt.vouchersResp, nil)

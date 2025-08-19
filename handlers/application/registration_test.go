@@ -4,22 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 func TestCreateAccount(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -57,7 +51,6 @@ func TestCreateAccount(t *testing.T) {
 			h := &MenuHandlers{
 				userdataStore:  userStore,
 				accountService: mockAccountService,
-				logDb:          logDb,
 				flagManager:    fm,
 			}
 

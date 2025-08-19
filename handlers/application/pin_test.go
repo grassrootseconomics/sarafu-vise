@@ -6,13 +6,12 @@ import (
 	"strconv"
 	"testing"
 
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/common/pin"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 )
 
 func TestCountIncorrectPINAttempts(t *testing.T) {
@@ -71,11 +70,6 @@ func TestSaveTemporaryPin(t *testing.T) {
 	ctx, userdatastore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	_, logdb := InitializeTestLogdbStore(t)
-	logDb := store.LogDb{
-		Db: logdb,
-	}
-
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
 		log.Fatal(err)
@@ -87,7 +81,6 @@ func TestSaveTemporaryPin(t *testing.T) {
 	h := &MenuHandlers{
 		flagManager:   fm,
 		userdataStore: userdatastore,
-		logDb:         logDb,
 	}
 
 	// Define test cases

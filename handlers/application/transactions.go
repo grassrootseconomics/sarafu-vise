@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 // CheckTransactions retrieves the transactions from the API using the "PublicKey" and stores to prefixDb.
@@ -23,7 +23,6 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
 
 	userStore := h.userdataStore
-	logdb := h.logDb
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read publicKey entry with", "key", storedb.DATA_PUBLIC_KEY, "error", err)
@@ -63,10 +62,6 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 		if err := h.prefixDb.Put(ctx, []byte(storedb.ToBytes(key)), []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "failed to write to prefixDb", "error", err)
 			return res, err
-		}
-		err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write tx db log entry", "key", key, "value", value)
 		}
 	}
 

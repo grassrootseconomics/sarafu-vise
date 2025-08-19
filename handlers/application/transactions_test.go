@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 )
 
@@ -21,11 +21,6 @@ func TestCheckTransactions(t *testing.T) {
 
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	spdb := InitializeTestSubPrefixDb(t, ctx)
 
@@ -38,7 +33,6 @@ func TestCheckTransactions(t *testing.T) {
 		userdataStore:  userStore,
 		accountService: mockAccountService,
 		prefixDb:       spdb,
-		logDb:          logDb,
 		flagManager:    fm,
 	}
 

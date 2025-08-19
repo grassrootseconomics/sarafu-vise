@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 
 	"git.grassecon.net/grassrootseconomics/common/hex"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -33,15 +33,10 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 		storedb.DATA_ACCOUNT_ALIAS: "",
 	}
 	store := h.userdataStore
-	logdb := h.logDb
 	for key, value := range data {
 		err = store.WriteEntry(ctx, sessionId, key, []byte(value))
 		if err != nil {
 			return err
-		}
-		err = logdb.WriteLogEntry(ctx, sessionId, key, []byte(value))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write log entry", "key", key, "value", value)
 		}
 	}
 	publicKeyNormalized, err := hex.NormalizeHex(publicKey)
@@ -51,11 +46,6 @@ func (h *MenuHandlers) createAccountNoExist(ctx context.Context, sessionId strin
 	err = store.WriteEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
 	if err != nil {
 		return err
-	}
-
-	err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY_REVERSE, []byte(sessionId))
-	if err != nil {
-		logg.DebugCtxf(ctx, "Failed to write log entry", "key", storedb.DATA_PUBLIC_KEY_REVERSE, "value", sessionId)
 	}
 
 	res.FlagSet = append(res.FlagSet, flag_account_created)

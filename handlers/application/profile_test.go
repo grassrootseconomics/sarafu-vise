@@ -6,14 +6,13 @@ import (
 	"log"
 	"testing"
 
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
-	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 	"github.com/stretchr/testify/require"
 )
 
@@ -21,11 +20,6 @@ func TestSaveFirstname(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -52,7 +46,6 @@ func TestSaveFirstname(t *testing.T) {
 		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
-		logDb:         logDb,
 	}
 
 	// Call the method
@@ -71,11 +64,6 @@ func TestSaveFamilyname(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -102,7 +90,6 @@ func TestSaveFamilyname(t *testing.T) {
 		userdataStore: userStore,
 		st:            mockState,
 		flagManager:   fm,
-		logDb:         logDb,
 	}
 
 	// Call the method
@@ -224,11 +211,6 @@ func TestSaveYob(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -255,7 +237,6 @@ func TestSaveYob(t *testing.T) {
 		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
-		logDb:         logDb,
 	}
 
 	// Call the method
@@ -274,11 +255,6 @@ func TestSaveLocation(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -305,7 +281,6 @@ func TestSaveLocation(t *testing.T) {
 		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
-		logDb:         logDb,
 	}
 
 	// Call the method
@@ -324,11 +299,6 @@ func TestSaveGender(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -378,7 +348,6 @@ func TestSaveGender(t *testing.T) {
 				userdataStore: userStore,
 				st:            mockState,
 				flagManager:   fm,
-				logDb:         logDb,
 			}
 
 			expectedResult := resource.Result{}
@@ -403,11 +372,6 @@ func TestSaveOfferings(t *testing.T) {
 	sessionId := "session123"
 	ctx, userStore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
 
 	fm, _ := NewFlagManager(flagsPath)
 
@@ -434,7 +398,6 @@ func TestSaveOfferings(t *testing.T) {
 		userdataStore: userStore,
 		flagManager:   fm,
 		st:            mockState,
-		logDb:         logDb,
 	}
 
 	// Call the method

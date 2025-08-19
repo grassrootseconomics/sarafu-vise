@@ -9,10 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.defalsify.org/vise.git/asm"
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	httpremote "git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
@@ -20,6 +16,10 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/testutil/testtag"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/asm"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -113,12 +113,6 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 		os.Exit(1)
 	}
 
-	logdb, err := menuStorageService.GetLogDb(ctx, userDataStore, "test-db-logs", "user-data")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
-		os.Exit(1)
-	}
-
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
 		fmt.Fprintf(os.Stderr, "dbresource cast error")
@@ -127,7 +121,6 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 
 	lhs, err := handlers.NewLocalHandlerService(ctx, pfp, true, dbResource, cfg, rs)
 	lhs.SetDataStore(&userDataStore)
-	lhs.SetLogDb(&logdb)
 	lhs.SetPersister(pe)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -161,7 +154,6 @@ func TestEngine(sessionId string) (engine.Engine, func(), chan bool, *persist.Pe
 
 	en := lhs.GetEngine(lhs.Cfg, rs, pe)
 	cleanFn := func() {
-		logdb.Close(ctx)
 		err := en.Finish(ctx)
 		if err != nil {
 			logg.Errorf(err.Error())

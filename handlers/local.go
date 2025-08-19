@@ -4,18 +4,13 @@ import (
 	"context"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/handlers/application"
-)
-
-var (
-	logg = logging.NewVanilla().WithDomain("sarafu-vise.engine")
 )
 
 type HandlerService interface {
@@ -27,7 +22,6 @@ type LocalHandlerService struct {
 	DbRs          *resource.DbResource
 	Pe            *persist.Persister
 	UserdataStore *db.Db
-	LogDb         *db.Db
 	Cfg           engine.Config
 	Rs            resource.Resource
 	first         resource.EntryFunc
@@ -58,16 +52,12 @@ func (ls *LocalHandlerService) SetDataStore(db *db.Db) {
 	ls.UserdataStore = db
 }
 
-func (ls *LocalHandlerService) SetLogDb(db *db.Db) {
-	ls.LogDb = db
-}
-
 func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) (*application.MenuHandlers, error) {
 	replaceSeparatorFunc := func(input string) string {
 		return strings.ReplaceAll(input, ":", ls.Cfg.MenuSeparator)
 	}
 
-	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, *ls.LogDb, accountService, replaceSeparatorFunc)
+	appHandlers, err := application.NewMenuHandlers(ls.Parser, *ls.UserdataStore, accountService, replaceSeparatorFunc)
 	if err != nil {
 		return nil, err
 	}

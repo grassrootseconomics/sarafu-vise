@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 

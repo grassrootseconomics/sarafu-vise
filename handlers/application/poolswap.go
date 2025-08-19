@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )

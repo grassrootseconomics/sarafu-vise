@@ -3,8 +3,8 @@ package debug
 import (
 	"testing"
 
-	visedb "git.defalsify.org/vise.git/db"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	visedb "github.com/grassrootseconomics/go-vise/db"
 )
 
 func TestDebugDbSubKeyInfo(t *testing.T) {

@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/person"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/resource"
 )
 
 // SaveFirstname updates the first name in the gdbm with the provided input.
@@ -24,7 +24,6 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 	firstName := string(input)
 
 	store := h.userdataStore
-	logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_firstname_set, _ := h.flagManager.GetFlag("flag_firstname_set")
@@ -44,10 +43,6 @@ func (h *MenuHandlers) SaveFirstname(ctx context.Context, sym string, input []by
 		}
 		res.FlagSet = append(res.FlagSet, flag_firstname_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryFirstName))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FIRST_NAME, "value", temporaryFirstName)
-		}
 	} else {
 		if firstNameSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(firstName))
@@ -73,7 +68,6 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 	}
 
 	store := h.userdataStore
-	logdb := h.logDb
 	familyName := string(input)
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
@@ -94,10 +88,6 @@ func (h *MenuHandlers) SaveFamilyname(ctx context.Context, sym string, input []b
 		}
 		res.FlagSet = append(res.FlagSet, flag_familyname_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FAMILY_NAME, []byte(temporaryFamilyName))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write firtname db log entry", "key", storedb.DATA_FAMILY_NAME, "value", temporaryFamilyName)
-		}
 	} else {
 		if familyNameSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(familyName))
@@ -154,7 +144,6 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 	}
 	yob := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_yob_set, _ := h.flagManager.GetFlag("flag_yob_set")
@@ -175,10 +164,6 @@ func (h *MenuHandlers) SaveYob(ctx context.Context, sym string, input []byte) (r
 		}
 		res.FlagSet = append(res.FlagSet, flag_yob_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_YOB, []byte(temporaryYob))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write yob db log entry", "key", storedb.DATA_YOB, "value", temporaryYob)
-		}
 	} else {
 		if yobSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(yob))
@@ -204,7 +189,6 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 	}
 	location := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_location_set, _ := h.flagManager.GetFlag("flag_location_set")
@@ -224,10 +208,6 @@ func (h *MenuHandlers) SaveLocation(ctx context.Context, sym string, input []byt
 		}
 		res.FlagSet = append(res.FlagSet, flag_location_set)
 
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_LOCATION, []byte(temporaryLocation))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write location db log entry", "key", storedb.DATA_LOCATION, "value", temporaryLocation)
-		}
 	} else {
 		if locationSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(location))
@@ -255,7 +235,6 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 	}
 	gender := strings.Split(symbol, "_")[1]
 	store := h.userdataStore
-	logdb := h.logDb
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_gender_set, _ := h.flagManager.GetFlag("flag_gender_set")
 
@@ -274,11 +253,6 @@ func (h *MenuHandlers) SaveGender(ctx context.Context, sym string, input []byte)
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_gender_set)
-
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_GENDER, []byte(temporaryGender))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write gender db log entry", "key", storedb.DATA_TEMPORARY_VALUE, "value", temporaryGender)
-		}
 
 	} else {
 		if genderSet {
@@ -306,7 +280,6 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 
 	offerings := string(input)
 	store := h.userdataStore
-	logdb := h.logDb
 
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
 	flag_offerings_set, _ := h.flagManager.GetFlag("flag_offerings_set")
@@ -326,11 +299,6 @@ func (h *MenuHandlers) SaveOfferings(ctx context.Context, sym string, input []by
 			return res, err
 		}
 		res.FlagSet = append(res.FlagSet, flag_offerings_set)
-
-		err = logdb.WriteLogEntry(ctx, sessionId, storedb.DATA_FIRST_NAME, []byte(temporaryOfferings))
-		if err != nil {
-			logg.DebugCtxf(ctx, "Failed to write offerings db log entry", "key", storedb.DATA_OFFERINGS, "value", offerings)
-		}
 	} else {
 		if offeringsSet {
 			err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(offerings))

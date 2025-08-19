@@ -5,10 +5,10 @@ import (
 	"log"
 	"testing"
 
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/alecthomas/assert/v2"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 )
 
 func TestSetLanguage(t *testing.T) {

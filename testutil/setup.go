@@ -4,16 +4,16 @@ import (
 	"context"
 	"path"
 
-	"git.defalsify.org/vise.git/db"
-	fsdb "git.defalsify.org/vise.git/db/fs"
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/storage"
+	"github.com/grassrootseconomics/go-vise/db"
+	fsdb "github.com/grassrootseconomics/go-vise/db/fs"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 	testdataloader "github.com/peteole/testdata-loader"
 )
 
 var (
-	logg       = logging.NewVanilla().WithDomain("sarafu-vise.testutil").WithContextKey("SessionId")
+	logg       = slogging.Get().With("component", "sarafu-vise.testutil")
 	conns      storage.Conns
 	resourceDb db.Db
 	baseDir    = testdataloader.GetBasePath()

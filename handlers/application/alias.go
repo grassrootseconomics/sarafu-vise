@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"unicode"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )

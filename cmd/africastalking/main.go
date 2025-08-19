@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"syscall"
 
-	"git.defalsify.org/vise.git/engine"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/resource"
+	"github.com/grassrootseconomics/go-vise/engine"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/resource"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/visedriver/request"
@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	logg          = logging.NewVanilla().WithDomain("AfricasTalking").WithContextKey("at-session-id")
+	logg          = slogging.Get().With("component", "AfricasTalking")
 	scriptDir     = path.Join("services", "registration")
 	build         = "dev"
 	menuSeparator = ": "
@@ -79,10 +79,10 @@ func main() {
 	pfp := path.Join(scriptDir, "pp.csv")
 
 	cfg := engine.Config{
-		Root:          "root",
-		OutputSize:    uint32(size),
-		FlagCount:     uint32(128),
-		MenuSeparator: menuSeparator,
+		Root:              "root",
+		OutputSize:        uint32(size),
+		FlagCount:         uint32(128),
+		MenuSeparator:     menuSeparator,
 		ResetOnEmptyInput: true,
 	}
 
@@ -102,11 +102,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, "userdatadb: %v\n", err)
 		os.Exit(1)
 	}
-	logdb, err := menuStorageService.GetLogDb(ctx, userdataStore, logDbConnStr, "user-data")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "get log db error: %v\n", err)
-		os.Exit(1)
-	}
 
 	dbResource, ok := rs.(*resource.DbResource)
 	if !ok {
@@ -120,7 +115,6 @@ func main() {
 		os.Exit(1)
 	}
 	lhs.SetDataStore(&userdataStore)
-	lhs.SetLogDb(&logdb)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "setdatastore: %v\n", err)
 		os.Exit(1)

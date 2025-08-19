@@ -6,8 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
@@ -15,6 +13,8 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/grassrootseconomics/ethutils"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/resource"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 

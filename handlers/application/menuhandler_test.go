@@ -8,23 +8,23 @@ import (
 	"strings"
 	"testing"
 
-	"git.defalsify.org/vise.git/cache"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/common/pin"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/mocks"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/testutil/testservice"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/cache"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
+	"github.com/grassrootseconomics/go-vise/state"
 
 	"github.com/alecthomas/assert/v2"
 
 	testdataloader "github.com/peteole/testdata-loader"
 	"github.com/stretchr/testify/require"
 
-	visedb "git.defalsify.org/vise.git/db"
-	memdb "git.defalsify.org/vise.git/db/mem"
+	visedb "github.com/grassrootseconomics/go-vise/db"
+	memdb "github.com/grassrootseconomics/go-vise/db/mem"
 )
 
 var (
@@ -56,25 +56,6 @@ func InitializeTestStore(t *testing.T) (context.Context, *store.UserDataStore) {
 	return ctx, store
 }
 
-// InitializeTestLogdbStore sets up and returns an in-memory database and logdb store.
-func InitializeTestLogdbStore(t *testing.T) (context.Context, *store.UserDataStore) {
-	ctx := context.Background()
-
-	// Initialize memDb
-	db := memdb.NewMemDb()
-	err := db.Connect(ctx, "")
-	require.NoError(t, err, "Failed to connect to memDb")
-
-	// Create UserDataStore with memDb
-	logdb := &store.UserDataStore{Db: db}
-
-	t.Cleanup(func() {
-		db.Close(ctx) // Ensure the DB is closed after each test
-	})
-
-	return ctx, logdb
-}
-
 func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPrefixDb {
 	db := memdb.NewMemDb()
 	err := db.Connect(ctx, "")
@@ -89,7 +70,6 @@ func InitializeTestSubPrefixDb(t *testing.T, ctx context.Context) *storedb.SubPr
 
 func TestNewMenuHandlers(t *testing.T) {
 	_, store := InitializeTestStore(t)
-	_, logdb := InitializeTestLogdbStore(t)
 
 	fm, err := NewFlagManager(flagsPath)
 	if err != nil {
@@ -100,7 +80,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for valid UserDataStore
 	t.Run("Valid UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, store, logdb, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, store, &accountService, mockReplaceSeparator)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -124,7 +104,7 @@ func TestNewMenuHandlers(t *testing.T) {
 
 	// Test case for nil UserDataStore
 	t.Run("Nil UserDataStore", func(t *testing.T) {
-		handlers, err := NewMenuHandlers(fm, nil, logdb, &accountService, mockReplaceSeparator)
+		handlers, err := NewMenuHandlers(fm, nil, &accountService, mockReplaceSeparator)
 		if err == nil {
 			t.Fatal("expected an error, got none")
 		}
@@ -227,12 +207,6 @@ func TestCheckIdentifier(t *testing.T) {
 	ctx, userdatastore := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
 
-	_, logdb := InitializeTestLogdbStore(t)
-
-	logDb := store.LogDb{
-		Db: logdb,
-	}
-
 	// Define test cases
 	tests := []struct {
 		name            string
@@ -260,7 +234,6 @@ func TestCheckIdentifier(t *testing.T) {
 			// Create the MenuHandlers instance with the mock store
 			h := &MenuHandlers{
 				userdataStore: userdatastore,
-				logDb:         logDb,
 			}
 
 			// Call the method

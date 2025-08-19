@@ -7,23 +7,23 @@ import (
 
 	"gopkg.in/leonelquinteros/gotext.v1"
 
-	"git.defalsify.org/vise.git/asm"
-	"git.defalsify.org/vise.git/cache"
-	"git.defalsify.org/vise.git/db"
-	"git.defalsify.org/vise.git/lang"
-	"git.defalsify.org/vise.git/logging"
-	"git.defalsify.org/vise.git/persist"
-	"git.defalsify.org/vise.git/resource"
-	"git.defalsify.org/vise.git/state"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/internal/sms"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/profile"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	"github.com/grassrootseconomics/go-vise/asm"
+	"github.com/grassrootseconomics/go-vise/cache"
+	"github.com/grassrootseconomics/go-vise/db"
+	"github.com/grassrootseconomics/go-vise/lang"
+	"github.com/grassrootseconomics/go-vise/persist"
+	"github.com/grassrootseconomics/go-vise/resource"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
+	"github.com/grassrootseconomics/go-vise/state"
 )
 
 var (
-	logg           = logging.NewVanilla().WithDomain("ussdmenuhandler").WithContextKey("SessionId")
+	logg           = slogging.Get().With("component", "ussdmenuhandler")
 	scriptDir      = path.Join("services", "registration")
 	translationDir = path.Join(scriptDir, "locale")
 )
@@ -65,13 +65,13 @@ type MenuHandlers struct {
 	accountService       remote.AccountService
 	prefixDb             storedb.PrefixDb
 	smsService           sms.SmsService
-	logDb                store.LogDb
+	// logDb                store.LogDb
 	profile              *profile.Profile
 	ReplaceSeparatorFunc func(string) string
 }
 
 // NewHandlers creates a new instance of the Handlers struct with the provided dependencies.
-func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
+func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, accountService remote.AccountService, replaceSeparatorFunc func(string) string) (*MenuHandlers, error) {
 	if userdataStore == nil {
 		return nil, fmt.Errorf("cannot create handler with nil userdata store")
 	}
@@ -83,9 +83,9 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, ac
 		Userdatastore:  *userDb,
 	}
 
-	logDb := store.LogDb{
-		Db: logdb,
-	}
+	// logDb := store.LogDb{
+	// 	Db: logdb,
+	// }
 
 	// Instantiate the SubPrefixDb with "DATATYPE_USERDATA" prefix
 	prefix := storedb.ToBytes(db.DATATYPE_USERDATA)
@@ -97,7 +97,7 @@ func NewMenuHandlers(appFlags *FlagManager, userdataStore db.Db, logdb db.Db, ac
 		accountService:       accountService,
 		smsService:           smsservice,
 		prefixDb:             prefixDb,
-		logDb:                logDb,
+		// logDb:                logDb,
 		profile:              &profile.Profile{Max: 6},
 		ReplaceSeparatorFunc: replaceSeparatorFunc,
 	}

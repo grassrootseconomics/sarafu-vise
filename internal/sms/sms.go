@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"git.defalsify.org/vise.git/logging"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/remote"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	slogging "github.com/grassrootseconomics/go-vise/slog"
 )
 
 var (
-	logg = logging.NewVanilla().WithDomain("smsservice")
+	logg = slogging.Get().With("component", "smsservice")
 )
 
 type SmsService struct {

@@ -4,7 +4,7 @@
 package debug
 
 import (
-	"git.defalsify.org/vise.git/db"
+	"github.com/grassrootseconomics/go-vise/db"
 
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )

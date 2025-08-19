@@ -5,7 +5,7 @@ import (
 	"context"
 	"testing"
 
-	memdb "git.defalsify.org/vise.git/db/mem"
+	memdb "github.com/grassrootseconomics/go-vise/db/mem"
 )
 
 func TestSubPrefix(t *testing.T) {
