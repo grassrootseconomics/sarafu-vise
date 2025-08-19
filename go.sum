@@ -1,11 +1,15 @@
-git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66 h1:hmtb2Q3lHxq+SXqG+Gn43pKhTRYx+sw5j1LpgBfXN1o=
-git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
+git.defalsify.org/vise.git v0.3.2-0.20250407143413-e55cf9bcb7d2 h1:kbiDZtvphEKsTAnebrB6QxRbB7zdoTHSmzzumXrJ4hw=
+git.defalsify.org/vise.git v0.3.2-0.20250407143413-e55cf9bcb7d2/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e h1:DcC9qkNl9ny3hxQmsMK6W81+5R/j4ZwYUbvewMI/rlc=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e/go.mod h1:wgQJZGIS6QuNLHqDhcsvehsbn5PvgV7aziRebMnJi60=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250630214912-814bef2b209a h1:KuhJ/WY4RCGmrXUA680ciaponM4vM5zBOJfnCpUo2fc=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250630214912-814bef2b209a/go.mod h1:y/vsN8UO0wSxZk3gv0y5df4RPKMJI6TIxjVcVCPF8T8=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250819094350-3c8e3d1bc86f h1:0cf7i1gNXZR9VqXjy45cKOB5lbnSzfZGkIvSQhQSF5I=
+git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250819094350-3c8e3d1bc86f/go.mod h1:LJF/8GtEP/XU2+Z1KzN6//nFyqJbn17oledIn6Gtmmc=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306 h1:Jo+yWysWw/N5BJQtAyEMN8ePVvAyPHv+JG4lQti+1N4=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306/go.mod h1:FdLwYtzsjOIcDiW4uDgDYnB4Wdzq12uJUe0QHSSPbSo=
+git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-5a9c82207578 h1:GKhBMVbjGBus3eAp2tw3M66irOnEWWg0QEKVn0bBS8E=
+git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-5a9c82207578/go.mod h1:hx6mjSyxKv5oxiJxB6EevJrMJIYjVoYxFEzBtpD+29c=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694 h1:DjJlBSz0S13acft5XZDWk7ZYnzElym0xLMYEVgyNJ+E=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694/go.mod h1:DpibtYpnT3nG4Kn556hRAkdu4+CtiI/6MbnQHal51mQ=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
@@ -97,6 +101,8 @@ github.com/grassrootseconomics/eth-custodial v1.3.0-beta h1:twrMBhl89GqDUL9PlkzQ
 github.com/grassrootseconomics/eth-custodial v1.3.0-beta/go.mod h1:7uhRcdnJplX4t6GKCEFkbeDhhjlcaGJeJqevbcvGLZo=
 github.com/grassrootseconomics/ethutils v1.3.1 h1:LlQO90HjJkl7ejC8fv6jP7RJUrAm1j4VMMCYfsoIrhU=
 github.com/grassrootseconomics/ethutils v1.3.1/go.mod h1:Wuv1VEZrkLIXqTSEYI3Nh9HG/ZHOUQ+U+xvWJ8QtjgQ=
+github.com/grassrootseconomics/go-vise v0.5.0 h1:FRg2de55Eb5SisrgTBeFWfWX+sXwp5q9r7YWtKWDwsk=
+github.com/grassrootseconomics/go-vise v0.5.0/go.mod h1:b2/q4jfTu2i1wyUwYUu7FYq4m2f1AZv8MpiDM3ZcoGo=
 github.com/grassrootseconomics/ussd-data-service v1.6.0-beta h1:pY6zns6ifXyClRxP+JJaWrged3oRE7tTS2xaftF9clA=
 github.com/grassrootseconomics/ussd-data-service v1.6.0-beta/go.mod h1:9sGnorpKaK76FmOGXoh/xv7x5siSFNYdXxQo9BKW4DI=
 github.com/graygnuorg/go-gdbm v0.0.0-20220711140707-71387d66dce4 h1:U4kkNYryi/qfbBF8gh7Vsbuz+cVmhf5kt6pE9bYYyLo=
@@ -127,6 +133,10 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7c=
 github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2Sh+Jxxv8=
+github.com/leonelquinteros/gotext v1.7.2 h1:bDPndU8nt+/kRo1m4l/1OXiiy2v7Z7dfPQ9+YP7G1Mc=
+github.com/leonelquinteros/gotext v1.7.2/go.mod h1:9/haCkm5P7Jay1sxKDGJ5WIg4zkz8oZKw4ekNpALob8=
+github.com/lmittmann/tint v1.1.2 h1:2CQzrL6rslrsyjqLDwD11bZ5OpLBPU+g3G/r5LSfS8w=
+github.com/lmittmann/tint v1.1.2/go.mod h1:HIS3gSy7qNwGCj+5oRjAutErFBl4BzdQP6cJZ0NfMwE=
 github.com/lmittmann/w3 v0.17.1 h1:zdXIimmNmYfqOFur+Jqc9Yqwtq6jwnsQufbTOnSAtW4=
 github.com/lmittmann/w3 v0.17.1/go.mod h1:WVUGMbL83WYBu4Sge3SVlW3qIG4VaHe+S8+UUnwz9Eg=
 github.com/mattn/go-runewidth v0.0.15 h1:UNAjwbU9l54TA3KzvqLGxwWjHmMgBUVhBiTjelZgg3U=

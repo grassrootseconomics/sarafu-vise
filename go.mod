@@ -5,14 +5,14 @@ go 1.24
 toolchain go1.24.6
 
 require (
-	git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66
 	git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e
-	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250630214912-814bef2b209a
-	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306
+	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250819094350-3c8e3d1bc86f
+	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-5a9c82207578
 	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ethutils v1.3.1
+	github.com/grassrootseconomics/go-vise v0.5.0
 	github.com/grassrootseconomics/ussd-data-service v1.6.0-beta
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/peteole/testdata-loader v0.3.0
@@ -22,6 +22,7 @@ require (
 )
 
 require (
+	git.defalsify.org/vise.git v0.3.2-0.20250407143413-e55cf9bcb7d2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
@@ -50,10 +51,10 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/leonelquinteros/gotext v1.7.2 // indirect
 	github.com/lmittmann/w3 v0.17.1 // indirect
 	github.com/mattn/kinako v0.0.0-20170717041458-332c0a7e205a // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
-	github.com/pashagolub/pgxmock/v4 v4.7.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
