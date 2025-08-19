@@ -8,7 +8,7 @@ require (
 	git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20250417111317-2953f4c2f32e
 	git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20250819094350-3c8e3d1bc86f
 	git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-5a9c82207578
-	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.0.0-20250129070628-5a539172c694
+	git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.9.0-beta.1.0.20250819143213-4e0d0b53e8e2
 	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ethutils v1.3.1
