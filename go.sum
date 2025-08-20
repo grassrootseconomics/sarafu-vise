@@ -8,6 +8,8 @@ git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250819084006-5a9c82207578/go.mod h1:hx6mjSyxKv5oxiJxB6EevJrMJIYjVoYxFEzBtpD+29c=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.9.0-beta.1.0.20250819143213-4e0d0b53e8e2 h1:ZAb4ENotTZOIR15TG6Cu9pyKxRYpAAVSBp49n2Py2ic=
 git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.9.0-beta.1.0.20250819143213-4e0d0b53e8e2/go.mod h1:h9dhyoSJvgGHNqiFwyLANIEPswohNO5IRBrV+VvXbxI=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.9.0-beta.1.0.20250820130947-615f1d32acbe h1:l4Dw6/J269cBlJQlWMv5OnAMufeg+/qcGzJVkw1kocM=
+git.grassecon.net/grassrootseconomics/visedriver-africastalking v0.9.0-beta.1.0.20250820130947-615f1d32acbe/go.mod h1:h9dhyoSJvgGHNqiFwyLANIEPswohNO5IRBrV+VvXbxI=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
