@@ -7,9 +7,9 @@ This is a USSD service built using the [go-vise](https://github.com/nolash/go-vi
 ## Prerequisites
 ### 1. [go-vise](https://github.com/nolash/go-vise)
 
-Set up `go-vise` by cloning the repository into a separate directory. The main upstream repository is hosted at: `https://git.defalsify.org/vise.git`
+Set up `go-vise` by cloning the repository into a separate directory. The main upstream repository is hosted at: `https://github.com/grassrootseconomics/go-vise`
 ```
-git clone https://git.defalsify.org/vise.git
+git clone https://github.com/grassrootseconomics/go-vise
 ```
 
 ## Setup
