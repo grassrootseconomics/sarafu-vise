@@ -91,8 +91,6 @@ const (
 	DATA_ACTIVE_POOL_SYM
 	// Holds the send transaction type
 	DATA_SEND_TRANSACTION_TYPE
-	// Holds the recipient active token (RAT)
-	DATA_RECIPIENT_ACTIVE_TOKEN
 	// Holds the recipient formatted phone number
 	DATA_RECIPIENT_PHONE_NUMBER
 )
