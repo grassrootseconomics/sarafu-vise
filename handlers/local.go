@@ -136,6 +136,9 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("swap_max_limit", appHandlers.SwapMaxLimit)
 	ls.DbRs.AddLocalFunc("swap_preview", appHandlers.SwapPreview)
 	ls.DbRs.AddLocalFunc("initiate_swap", appHandlers.InitiateSwap)
+	ls.DbRs.AddLocalFunc("transaction_swap_preview", appHandlers.TransactionSwapPreview)
+	ls.DbRs.AddLocalFunc("transaction_initiate_swap", appHandlers.TransactionInitiateSwap)
+
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil
