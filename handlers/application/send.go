@@ -703,3 +703,84 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	return res, nil
 }
+
+// TransactionInitiateSwap calls the poolSwap and returns a confirmation based on the result.
+func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
+	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
+		return res, err
+	}
+
+	swapAmountStr := string(swapAmount)
+
+	// Call the poolSwap API
+	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	if err != nil {
+		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
+
+	swapTrackingId := poolSwap.TrackingId
+	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", swapTrackingId)
+
+	// Initiate a send 
+	recipientPublicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
+		return res, err
+	}
+	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	if err != nil {
+		// invalid state
+		return res, err
+	}
+
+	// Call TokenTransfer
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, swapAmountStr, swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
+	if err != nil {
+		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
+		return res, nil
+	}
+
+	trackingId := tokenTransfer.TrackingId
+	logg.InfoCtxf(ctx, "TokenTransfer", "trackingId", trackingId)
+
+	res.Content = l.Get(
+		"Your request has been sent. %s will receive %s %s from %s.",
+		string(recipientPhoneNumber),
+		swapData.TemporaryValue,
+		swapData.ActiveSwapToSym,
+		sessionId,
+	)
+
+	res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_swap_transaction)
+	return res, nil
+}
