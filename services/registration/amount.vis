@@ -4,6 +4,7 @@ RELOAD max_amount
 MAP max_amount
 MOUT back 0
 HALT
+CATCH transaction_swap flag_swap_transaction 1
 LOAD validate_amount 64
 RELOAD validate_amount
 CATCH api_failure flag_api_call_error 1
