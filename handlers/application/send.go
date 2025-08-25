@@ -94,23 +94,31 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 		logg.ErrorCtxf(ctx, "Failed to read sender activeSym", "error", err)
 		return *res, err
 	}
-	recipientActiveToken, err := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_SYM)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "Failed to read recipient activeSym", "error", err)
-		return *res, err
-	}
+
+	recipientActiveToken, _ := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_SYM)
 
 	txType := "swap"
-	if senderSym != nil && recipientActiveToken != nil && string(senderSym) == string(recipientActiveToken) {
+
+	// recipient has no active token → normal transaction
+	if recipientActiveToken == nil {
+		txType = "normal"
+	} else if senderSym != nil && string(senderSym) == string(recipientActiveToken) {
+		// recipient has active token same as sender → normal transaction
 		txType = "normal"
 	}
+
+	// save transaction type
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write tx type", "type", txType, "error", err)
 		return *res, err
 	}
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, recipientActiveToken); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write recipient active token", "error", err)
-		return *res, err
+
+	// only save recipient’s active token if it exists
+	if recipientActiveToken != nil {
+		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, recipientActiveToken); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write recipient active token", "error", err)
+			return *res, err
+		}
 	}
 
 	return *res, nil
