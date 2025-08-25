@@ -14,6 +14,7 @@ import (
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/grassrootseconomics/ethutils"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
@@ -89,20 +90,20 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 		return *res, err
 	}
 
-	senderSym, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "Failed to read sender activeSym", "error", err)
+		logg.ErrorCtxf(ctx, "Failed to read sender senderActiveAddress", "error", err)
 		return *res, err
 	}
 
-	recipientActiveToken, _ := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_SYM)
+	recipientActiveAddress, _ := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_ADDRESS)
 
 	txType := "swap"
 
 	// recipient has no active token → normal transaction
-	if recipientActiveToken == nil {
+	if recipientActiveAddress == nil {
 		txType = "normal"
-	} else if senderSym != nil && string(senderSym) == string(recipientActiveToken) {
+	} else if senderActiveAddress != nil && string(senderActiveAddress) == string(recipientActiveAddress) {
 		// recipient has active token same as sender → normal transaction
 		txType = "normal"
 	}
@@ -113,12 +114,10 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 		return *res, err
 	}
 
-	// only save recipient’s active token if it exists
-	if recipientActiveToken != nil {
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, recipientActiveToken); err != nil {
-			logg.ErrorCtxf(ctx, "Failed to write recipient active token", "error", err)
-			return *res, err
-		}
+	// save the recipient's phone number
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, []byte(formattedNumber)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write recipient's phone number", "type", txType, "error", err)
+		return *res, err
 	}
 
 	return *res, nil
@@ -219,7 +218,7 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_ACTIVE_TOKEN, []byte(""))
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, []byte(""))
 	if err != nil {
 		return res, nil
 	}
@@ -264,6 +263,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	}
 
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
 	userStore := h.userdataStore
 
 	// Fetch session data
@@ -277,16 +277,22 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 
 	// If normal transaction, return balance
 	if string(transactionType) == "normal" {
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
 		return res, nil
 	}
 
-	// Get recipient token address
-	recipientTokenAddress, err := h.getRecipientTokenAddress(ctx, sessionId)
+	res.FlagSet = append(res.FlagSet, flag_swap_transaction)
+
+	// Get the recipient's phone number to read other data items
+	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
 	if err != nil {
-		// fallback to normal
-		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
-		return res, nil
+		// invalid state
+		return res, err
+	}
+	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
+	if err != nil {
+		return res, err
 	}
 
 	// Resolve active pool address
@@ -307,7 +313,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	}
 
 	// Calculate max swappable amount
-	maxStr, err := h.calculateSwapMaxAmount(ctx, activePoolAddress, activeAddress, recipientTokenAddress, publicKey, activeDecimal)
+	maxStr, err := h.calculateSwapMaxAmount(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, err
@@ -324,6 +330,20 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxStr))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write swap max amount", "value", maxStr, "error", err)
+		return res, err
+	}
+
+	// save swap related data for the swap preview
+	metadata := &dataserviceapi.TokenHoldings{
+		TokenSymbol:   string(recipientActiveSym),
+		Balance:       formattedBalance, //not used
+		TokenDecimals: string(recipientActiveDecimal),
+		TokenAddress:  string(recipientActiveAddress),
+	}
+
+	// Store the active swap_to data
+	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 		return res, err
 	}
 
@@ -355,16 +375,28 @@ func (h *MenuHandlers) getSessionData(ctx context.Context, sessionId string) (tr
 		return
 	}
 	activeDecimal, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL)
+	if err != nil {
+		return
+	}
 	return
 }
 
-func (h *MenuHandlers) getRecipientTokenAddress(ctx context.Context, sessionId string) ([]byte, error) {
+func (h *MenuHandlers) getRecipientData(ctx context.Context, sessionId string) (recipientActiveSym, recipientActiveAddress, recipientActiveDecimal []byte, err error) {
 	store := h.userdataStore
-	recipientPhone, err := store.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+
+	recipientActiveSym, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return store.ReadEntry(ctx, string(recipientPhone), storedb.DATA_ACTIVE_ADDRESS)
+	recipientActiveAddress, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		return
+	}
+	recipientActiveDecimal, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL)
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (h *MenuHandlers) resolveActivePoolAddress(ctx context.Context, sessionId string) ([]byte, error) {
