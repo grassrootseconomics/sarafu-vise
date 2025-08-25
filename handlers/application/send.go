@@ -251,27 +251,157 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 	return res, nil
 }
 
-// MaxAmount gets the current sender's balance from the store and sets it as
+// MaxAmount checks the transaction type to determine the displayed max amount.
+// If the transaction type is "swap", it checks the max swappable amount and sets this as the content.
+// If the transaction type is "normal", gets the current sender's balance from the store and sets it as
 // the result content.
 func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
-	var err error
 
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
 	}
-	store := h.userdataStore
 
-	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
+	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	userStore := h.userdataStore
+
+	// Fetch session data
+	transactionType, activeBal, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
 
-	res.Content = string(activeBal)
+	// Format the active balance amount to 2 decimal places
+	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
 
+	// If normal transaction, return balance
+	if string(transactionType) == "normal" {
+		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+		return res, nil
+	}
+
+	// Get recipient token address
+	recipientTokenAddress, err := h.getRecipientTokenAddress(ctx, sessionId)
+	if err != nil {
+		// fallback to normal
+		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+		return res, nil
+	}
+
+	// Resolve active pool address
+	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	// Check if sender token is swappable
+	canSwap, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
+	if err != nil || !canSwap.CanSwapFrom {
+		if err != nil {
+			res.FlagSet = append(res.FlagSet, flag_api_error)
+			logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
+		}
+		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+		return res, err
+	}
+
+	// Calculate max swappable amount
+	maxStr, err := h.calculateSwapMaxAmount(ctx, activePoolAddress, activeAddress, recipientTokenAddress, publicKey, activeDecimal)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		return res, err
+	}
+
+	// Fallback if below minimum
+	maxFloat, _ := strconv.ParseFloat(maxStr, 64)
+	if maxFloat < 0.1 {
+		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+		return res, nil
+	}
+
+	// Save max swap amount and return
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap max amount", "value", maxStr, "error", err)
+		return res, err
+	}
+
+	res.Content = fmt.Sprintf("%s %s", maxStr, string(activeSym))
 	return res, nil
+}
+
+func (h *MenuHandlers) getSessionData(ctx context.Context, sessionId string) (transactionType, activeBal, activeSym, activeAddress, publicKey, activeDecimal []byte, err error) {
+	store := h.userdataStore
+
+	transactionType, err = store.ReadEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE)
+	if err != nil {
+		return
+	}
+	activeBal, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
+	if err != nil {
+		return
+	}
+	activeAddress, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		return
+	}
+	activeSym, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+	if err != nil {
+		return
+	}
+	publicKey, err = store.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		return
+	}
+	activeDecimal, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_DECIMAL)
+	return
+}
+
+func (h *MenuHandlers) getRecipientTokenAddress(ctx context.Context, sessionId string) ([]byte, error) {
+	store := h.userdataStore
+	recipientPhone, err := store.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	if err != nil {
+		return nil, err
+	}
+	return store.ReadEntry(ctx, string(recipientPhone), storedb.DATA_ACTIVE_ADDRESS)
+}
+
+func (h *MenuHandlers) resolveActivePoolAddress(ctx context.Context, sessionId string) ([]byte, error) {
+	store := h.userdataStore
+	addr, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
+	if err == nil {
+		return addr, nil
+	}
+	if db.IsNotFound(err) {
+		defaultAddr := []byte(config.DefaultPoolAddress())
+		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, defaultAddr); err != nil {
+			logg.ErrorCtxf(ctx, "failed to write default pool address", "error", err)
+			return nil, err
+		}
+		return defaultAddr, nil
+	}
+	logg.ErrorCtxf(ctx, "failed to read active pool address", "error", err)
+	return nil, err
+}
+
+func (h *MenuHandlers) calculateSwapMaxAmount(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, decimal []byte) (string, error) {
+	swapLimit, err := h.accountService.GetSwapFromTokenMaxLimit(
+		ctx,
+		string(poolAddress),
+		string(fromAddress),
+		string(toAddress),
+		string(publicKey),
+	)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
+		return "", err
+	}
+
+	scaled := store.ScaleDownBalance(swapLimit.Max, string(decimal))
+
+	formattedAmount, _ := store.TruncateDecimalString(string(scaled), 2)
+	return formattedAmount, nil
 }
 
 // ValidateAmount ensures that the given input is a valid amount and that
