@@ -602,3 +602,104 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
 }
+
+// TransactionSwapPreview displays the send swap preview and estimates
+func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	if err != nil {
+		// invalid state
+		return res, err
+	}
+
+	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	maxValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
+		return res, err
+	}
+
+	inputAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil || inputAmount > maxValue {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	// Format the amount to 2 decimal places
+	formattedAmount, err := store.TruncateDecimalString(inputStr, 2)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapFromDecimal)
+	if err != nil {
+		return res, err
+	}
+
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT, []byte(finalAmountStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		return res, err
+	}
+	// store the user's input amount in the temporary value
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		return res, err
+	}
+
+	// call the API to get the quote
+	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	if err != nil {
+		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
+
+	// Scale down the quoted amount
+	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
+
+	fmt.Println("the quoteAmountStr is:", quoteAmountStr)
+	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
+		return res, err
+	}
+
+	// Format to 2 decimal places
+	qouteStr := fmt.Sprintf("%.2f", qouteAmount)
+
+	res.Content = fmt.Sprintf(
+		"%s will receive %s %s",
+		string(recipientPhoneNumber), qouteStr, swapData.ActiveSwapToSym,
+	)
+
+	return res, nil
+}
