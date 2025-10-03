@@ -290,7 +290,7 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	res.Content = fmt.Sprintf(
-		"Name: %s\nSymbol: %s\nCommodity: %s\nLocation: %s", voucherData.TokenName, voucherData.TokenSymbol, voucherData.TokenCommodity, voucherData.TokenLocation,
+		"Name: %s\nSymbol: %s\nProduct: %s\nLocation: %s", voucherData.TokenName, voucherData.TokenSymbol, voucherData.TokenCommodity, voucherData.TokenLocation,
 	)
 
 	return res, nil
