@@ -15,11 +15,6 @@ var (
 	logg = logging.NewVanilla().WithDomain("vouchers").WithContextKey("SessionId")
 )
 
-// symbolReplacements holds mappings of invalid symbols → valid ones
-var symbolReplacements = map[string]string{
-	"USD₮": "USDT",
-}
-
 // VoucherMetadata helps organize data fields
 type VoucherMetadata struct {
 	Symbols   string
@@ -28,24 +23,13 @@ type VoucherMetadata struct {
 	Addresses string
 }
 
-// sanitizeSymbol replaces known invalid token symbols with normalized ones
-func sanitizeSymbol(symbol string) string {
-	if replacement, ok := symbolReplacements[symbol]; ok {
-		return replacement
-	}
-	return symbol
-}
-
 // ProcessVouchers converts holdings into formatted strings
 func ProcessVouchers(holdings []dataserviceapi.TokenHoldings) VoucherMetadata {
 	var data VoucherMetadata
 	var symbols, balances, decimals, addresses []string
 
 	for i, h := range holdings {
-		// normalize token symbol before use
-		cleanSymbol := sanitizeSymbol(h.TokenSymbol)
-
-		symbols = append(symbols, fmt.Sprintf("%d:%s", i+1, cleanSymbol))
+		symbols = append(symbols, fmt.Sprintf("%d:%s", i+1, h.TokenSymbol))
 
 		// Scale down the balance
 		scaledBalance := ScaleDownBalance(h.Balance, h.TokenDecimals)
