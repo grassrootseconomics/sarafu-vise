@@ -195,12 +195,14 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
-	var AliasAddressResult string
+	var aliasAddressResult string
+	// set the default transaction type
+	txType := "swap"
 
 	if strings.Contains(recipient, ".") {
 		alias, err := h.accountService.CheckAliasAddress(ctx, recipient)
 		if err == nil {
-			AliasAddressResult = alias.Address
+			aliasAddressResult = alias.Address
 		} else {
 			logg.ErrorCtxf(ctx, "Failed to resolve alias", "alias", recipient, "error", err)
 		}
@@ -212,7 +214,7 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 			alias, err := h.accountService.CheckAliasAddress(ctx, fqdn)
 			if err == nil {
 				res.FlagReset = append(res.FlagReset, flag_api_error)
-				AliasAddressResult = alias.Address
+				aliasAddressResult = alias.Address
 				break
 			} else {
 				res.FlagSet = append(res.FlagSet, flag_api_error)
@@ -222,19 +224,66 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 		}
 	}
 
-	if AliasAddressResult == "" {
+	if aliasAddressResult == "" {
 		res.FlagSet = append(res.FlagSet, flag_invalid_recipient)
 		res.Content = recipient
 		return *res, nil
 	}
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(AliasAddressResult)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(aliasAddressResult)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to store alias recipient", "error", err)
 		return *res, err
 	}
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte("normal")); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write tx type for alias", "error", err)
+
+	// Normalize the alias address to fetch the recipient's phone number
+	publicKeyNormalized, err := hex.NormalizeHex(aliasAddressResult)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to normalize alias address", "address", aliasAddressResult, "error", err)
 		return *res, err
+	}
+
+	// get the recipient's phone number from the address
+	recipientPhoneNumber, err := store.ReadEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE)
+	if err != nil || len(recipientPhoneNumber) == 0 {
+		txType = "normal"
+		logg.WarnCtxf(ctx, "Alias address not registered, switching to normal transaction", "address", aliasAddressResult)
+		recipientPhoneNumber = nil
+	}
+
+	// Read sender's active address
+	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
+		return *res, err
+	}
+
+	var recipientActiveAddress []byte
+	if recipientPhoneNumber != nil {
+		recipientActiveAddress, _ = store.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
+	}
+
+	// recipient has no active token → normal transaction
+	if recipientActiveAddress == nil {
+		txType = "normal"
+	} else if senderActiveAddress != nil && string(senderActiveAddress) == string(recipientActiveAddress) {
+		// recipient has active token same as sender → normal transaction
+		txType = "normal"
+	}
+
+	// Save the transaction type
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
+		return *res, err
+	}
+
+	// Save the recipient's phone number only if it exists
+	if recipientPhoneNumber != nil {
+		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "error", err)
+			return *res, err
+		}
+	} else {
+		logg.InfoCtxf(ctx, "No recipient phone number found for alias", "address", aliasAddressResult)
 	}
 
 	return *res, nil
