@@ -138,6 +138,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("initiate_swap", appHandlers.InitiateSwap)
 	ls.DbRs.AddLocalFunc("transaction_swap_preview", appHandlers.TransactionSwapPreview)
 	ls.DbRs.AddLocalFunc("transaction_initiate_swap", appHandlers.TransactionInitiateSwap)
+	ls.DbRs.AddLocalFunc("clear_trans_type_flag", appHandlers.ClearTransactionTypeFlag)
 
 	ls.first = appHandlers.Init
 

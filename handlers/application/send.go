@@ -836,3 +836,19 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	res.FlagReset = append(res.FlagReset, flag_account_authorized, flag_swap_transaction)
 	return res, nil
 }
+
+
+// ClearTransactionTypeFlag resets the flag when a user goes back.
+func (h *MenuHandlers) ClearTransactionTypeFlag(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+
+	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		return res, nil
+	}
+
+	return res, nil
+}
