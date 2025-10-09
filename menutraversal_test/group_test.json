@@ -5,19 +5,19 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "2",
+                    "input": "3",
                     "expectedContent": "My vouchers\n1:Select voucher\n2:Voucher details\n0:Back"
                 },
                 {
                     "input": "1",
-                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                    "expectedContent": "Select number or symbol from your vouchers:\n1:SRF\n0:Back\n99:Quit"
                 },
                 {
                     "input": "",
-                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                    "expectedContent": "Select number or symbol from your vouchers:\n1:SRF\n0:Back\n99:Quit"
                 },
                 {
                     "input": "1",
@@ -29,7 +29,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -38,15 +38,15 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "2",
+                    "input": "3",
                     "expectedContent": "My vouchers\n1:Select voucher\n2:Voucher details\n0:Back"
                 },
                 {
                     "input": "1",
-                    "expectedContent": "Select number or symbol from your vouchers:\n1SRF\n0:Back\n99:Quit"
+                    "expectedContent": "Select number or symbol from your vouchers:\n1:SRF\n0:Back\n99:Quit"
                 },
                 {
                     "input": "SRF",
@@ -58,7 +58,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -67,10 +67,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -95,7 +95,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -104,10 +104,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -136,7 +136,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -145,10 +145,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -177,7 +177,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -186,10 +186,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -210,7 +210,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -219,10 +219,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -235,7 +235,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -244,10 +244,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -280,7 +280,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -289,10 +289,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -325,7 +325,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -334,10 +334,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -382,7 +382,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -391,10 +391,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -419,7 +419,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -428,10 +428,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -460,7 +460,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -469,10 +469,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -497,7 +497,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -506,10 +506,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -534,7 +534,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -543,10 +543,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -571,7 +571,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -580,10 +580,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
@@ -604,7 +604,7 @@
                 },
                 {
                     "input": "0",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 }
             ]
         },
@@ -613,10 +613,10 @@
             "steps": [
                 {
                     "input": "",
-                    "expectedContent": "{balance}\n\n1:Send\n2:My Vouchers\n3:My Account\n4:Help\n9:Quit"
+                    "expectedContent": "{balance}\n\n1:Send\n2:Swap\n3:My Vouchers\n4:Select pool\n5:My Account\n6:Help\n9:Quit"
                 },
                 {
-                    "input": "3",
+                    "input": "5",
                     "expectedContent": "My Account\n1:Profile\n2:Change language\n3:Check balances\n4:Check statement\n5:PIN options\n6:My Address\n7:My Alias\n0:Back"
                 },
                 {
