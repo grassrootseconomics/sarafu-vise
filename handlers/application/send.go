@@ -121,8 +121,6 @@ func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient s
 		recipientPhoneNumber = nil
 	}
 
-	fmt.Println("on the address; address:", address, "publicKeyNormalized", publicKeyNormalized, "recipientPhoneNumber", recipientPhoneNumber)
-
 	if err := h.determineAndSaveTransactionType(ctx, sessionId, []byte(address), recipientPhoneNumber); err != nil {
 		return *res, err
 	}
@@ -187,8 +185,6 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 		recipientPhoneNumber = nil
 	}
 
-	fmt.Println("on the alias; address:", aliasAddressResult, "publicKeyNormalized", publicKeyNormalized, "recipientPhoneNumber", recipientPhoneNumber)
-
 	if err := h.determineAndSaveTransactionType(ctx, sessionId, []byte(aliasAddressResult), recipientPhoneNumber); err != nil {
 		return *res, err
 	}
@@ -226,8 +222,6 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 		// recipient has active token same as sender → normal transaction
 		txType = "normal"
 	}
-
-	fmt.Println("the final txtype:", txType)
 
 	// Save the transaction type
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
@@ -330,8 +324,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	if err != nil {
 		return res, err
 	}
-
-	fmt.Println("the transaction type:", transactionType)
 
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
@@ -747,7 +739,6 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	// Scale down the quoted amount
 	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
 
-	fmt.Println("the quoteAmountStr is:", quoteAmountStr)
 	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
