@@ -91,33 +91,8 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 		return *res, err
 	}
 
-	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "Failed to read sender senderActiveAddress", "error", err)
-		return *res, err
-	}
-
-	recipientActiveAddress, _ := store.ReadEntry(ctx, formattedNumber, storedb.DATA_ACTIVE_ADDRESS)
-
-	txType := "swap"
-
-	// recipient has no active token → normal transaction
-	if recipientActiveAddress == nil {
-		txType = "normal"
-	} else if senderActiveAddress != nil && string(senderActiveAddress) == string(recipientActiveAddress) {
-		// recipient has active token same as sender → normal transaction
-		txType = "normal"
-	}
-
-	// save transaction type
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write tx type", "type", txType, "error", err)
-		return *res, err
-	}
-
-	// save the recipient's phone number
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, []byte(formattedNumber)); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write recipient's phone number", "type", txType, "error", err)
+	// Delegate to shared logic
+	if err := h.determineAndSaveTransactionType(ctx, sessionId, publicKey, []byte(formattedNumber)); err != nil {
 		return *res, err
 	}
 
@@ -127,10 +102,7 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
 	store := h.userdataStore
 	address := ethutils.ChecksumAddress(recipient)
-	// set the default transaction type
-	txType := "swap"
 
-	// use the received address as the recipient's public key
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(address)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write recipient address", "error", err)
 		return *res, err
@@ -145,46 +117,12 @@ func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient s
 	// get the recipient's phone number from the address
 	recipientPhoneNumber, err := store.ReadEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE)
 	if err != nil || len(recipientPhoneNumber) == 0 {
-		// Address not registered → fallback to normal transaction
-		txType = "normal"
 		logg.WarnCtxf(ctx, "Recipient address not registered, switching to normal transaction", "address", address)
 		recipientPhoneNumber = nil
 	}
 
-	// Read sender's active address
-	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
+	if err := h.determineAndSaveTransactionType(ctx, sessionId, []byte(address), recipientPhoneNumber); err != nil {
 		return *res, err
-	}
-
-	var recipientActiveAddress []byte
-	if recipientPhoneNumber != nil {
-		recipientActiveAddress, _ = store.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
-	}
-
-	// recipient has no active token → normal transaction
-	if recipientActiveAddress == nil {
-		txType = "normal"
-	} else if senderActiveAddress != nil && string(senderActiveAddress) == string(recipientActiveAddress) {
-		// recipient has active token same as sender → normal transaction
-		txType = "normal"
-	}
-
-	// Save the transaction type
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
-		return *res, err
-	}
-
-	// Save the recipient's phone number only if it exists
-	if recipientPhoneNumber != nil {
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
-			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "error", err)
-			return *res, err
-		}
-	} else {
-		logg.InfoCtxf(ctx, "No recipient phone number found for address", "address", address)
 	}
 
 	return *res, nil
@@ -196,8 +134,6 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	var aliasAddressResult string
-	// set the default transaction type
-	txType := "swap"
 
 	if strings.Contains(recipient, ".") {
 		alias, err := h.accountService.CheckAliasAddress(ctx, recipient)
@@ -245,16 +181,33 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 	// get the recipient's phone number from the address
 	recipientPhoneNumber, err := store.ReadEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE)
 	if err != nil || len(recipientPhoneNumber) == 0 {
-		txType = "normal"
 		logg.WarnCtxf(ctx, "Alias address not registered, switching to normal transaction", "address", aliasAddressResult)
 		recipientPhoneNumber = nil
 	}
+
+	if err := h.determineAndSaveTransactionType(ctx, sessionId, []byte(aliasAddressResult), recipientPhoneNumber); err != nil {
+		return *res, err
+	}
+
+	return *res, nil
+}
+
+// determineAndSaveTransactionType centralizes transaction-type logic and recipient info persistence.
+// It expects the session to already have the recipient's public key (address) written.
+func (h *MenuHandlers) determineAndSaveTransactionType(
+	ctx context.Context,
+	sessionId string,
+	publicKey []byte,
+	recipientPhoneNumber []byte,
+) error {
+	store := h.userdataStore
+	txType := "swap"
 
 	// Read sender's active address
 	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
-		return *res, err
+		return err
 	}
 
 	var recipientActiveAddress []byte
@@ -273,20 +226,20 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 	// Save the transaction type
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
-		return *res, err
+		return err
 	}
 
 	// Save the recipient's phone number only if it exists
 	if recipientPhoneNumber != nil {
 		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
-			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "error", err)
-			return *res, err
+			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "type", txType, "error", err)
+			return err
 		}
 	} else {
-		logg.InfoCtxf(ctx, "No recipient phone number found for alias", "address", aliasAddressResult)
+		logg.InfoCtxf(ctx, "No recipient phone number found for public key", "publicKey", string(publicKey))
 	}
 
-	return *res, nil
+	return nil
 }
 
 // TransactionReset resets the previous transaction data (Recipient and Amount)
