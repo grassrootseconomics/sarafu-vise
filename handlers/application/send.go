@@ -8,6 +8,7 @@ import (
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
+	"git.grassecon.net/grassrootseconomics/common/hex"
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
@@ -125,15 +126,65 @@ func (h *MenuHandlers) handlePhoneNumber(ctx context.Context, sessionId, recipie
 
 func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
 	store := h.userdataStore
-
 	address := ethutils.ChecksumAddress(recipient)
+	// set the default transaction type
+	txType := "swap"
+
+	// use the received address as the recipient's public key
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT, []byte(address)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write recipient address", "error", err)
 		return *res, err
 	}
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte("normal")); err != nil {
-		logg.ErrorCtxf(ctx, "Failed to write tx type for address", "error", err)
+
+	// normalize the address to fetch the recipient's phone number
+	publicKeyNormalized, err := hex.NormalizeHex(address)
+	if err != nil {
 		return *res, err
+	}
+
+	// get the recipient's phone number from the address
+	recipientPhoneNumber, err := store.ReadEntry(ctx, publicKeyNormalized, storedb.DATA_PUBLIC_KEY_REVERSE)
+	if err != nil || len(recipientPhoneNumber) == 0 {
+		// Address not registered → fallback to normal transaction
+		txType = "normal"
+		logg.WarnCtxf(ctx, "Recipient address not registered, switching to normal transaction", "address", address)
+		recipientPhoneNumber = nil
+	}
+
+	// Read sender's active address
+	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
+		return *res, err
+	}
+
+	var recipientActiveAddress []byte
+	if recipientPhoneNumber != nil {
+		recipientActiveAddress, _ = store.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
+	}
+
+	// recipient has no active token → normal transaction
+	if recipientActiveAddress == nil {
+		txType = "normal"
+	} else if senderActiveAddress != nil && string(senderActiveAddress) == string(recipientActiveAddress) {
+		// recipient has active token same as sender → normal transaction
+		txType = "normal"
+	}
+
+	// Save the transaction type
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
+		return *res, err
+	}
+
+	// Save the recipient's phone number only if it exists
+	if recipientPhoneNumber != nil {
+		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "error", err)
+			return *res, err
+		}
+	} else {
+		logg.InfoCtxf(ctx, "No recipient phone number found for address", "address", address)
 	}
 
 	return *res, nil
@@ -748,7 +799,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	swapTrackingId := poolSwap.TrackingId
 	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", swapTrackingId)
 
-	// Initiate a send 
+	// Initiate a send
 	recipientPublicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
