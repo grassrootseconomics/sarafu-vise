@@ -359,6 +359,7 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	r, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, data.Recipient, data.ActiveAddress)
 	if err != nil {
 		var apiErr *APIError
+		fmt.Printf("Error type: %T | Error value: %v\n", err, err)
 		if errors.As(err, &apiErr) {
 			switch apiErr.Code {
 			case "E10":
