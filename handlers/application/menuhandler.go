@@ -28,6 +28,19 @@ var (
 	translationDir = path.Join(scriptDir, "locale")
 )
 
+// custom error struct that carries both fields from the API error
+type APIError struct {
+	Code        string
+	Description string
+}
+
+func (e *APIError) Error() string {
+	if e.Code != "" {
+		return fmt.Sprintf("[%s] %s", e.Code, e.Description)
+	}
+	return e.Description
+}
+
 // TODO: this is only in use in testing, should be moved to test domain and/or replaced by asm.FlagParser
 // FlagManager handles centralized flag management
 type FlagManager struct {
