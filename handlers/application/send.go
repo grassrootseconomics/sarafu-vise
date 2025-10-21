@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -357,9 +358,20 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	// Call TokenTransfer
 	r, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, data.Recipient, data.ActiveAddress)
 	if err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) {
+			switch apiErr.Code {
+			case "E10":
+				res.Content = l.Get("Only USD vouchers are allowed to mpesa.sarafu.eth.")
+			default:
+				res.Content = l.Get("Your request failed. Please try again later.")
+			}
+		} else {
+			res.Content = l.Get("An unexpected error occurred. Please try again later.")
+		}
+
 		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_error)
-		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
 		return res, nil
 	}
