@@ -12,12 +12,12 @@ import (
 	"git.grassecon.net/grassrootseconomics/common/identity"
 	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/sarafu-api/models"
+	"git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"github.com/grassrootseconomics/ethutils"
 	"gopkg.in/leonelquinteros/gotext.v1"
-	"git.grassecon.net/grassrootseconomics/sarafu-api/remote/http"
 )
 
 // ValidateRecipient validates that the given input is valid.
@@ -360,7 +360,6 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	r, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, data.Recipient, data.ActiveAddress)
 	if err != nil {
 		var apiErr *http.APIError
-		fmt.Printf("Error type: %T | Error value: %v\n", err, err)
 		if errors.As(err, &apiErr) {
 			switch apiErr.Code {
 			case "E10":
