@@ -42,3 +42,6 @@ msgstr "%s haipo kwenye %s. Tafadhali badilisha sarafu yako na ujaribu tena."
 
 msgid "Name: %s\nSymbol: %s"
 msgstr "Jina: %s\nSarafu: %s"
+
+msgid "Only USD vouchers are allowed to mpesa.sarafu.eth."
+msgstr "Ni sarafu za USD pekee zinazoruhusiwa kwa mpesa.sarafu.eth."
