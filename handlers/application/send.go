@@ -732,13 +732,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
-	// store the user's input amount in the temporary value
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
-		return res, err
-	}
-
+	
 	// call the API to get the quote
 	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
 	if err != nil {
@@ -749,11 +743,25 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
+	// store the outvalue as the final amount
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(r.OutValue))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write amount value entry with", "key", storedb.DATA_AMOUNT, "value", r.OutValue, "error", err)
+		return res, err
+	}
+
 	// Scale down the quoted amount
 	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
-	
+
 	// Format the qouteAmount amount to 2 decimal places
 	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
+
+	// store the qouteAmount in the temporary value
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(qouteAmount))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write temporary qouteAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", qouteAmount, "error", err)
+		return res, err
+	}
 
 	res.Content = fmt.Sprintf(
 		"%s will receive %s %s",
@@ -819,8 +827,15 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 		return res, err
 	}
 
-	// Call TokenTransfer
-	tokenTransfer, err := h.accountService.TokenTransfer(ctx, swapAmountStr, swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
+	// read the amount that should be sent
+	amount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
+	if err != nil {
+		// invalid state
+		return res, err
+	}
+
+	// Call TokenTransfer with the expected swap amount
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
 	if err != nil {
 		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_error)
