@@ -220,7 +220,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	}
 
 	// Format to 2 decimal places
-	maxStr := fmt.Sprintf("%.2f", maxAmountFloat)
+	maxStr, _ := store.TruncateDecimalString(string(maxAmountStr), 2)
 
 	if maxAmountFloat < 0.1 {
 		// return with low amount flag
@@ -319,14 +319,9 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 
 	// Scale down the quoted amount
 	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
-	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
-		return res, err
-	}
 
 	// Format to 2 decimal places
-	qouteStr := fmt.Sprintf("%.2f", qouteAmount)
+	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
 
 	res.Content = fmt.Sprintf(
 		"You will swap:\n%s %s for %s %s:",

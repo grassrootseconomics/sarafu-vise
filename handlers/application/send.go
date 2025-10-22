@@ -751,19 +751,13 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	// Scale down the quoted amount
 	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
-
-	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
-		return res, err
-	}
-
-	// Format to 2 decimal places
-	qouteStr := fmt.Sprintf("%.2f", qouteAmount)
+	
+	// Format the qouteAmount amount to 2 decimal places
+	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
 
 	res.Content = fmt.Sprintf(
 		"%s will receive %s %s",
-		string(recipientPhoneNumber), qouteStr, swapData.ActiveSwapToSym,
+		string(recipientPhoneNumber), qouteAmount, swapData.ActiveSwapToSym,
 	)
 
 	return res, nil
