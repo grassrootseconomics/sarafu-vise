@@ -45,6 +45,26 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	res.FlagReset = append(res.FlagReset, flag_api_error)
 
 	if len(vouchersResp) == 0 {
+		// clear the current active voucher data if it exists
+		_, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SYM)
+		if err == nil {
+			firstVoucherMap := map[storedb.DataTyp]string{
+				storedb.DATA_ACTIVE_SYM:     "",
+				storedb.DATA_ACTIVE_BAL:     "",
+				storedb.DATA_ACTIVE_DECIMAL: "",
+				storedb.DATA_ACTIVE_ADDRESS: "",
+			}
+
+			for key, value := range firstVoucherMap {
+				if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+					logg.ErrorCtxf(ctx, "Failed to reset active voucher data", "key", key, "error", err)
+					return res, err
+				}
+			}
+
+			logg.InfoCtxf(ctx, "Default voucher reset")
+		}
+
 		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 		return res, nil
 	}
