@@ -1,5 +1,5 @@
-LOAD reset_transaction_amount 0
-LOAD max_amount 40
+LOAD reset_transaction_amount 10
+LOAD max_amount 160
 RELOAD max_amount
 MAP max_amount
 MOUT back 0
