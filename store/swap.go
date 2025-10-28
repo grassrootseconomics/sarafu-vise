@@ -173,9 +173,9 @@ func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId str
 	logg.InfoCtxf(ctx, "UpdateSwapToVoucherData", "data", data)
 	// Active swap to voucher data entries
 	activeEntries := map[storedb.DataTyp][]byte{
+		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: []byte(data.TokenAddress),
 		storedb.DATA_ACTIVE_SWAP_TO_SYM:     []byte(data.TokenSymbol),
 		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL: []byte(data.TokenDecimals),
-		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: []byte(data.TokenAddress),
 	}
 
 	// Write active data
