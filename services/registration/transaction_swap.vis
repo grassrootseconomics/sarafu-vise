@@ -1,6 +1,7 @@
 LOAD transaction_swap_preview 0
 MAP transaction_swap_preview
 CATCH api_failure flag_api_call_error 1
+CATCH invalid_credit_send_amount flag_invalid_amount 1
 MOUT back 0
 MOUT quit 9
 LOAD authorize_account 6
