@@ -294,13 +294,14 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 	}
 
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
 	store := h.userdataStore
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(""))
 	if err != nil {
 		return res, nil
 	}
 
-	res.FlagReset = append(res.FlagReset, flag_invalid_amount)
+	res.FlagReset = append(res.FlagReset, flag_invalid_amount, flag_swap_transaction)
 
 	return res, nil
 }
@@ -321,6 +322,10 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
 	userStore := h.userdataStore
 
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
 	// Fetch session data
 	transactionType, activeBal, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
@@ -333,7 +338,8 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// If normal transaction, return balance
 	if string(transactionType) == "normal" {
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
-		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
 	}
 
@@ -363,37 +369,38 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 			res.FlagSet = append(res.FlagSet, flag_api_error)
 			logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
 		}
-		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
-		return res, err
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+		return res, nil
 	}
 
-	// Calculate max swappable amount
-	maxStr, err := h.calculateSwapMaxAmount(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal)
+	// retrieve the max credit send amounts
+	maxSAT, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		return res, err
 	}
 
 	// Fallback if below minimum
-	maxFloat, _ := strconv.ParseFloat(maxStr, 64)
+	maxFloat, _ := strconv.ParseFloat(maxSAT, 64)
 	if maxFloat < 0.1 {
-		res.Content = fmt.Sprintf("%s %s", formattedBalance, string(activeSym))
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
 	}
 
-	// Save max swap amount and return
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxStr))
+	// Save max RAT amount to be used in validating the user's input
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxRAT))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write swap max amount", "value", maxStr, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write swap max amount (maxRAT)", "value", maxRAT, "error", err)
 		return res, err
 	}
 
 	// save swap related data for the swap preview
 	metadata := &dataserviceapi.TokenHoldings{
-		TokenSymbol:   string(recipientActiveSym),
-		Balance:       formattedBalance, //not used
-		TokenDecimals: string(recipientActiveDecimal),
 		TokenAddress:  string(recipientActiveAddress),
+		TokenSymbol:   string(recipientActiveSym),
+		TokenDecimals: string(recipientActiveDecimal),
 	}
 
 	// Store the active swap_to data
@@ -402,7 +409,17 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 
-	res.Content = fmt.Sprintf("%s %s", maxStr, string(activeSym))
+	res.Content = l.Get(
+		"Credit Available: %s %s\n(You can swap up to %s %s -> %s %s).\nEnter %s amount:",
+		maxRAT,
+		string(recipientActiveSym),
+		maxSAT,
+		string(activeSym),
+		maxRAT,
+		string(recipientActiveSym),
+		string(recipientActiveSym),
+	)
+
 	return res, nil
 }
 
@@ -472,8 +489,8 @@ func (h *MenuHandlers) resolveActivePoolAddress(ctx context.Context, sessionId s
 	return nil, err
 }
 
-func (h *MenuHandlers) calculateSwapMaxAmount(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, decimal []byte) (string, error) {
-	swapLimit, err := h.accountService.GetSwapFromTokenMaxLimit(
+func (h *MenuHandlers) calculateSendCreditLimits(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, fromDecimal, toDecimal []byte) (string, string, error) {
+	creditSendMaxLimits, err := h.accountService.GetCreditSendMaxLimit(
 		ctx,
 		string(poolAddress),
 		string(fromAddress),
@@ -481,14 +498,17 @@ func (h *MenuHandlers) calculateSwapMaxAmount(ctx context.Context, poolAddress, 
 		string(publicKey),
 	)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
-		return "", err
+		logg.ErrorCtxf(ctx, "failed on GetCreditSendMaxLimit", "error", err)
+		return "", "", err
 	}
 
-	scaled := store.ScaleDownBalance(swapLimit.Max, string(decimal))
+	scaledSAT := store.ScaleDownBalance(creditSendMaxLimits.MaxSAT, string(fromDecimal))
+	formattedSAT, _ := store.TruncateDecimalString(string(scaledSAT), 2)
 
-	formattedAmount, _ := store.TruncateDecimalString(string(scaled), 2)
-	return formattedAmount, nil
+	scaledRAT := store.ScaleDownBalance(creditSendMaxLimits.MaxRAT, string(toDecimal))
+	formattedRAT, _ := store.TruncateDecimalString(string(scaledRAT), 2)
+
+	return formattedSAT, formattedRAT, nil
 }
 
 // ValidateAmount ensures that the given input is a valid amount and that
@@ -584,7 +604,7 @@ func (h *MenuHandlers) GetSender(ctx context.Context, sym string, input []byte) 
 	return res, nil
 }
 
-// GetAmount retrieves the amount from teh Gdbm Db.
+// GetAmount retrieves the transaction amount from the store.
 func (h *MenuHandlers) GetAmount(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 
@@ -677,6 +697,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, fmt.Errorf("missing session")
 	}
 
+	// Input in RAT
 	inputStr := string(input)
 	if inputStr == "0" {
 		return res, nil
@@ -701,14 +722,15 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, err
 	}
 
-	maxValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	// use the stored max RAT
+	maxRATValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
 		return res, err
 	}
 
 	inputAmount, err := strconv.ParseFloat(inputStr, 64)
-	if err != nil || inputAmount > maxValue {
+	if err != nil || inputAmount > maxRATValue {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 		res.Content = inputStr
 		return res, nil
@@ -722,36 +744,33 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapFromDecimal)
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapToDecimal)
 	if err != nil {
 		return res, err
 	}
 
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT, []byte(finalAmountStr))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
-		return res, err
-	}
-	
-	// call the API to get the quote
-	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	// call the credit send API to get the reverse quote
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
 	if err != nil {
 		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
-		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		logg.ErrorCtxf(ctx, "failed GetCreditSendReverseQuote poolSwap", "error", err)
 		return res, nil
 	}
 
-	// store the outvalue as the final amount
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(r.OutValue))
+	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
+	sendOutputAmount := r.OutputAmount // amount of RAT that will be received
+
+	// store the sendOutputAmount as the final amount (that will be sent)
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(sendOutputAmount))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write amount value entry with", "key", storedb.DATA_AMOUNT, "value", r.OutValue, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", sendOutputAmount, "error", err)
 		return res, err
 	}
 
-	// Scale down the quoted amount
-	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
+	// Scale down the quoted output amount
+	quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapData.ActiveSwapToDecimal)
 
 	// Format the qouteAmount amount to 2 decimal places
 	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
@@ -760,6 +779,13 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(qouteAmount))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write temporary qouteAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", qouteAmount, "error", err)
+		return res, err
+	}
+
+	// store the sendInputAmount as the swap amount
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT, []byte(sendInputAmount))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", sendInputAmount, "error", err)
 		return res, err
 	}
 
