@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"reflect"
 	"strconv"
+	"strings"
 
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 )
@@ -21,25 +22,34 @@ type TransactionData struct {
 	ActiveAddress  string
 }
 
-// TruncateDecimalString safely truncates the input amount to the specified decimal places
+// TruncateDecimalString safely truncates (not rounds) a number string to the specified decimal places
 func TruncateDecimalString(input string, decimalPlaces int) (string, error) {
-	num, ok := new(big.Float).SetString(input)
-	if !ok {
+	if _, err := strconv.ParseFloat(input, 64); err != nil {
 		return "", fmt.Errorf("invalid input")
 	}
 
-	// Multiply by 10^decimalPlaces
-	scale := new(big.Float).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(decimalPlaces)), nil))
-	scaled := new(big.Float).Mul(num, scale)
+	// Split input into integer and fractional parts
+	parts := strings.SplitN(input, ".", 2)
+	intPart := parts[0]
+	var fracPart string
 
-	// Truncate by converting to int (chops off decimals)
-	intPart, _ := scaled.Int(nil)
+	if len(parts) == 2 {
+		fracPart = parts[1]
+	}
 
-	// Divide back to get truncated float
-	truncated := new(big.Float).Quo(new(big.Float).SetInt(intPart), scale)
+	// Truncate or pad fractional part
+	if len(fracPart) > decimalPlaces {
+		fracPart = fracPart[:decimalPlaces]
+	} else {
+		fracPart = fracPart + strings.Repeat("0", decimalPlaces-len(fracPart))
+	}
 
-	// Format with fixed decimals
-	return truncated.Text('f', decimalPlaces), nil
+	// Handle zero decimal places
+	if decimalPlaces == 0 {
+		return intPart, nil
+	}
+
+	return fmt.Sprintf("%s.%s", intPart, fracPart), nil
 }
 
 func ParseAndScaleAmount(storedAmount, activeDecimal string) (string, error) {
