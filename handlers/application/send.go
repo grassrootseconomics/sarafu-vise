@@ -789,7 +789,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, err
 	}
 
-	res.Content = fmt.Sprintf(
+	res.Content = l.Get(
 		"%s will receive %s %s",
 		string(recipientPhoneNumber), qouteAmount, swapData.ActiveSwapToSym,
 	)
