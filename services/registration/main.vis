@@ -7,18 +7,20 @@ LOAD check_balance 128
 RELOAD check_balance
 MAP check_balance
 MOUT send 1
-MOUT swap 2
-MOUT vouchers 3
-MOUT select_pool 4
-MOUT account 5
-MOUT help 6
+MOUT credit_send 2
+MOUT swap 3
+MOUT vouchers 4
+MOUT select_pool 5
+MOUT account 6
+MOUT help 7
 MOUT quit 9
 HALT
 INCMP send 1
-INCMP swap_to_list 2
-INCMP my_vouchers 3
-INCMP select_pool 4
-INCMP my_account 5
-INCMP help 6
+INCMP credit_send 2
+INCMP swap_to_list 3
+INCMP my_vouchers 4
+INCMP select_pool 5
+INCMP my_account 6
+INCMP help 7
 INCMP quit 9
 INCMP . *
