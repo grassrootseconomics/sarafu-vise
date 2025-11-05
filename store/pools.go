@@ -44,10 +44,7 @@ func GetPoolData(ctx context.Context, store DataStore, sessionId string, input s
 	}
 	data := make(map[storedb.DataTyp]string)
 
-	fmt.Println("the keys:", keys)
-
 	for _, key := range keys {
-		fmt.Println("current key:", key)
 		value, err := store.ReadEntry(ctx, sessionId, key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
