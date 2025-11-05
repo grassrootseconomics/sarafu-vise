@@ -65,6 +65,7 @@ func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (
 
 	// Write data entries
 	for key, value := range dataMap {
+		fmt.Println("writing: ", value, "into: ", key)
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
