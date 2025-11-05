@@ -1,5 +1,6 @@
 CATCH no_voucher flag_no_active_voucher 1
 LOAD get_pools 0
+RELOAD get_pools
 MAP get_pools
 LOAD get_default_pool 20
 RELOAD get_default_pool
