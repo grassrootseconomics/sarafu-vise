@@ -52,7 +52,7 @@ func TestCheckBalance(t *testing.T) {
 			alias:          "user72",
 			activeSym:      "SRF",
 			activeBal:      "10.967",
-			expectedResult: resource.Result{Content: "user72 balance: 10.96 SRF\n"},
+			expectedResult: resource.Result{Content: "user72\nBalance: 10.96 SRF\n"},
 			expectError:    false,
 		},
 	}
