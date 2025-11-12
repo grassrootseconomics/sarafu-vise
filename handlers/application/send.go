@@ -133,7 +133,7 @@ func (h *MenuHandlers) handleAddress(ctx context.Context, sessionId, recipient s
 func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient string, res *resource.Result) (resource.Result, error) {
 	store := h.userdataStore
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	var aliasAddressResult string
 
@@ -151,11 +151,11 @@ func (h *MenuHandlers) handleAlias(ctx context.Context, sessionId, recipient str
 
 			alias, err := h.accountService.CheckAliasAddress(ctx, fqdn)
 			if err == nil {
-				res.FlagReset = append(res.FlagReset, flag_api_error)
+				res.FlagReset = append(res.FlagReset, flag_api_call_error)
 				aliasAddressResult = alias.Address
 				break
 			} else {
-				res.FlagSet = append(res.FlagSet, flag_api_error)
+				res.FlagSet = append(res.FlagSet, flag_api_call_error)
 				logg.ErrorCtxf(ctx, "Alias resolution failed", "alias", fqdn, "error", err)
 				return *res, nil
 			}
@@ -318,7 +318,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, fmt.Errorf("missing session")
 	}
 
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
 	userStore := h.userdataStore
 
@@ -366,8 +366,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	canSwap, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
 	if err != nil || !canSwap.CanSwapFrom {
 		if err != nil {
-			res.FlagSet = append(res.FlagSet, flag_api_error)
+			res.FlagSet = append(res.FlagSet, flag_api_call_error)
 			logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
+			return res, nil
 		}
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
@@ -377,8 +378,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// retrieve the max credit send amounts
 	maxSAT, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
-		return res, err
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
+		return res, nil
 	}
 
 	// Fallback if below minimum
@@ -668,8 +670,8 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 			res.Content = l.Get("An unexpected error occurred. Please try again later.")
 		}
 
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
 		return res, nil
 	}
@@ -752,8 +754,8 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	// call the credit send API to get the reverse quote
 	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
 	if err != nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed GetCreditSendReverseQuote poolSwap", "error", err)
 		return res, nil
@@ -831,8 +833,8 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	// Call the poolSwap API
 	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
 	if err != nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
 		return res, nil
@@ -863,8 +865,8 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	// Call TokenTransfer with the expected swap amount
 	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
 	if err != nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
 		return res, nil
