@@ -204,7 +204,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
-		return res, err
+		return res, nil
 	}
 
 	// Scale down the amount
