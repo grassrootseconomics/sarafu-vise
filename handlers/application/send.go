@@ -342,6 +342,8 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		fmt.Println("returning for a normal transaction")
 
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+
+		fmt.Println("the final Content:", res.Content)
 		return res, nil
 	}
 
