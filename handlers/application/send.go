@@ -339,6 +339,8 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	if string(transactionType) == "normal" || sym == "max_amount" {
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 
+		fmt.Println("returning for a normal transaction")
+
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
 	}
