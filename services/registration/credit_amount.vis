@@ -1,16 +1,19 @@
 LOAD reset_transaction_amount 10
-RELOAD reset_transaction_amount
-LOAD max_amount 0
-RELOAD max_amount
-MAP max_amount
+LOAD credit_max_amount 160
+RELOAD credit_max_amount
+CATCH api_failure flag_api_call_error 1
+MAP credit_max_amount
 MOUT back 0
 HALT
+LOAD clear_trans_type_flag 6
+RELOAD clear_trans_type_flag
+CATCH transaction_swap flag_swap_transaction 1
 LOAD validate_amount 64
 RELOAD validate_amount
 CATCH api_failure flag_api_call_error 1
 CATCH invalid_amount flag_invalid_amount 1
 INCMP _ 0
-LOAD get_recipient 100
+LOAD get_recipient 0
 LOAD get_sender 64
 LOAD get_amount 32
 INCMP transaction_pin *

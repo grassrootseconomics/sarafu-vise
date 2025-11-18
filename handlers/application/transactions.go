@@ -20,7 +20,7 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 	}
 
 	flag_no_transfers, _ := h.flagManager.GetFlag("flag_no_transfers")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	userStore := h.userdataStore
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
@@ -32,11 +32,11 @@ func (h *MenuHandlers) CheckTransactions(ctx context.Context, sym string, input 
 	// Fetch transactions from the API using the public key
 	transactionsResp, err := h.accountService.FetchTransactions(ctx, string(publicKey))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
 		return res, err
 	}
-	res.FlagReset = append(res.FlagReset, flag_api_error)
+	res.FlagReset = append(res.FlagReset, flag_api_call_error)
 
 	// Return if there are no transactions
 	if len(transactionsResp) == 0 {

@@ -1,2 +1,1 @@
-Kiwango cha juu: {{.max_amount}}
-Weka kiwango:
+{{.max_amount}}

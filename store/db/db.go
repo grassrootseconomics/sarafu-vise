@@ -89,6 +89,10 @@ const (
 	DATA_ACTIVE_POOL_NAME
 	// Holds the active pool symbol for the swap
 	DATA_ACTIVE_POOL_SYM
+	// Holds the send transaction type
+	DATA_SEND_TRANSACTION_TYPE
+	// Holds the recipient formatted phone number
+	DATA_RECIPIENT_PHONE_NUMBER
 )
 
 const (

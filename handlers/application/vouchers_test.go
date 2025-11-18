@@ -265,7 +265,7 @@ func TestGetVoucherDetails(t *testing.T) {
 		TokenCommodity: "Farming",
 	}
 	expectedResult.Content = fmt.Sprintf(
-		"Name: %s\nSymbol: %s\nCommodity: %s\nLocation: %s", tokenDetails.TokenName, tokenDetails.TokenSymbol, tokenDetails.TokenCommodity, tokenDetails.TokenLocation,
+		"Name: %s\nSymbol: %s\nProduct: %s\nLocation: %s", tokenDetails.TokenName, tokenDetails.TokenSymbol, tokenDetails.TokenCommodity, tokenDetails.TokenLocation,
 	)
 	mockAccountService.On("VoucherData", string(tokA_AAddress)).Return(tokenDetails, nil)
 	res, err := h.GetVoucherDetails(ctx, "SessionId", []byte(""))

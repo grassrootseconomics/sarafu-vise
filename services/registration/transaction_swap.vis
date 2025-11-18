@@ -1,0 +1,13 @@
+LOAD transaction_swap_preview 0
+MAP transaction_swap_preview
+CATCH api_failure flag_api_call_error 1
+CATCH invalid_credit_send_amount flag_invalid_amount 1
+MOUT back 0
+MOUT quit 9
+LOAD authorize_account 6
+HALT
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+INCMP _ 0
+INCMP quit 9
+INCMP transaction_swap_initiated *
