@@ -1,6 +1,6 @@
 module git.grassecon.net/grassrootseconomics/sarafu-vise
 
-go 1.23.4
+go 1.24.0
 
 require (
 	git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66
@@ -15,7 +15,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/crypto v0.32.0
+	golang.org/x/crypto v0.45.0
 	gopkg.in/leonelquinteros/gotext.v1 v1.3.1
 )
 
@@ -59,9 +59,9 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
