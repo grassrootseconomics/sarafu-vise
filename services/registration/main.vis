@@ -11,8 +11,9 @@ MOUT credit_send 2
 MOUT swap 3
 MOUT vouchers 4
 MOUT select_pool 5
-MOUT account 6
-MOUT help 7
+MOUT mpesa 6
+MOUT account 7
+MOUT help 8
 MOUT quit 9
 HALT
 INCMP send 1
@@ -20,7 +21,8 @@ INCMP credit_send 2
 INCMP swap_to_list 3
 INCMP my_vouchers 4
 INCMP select_pool 5
-INCMP my_account 6
-INCMP help 7
+INCMP mpesa 6
+INCMP my_account 7
+INCMP help 8
 INCMP quit 9
 INCMP . *
