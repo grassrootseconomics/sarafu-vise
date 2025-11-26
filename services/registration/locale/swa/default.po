@@ -54,3 +54,9 @@ msgstr "Kiwango kinachopatikana: %s %s\n(Unaweza kubadilisha hadi %s %s -> %s %s
 
 msgid "%s will receive %s %s"
 msgstr "%s atapokea %s %s"
+
+msgid "Enter the amount of Mpesa to get: (Max %s Ksh)\n"
+msgstr "Weka kiasi cha Moesa cha kupata: (Kikomo %s Ksh)\n"
+
+msgid "You are sending %s %s in order to receive %s ksh"
+msgstr "Unatuma %s %s ili upoke %s ksh"
