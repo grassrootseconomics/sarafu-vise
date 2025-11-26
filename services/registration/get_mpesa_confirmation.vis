@@ -1,0 +1,13 @@
+LOAD get_mpesa_preview 0
+MAP get_mpesa_preview
+CATCH api_failure flag_api_call_error 1
+CATCH invalid_credit_send_amount flag_invalid_amount 1
+MOUT back 0
+MOUT quit 9
+HALT
+LOAD authorize_account 6
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+INCMP _ 0
+INCMP quit 9
+INCMP initiate_get_mpesa *
