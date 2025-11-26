@@ -1,0 +1,7 @@
+LOAD get_mpesa_max_limit 0
+RELOAD get_mpesa_max_limit
+MAP get_mpesa_max_limit
+MOUT quit 9
+HALT
+INCMP get_mpesa_confirmation *
+INCMP quit 9
