@@ -140,6 +140,9 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("transaction_swap_preview", appHandlers.TransactionSwapPreview)
 	ls.DbRs.AddLocalFunc("transaction_initiate_swap", appHandlers.TransactionInitiateSwap)
 	ls.DbRs.AddLocalFunc("clear_trans_type_flag", appHandlers.ClearTransactionTypeFlag)
+	ls.DbRs.AddLocalFunc("get_mpesa_max_limit", appHandlers.GetMpesaMaxLimit)
+	ls.DbRs.AddLocalFunc("get_mpesa_preview", appHandlers.GetMpesaPreview)
+	ls.DbRs.AddLocalFunc("initiate_get_mpesa", appHandlers.InitiateGetMpesa)
 
 	ls.first = appHandlers.Init
 
