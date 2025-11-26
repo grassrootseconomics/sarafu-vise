@@ -87,3 +87,7 @@ func DefaultPoolName() string {
 func DefaultPoolSymbol() string {
 	return env.GetEnv("DEFAULT_POOL_SYMBOL", "")
 }
+
+func DefaultMpesaAddress() string {
+	return env.GetEnv("DEFAULT_MPESA_ADDRESS", "")
+}
