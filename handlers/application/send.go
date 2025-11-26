@@ -313,8 +313,6 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 
-	fmt.Println("running in MaxAmount with sym:", sym)
-
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
 		return res, fmt.Errorf("missing session")
@@ -341,7 +339,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	if string(transactionType) == "normal" || sym == "send_max_amount" {
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 
-		fmt.Println("running in send_max_amount with:", formattedBalance, string(activeSym))
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 
 		return res, nil
