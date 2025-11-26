@@ -1,8 +1,8 @@
 LOAD reset_transaction_amount 10
 RELOAD reset_transaction_amount
-LOAD max_amount 0
-RELOAD max_amount
-MAP max_amount
+LOAD send_max_amount 0
+RELOAD send_max_amount
+MAP send_max_amount
 MOUT back 0
 HALT
 LOAD validate_amount 64
