@@ -32,21 +32,23 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	l.AddDomain("default")
 
 	inputStr := string(input)
-	if inputStr == "9" {
+	if inputStr == "0" || inputStr == "9" {
 		return res, nil
 	}
 
 	userStore := h.userdataStore
 
 	// Fetch session data
-	_, _, _, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
+	_, activeBal, _, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
+	const rate = 129.5
+	txType := "swap"
 	mpesaAddress := config.DefaultMpesaAddress()
 
-	// Normalize the alias address to fetch mpesa's phone number
+	// Normalize the mpesa address to fetch the phone number
 	publicKeyNormalized, err := hex.NormalizeHex(mpesaAddress)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to normalize alias address", "address", mpesaAddress, "error", err)
@@ -71,6 +73,28 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
+	// If RAT is the same as SAT, return early with KSH format
+	if string(activeAddress) == string(recipientActiveAddress) {
+		txType = "normal"
+		// Save the transaction type
+		if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
+			return res, err
+		}
+
+		activeFloat, _ := strconv.ParseFloat(string(activeBal), 64)
+		ksh := fmt.Sprintf("%f", activeFloat*rate)
+
+		kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
+
+		res.Content = l.Get(
+			"Enter the amount of Mpesa to get: (Max %s Ksh)\n",
+			kshFormatted,
+		)
+
+		return res, nil
+	}
+
 	// Resolve active pool address
 	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
 	if err != nil {
@@ -90,7 +114,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
-	// retrieve the max credit send amounts (I have KILIFI SAT, I want USD RAT)
+	// retrieve the max credit send amounts
 	_, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -98,13 +122,11 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
-	// Format to 2 decimal places
-	formattedAmount, _ := store.TruncateDecimalString(maxRAT, 2)
 	// Fallback if below minimum
 	maxFloat, _ := strconv.ParseFloat(maxRAT, 64)
 	if maxFloat < 0.1 {
-		// return with low amount flag
-		res.Content = formattedAmount
+		formatted, _ := store.TruncateDecimalString(maxRAT, 2)
+		res.Content = formatted
 		res.FlagSet = append(res.FlagSet, flag_low_swap_amount)
 		return res, nil
 	}
@@ -113,6 +135,12 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxRAT))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write swap max amount (maxRAT)", "value", maxRAT, "error", err)
+		return res, err
+	}
+
+	// Save the transaction type
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
 		return res, err
 	}
 
@@ -129,13 +157,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	rate := 129.5
-	amountFloat, _ := strconv.ParseFloat(maxRAT, 64)
-	amountKsh := amountFloat * rate
-
-	kshStr := fmt.Sprintf("%f", amountKsh)
-
-	// truncate to 0 decimal places
+	maxKsh := maxFloat * rate
+	kshStr := fmt.Sprintf("%f", maxKsh)
 	kshFormatted, _ := store.TruncateDecimalString(kshStr, 0)
 
 	res.Content = l.Get(
@@ -161,16 +184,78 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	}
 
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
 	userStore := h.userdataStore
+	const rate = 129.5
+
+	// Input in Ksh
+	kshAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	// divide by the rate
+	inputAmount := kshAmount / rate
+
+	// store the user's raw input amount in the temporary value
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write temporary inputStr entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
+		return res, err
+	}
 
 	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
 	if err != nil {
 		return res, err
+	}
+
+	transactionType, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE)
+	if err != nil {
+		return res, err
+	}
+
+	if string(transactionType) == "normal" {
+		activeBal, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
+			return res, err
+		}
+		balanceValue, err := strconv.ParseFloat(string(activeBal), 64)
+		if err != nil {
+			logg.ErrorCtxf(ctx, "Failed to convert the activeBal to a float", "error", err)
+			return res, err
+		}
+
+		if inputAmount > balanceValue {
+			res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+			res.Content = inputStr
+			return res, nil
+		}
+
+		// Format the input amount to 2 decimal places
+		inputAmountStr := fmt.Sprintf("%f", inputAmount)
+		qouteInputAmount, _ := store.TruncateDecimalString(inputAmountStr, 2)
+
+		// store the inputAmountStr as the final amount (that will be sent)
+		err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(inputAmountStr))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed to write send amount value entry with", "key", storedb.DATA_AMOUNT, "value", inputAmountStr, "error", err)
+			return res, err
+		}
+
+		res.Content = l.Get(
+			"You are sending %s %s in order to receive %s ksh",
+			qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
+		)
+
+		return res, nil
 	}
 
 	// use the stored max RAT
@@ -180,14 +265,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		return res, err
 	}
 
-	// Input in Ksh
-	kshAmount, err := strconv.ParseFloat(inputStr, 64)
-
-	// divide by the rate
-	rate := 129.5
-	inputAmount := kshAmount / rate
-
-	if err != nil || inputAmount > maxRATValue {
+	if inputAmount > maxRATValue {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 		res.Content = inputStr
 		return res, nil
@@ -203,15 +281,14 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	// call the credit send API to get the reverse quote
 	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
 	if err != nil {
-		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed GetCreditSendReverseQuote poolSwap", "error", err)
 		return res, nil
 	}
 
-	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped (current KILIFI)
-	sendOutputAmount := r.OutputAmount // amount of RAT that will be received (intended USDT)
+	sendInputAmount := r.InputAmount   // amount of SAT
+	sendOutputAmount := r.OutputAmount // amount of RAT
 
 	// store the sendOutputAmount as the final amount (that will be sent)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(sendOutputAmount))
@@ -232,13 +309,6 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	// Format the quoteInputStr amount to 2 decimal places
 	qouteInputAmount, _ := store.TruncateDecimalString(quoteInputStr, 2)
 
-	// store the user's input amount in the temporary value
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporary inputStr entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
-		return res, err
-	}
-
 	res.Content = l.Get(
 		"You are sending %s %s in order to receive %s ksh",
 		qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
@@ -247,7 +317,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	return res, nil
 }
 
-// InitiateGetMpesa calls the poolSwap and returns a confirmation based on the result.
+// InitiateGetMpesa calls the poolSwap, followed by the transfer and returns a confirmation based on the result.
 func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	var err error
@@ -257,6 +327,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 	}
 
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
@@ -264,9 +335,45 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 	userStore := h.userdataStore
 
+	mpesaAddress := config.DefaultMpesaAddress()
+
 	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
 	if err != nil {
 		return res, err
+	}
+
+	transactionType, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE)
+	if err != nil {
+		return res, err
+	}
+
+	if string(transactionType) == "normal" {
+		// Call TokenTransfer for the normal transaction
+		data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
+		if err != nil {
+			return res, err
+		}
+
+		finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
+		if err != nil {
+			return res, err
+		}
+
+		tokenTransfer, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, mpesaAddress, data.ActiveAddress)
+		if err != nil {
+			res.FlagSet = append(res.FlagSet, flag_api_call_error)
+			res.Content = l.Get("Your request failed. Please try again later.")
+			logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
+			return res, nil
+		}
+
+		logg.InfoCtxf(ctx, "TokenTransfer normal", "trackingId", tokenTransfer.TrackingId)
+
+		res.Content = l.Get("Your request has been sent. You will receive %s ksh.", data.TemporaryValue)
+
+		res.FlagReset = append(res.FlagReset, flag_account_authorized)
+		return res, nil
+
 	}
 
 	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
@@ -287,43 +394,30 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
-	swapTrackingId := poolSwap.TrackingId
-	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", swapTrackingId)
-
-	// Initiate a send to mpesa
-	mpesaAddress := config.DefaultMpesaAddress()
+	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", poolSwap.TrackingId)
 
 	finalKshStr, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
-		// invalid state
 		return res, err
 	}
 
-	// read the amount that should be sent
 	amount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
 	if err != nil {
-		// invalid state
 		return res, err
 	}
 
-	// Call TokenTransfer with the expected swap amount
+	// Initiate a send to mpesa after the swap
 	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, mpesaAddress, swapData.ActiveSwapToAddress)
 	if err != nil {
-		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
-		logg.ErrorCtxf(ctx, "failed on TokenTransfer", "error", err)
+		logg.ErrorCtxf(ctx, "failed on TokenTransfer after swap", "error", err)
 		return res, nil
 	}
 
-	trackingId := tokenTransfer.TrackingId
-	logg.InfoCtxf(ctx, "TokenTransfer", "trackingId", trackingId)
+	logg.InfoCtxf(ctx, "final TokenTransfer after swap", "trackingId", tokenTransfer.TrackingId)
 
-	res.Content = l.Get(
-		"Your request has been sent. You will receive %s ksh.",
-		finalKshStr,
-	)
-
+	res.Content = l.Get("Your request has been sent. You will receive %s ksh.", finalKshStr)
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
 }
