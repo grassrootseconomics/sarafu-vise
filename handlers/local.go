@@ -143,6 +143,9 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("get_mpesa_max_limit", appHandlers.GetMpesaMaxLimit)
 	ls.DbRs.AddLocalFunc("get_mpesa_preview", appHandlers.GetMpesaPreview)
 	ls.DbRs.AddLocalFunc("initiate_get_mpesa", appHandlers.InitiateGetMpesa)
+	ls.DbRs.AddLocalFunc("send_mpesa_min_limit", appHandlers.SendMpesaMinLimit)
+	ls.DbRs.AddLocalFunc("send_mpesa_preview", appHandlers.SendMpesaPreview)
+	ls.DbRs.AddLocalFunc("initiate_send_mpesa", appHandlers.InitiateSendMpesa)
 
 	ls.first = appHandlers.Init
 
