@@ -7,6 +7,7 @@ import (
 
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/hex"
+	"git.grassecon.net/grassrootseconomics/common/phone"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
@@ -44,7 +45,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	const rate = 129.5
+	rate := config.MpesaRate()
 	txType := "swap"
 	mpesaAddress := config.DefaultMpesaAddress()
 
@@ -191,7 +192,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	l.AddDomain("default")
 
 	userStore := h.userdataStore
-	const rate = 129.5
+	rate := config.MpesaRate()
 
 	// Input in Ksh
 	kshAmount, err := strconv.ParseFloat(inputStr, 64)
@@ -369,7 +370,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 		logg.InfoCtxf(ctx, "TokenTransfer normal", "trackingId", tokenTransfer.TrackingId)
 
-		res.Content = l.Get("Your request has been sent. You will receive %s ksh.", data.TemporaryValue)
+		res.Content = l.Get("Your request has been sent. You will receive %s ksh", data.TemporaryValue)
 
 		res.FlagReset = append(res.FlagReset, flag_account_authorized)
 		return res, nil
@@ -417,7 +418,155 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 	logg.InfoCtxf(ctx, "final TokenTransfer after swap", "trackingId", tokenTransfer.TrackingId)
 
-	res.Content = l.Get("Your request has been sent. You will receive %s ksh.", finalKshStr)
+	res.Content = l.Get("Your request has been sent. You will receive %s ksh", finalKshStr)
+	res.FlagReset = append(res.FlagReset, flag_account_authorized)
+	return res, nil
+}
+
+// SendMpesaMinLimit returns the min amount from the config
+func (h *MenuHandlers) SendMpesaMinLimit(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	inputStr := string(input)
+	if inputStr == "0" || inputStr == "9" {
+		return res, nil
+	}
+
+	// Fetch min amount from config/env
+	min := config.MinMpesaSendAmount()
+
+	// Convert to string
+	ksh := fmt.Sprintf("%f", min)
+
+	// Format (e.g., 100.0 -> 100)
+	kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
+
+	res.Content = l.Get(
+		"Enter the amount of Mpesa to send: (Minimum %s Ksh)\n",
+		kshFormatted,
+	)
+
+	return res, nil
+}
+
+// SendMpesaPreview displays the send mpesa preview and estimates
+func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	// INPUT IN Ksh
+	inputStr := string(input)
+	if inputStr == "0" || inputStr == "9" {
+		return res, nil
+	}
+
+	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+	sendRate := config.MpesaSendRate()
+
+	// Input in Ksh
+	kshAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	min := config.MinMpesaSendAmount()
+	max := config.MaxMpesaSendAmount()
+
+	if kshAmount > max || kshAmount < min {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_invalid_amount)
+
+	// store the user's raw input amount
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(inputStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write amount inputStr entry with", "key", storedb.DATA_AMOUNT, "value", inputStr, "error", err)
+		return res, err
+	}
+
+	estimateValue := kshAmount / sendRate
+	estimateStr := fmt.Sprintf("%f", estimateValue)
+	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 0)
+
+	res.Content = l.Get(
+		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive %s cUSD",
+		inputStr, estimateFormatted,
+	)
+
+	return res, nil
+}
+
+// InitiateSendMpesa calls the trigger-onram API to initiate the purchase
+func (h *MenuHandlers) InitiateSendMpesa(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	var err error
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	phoneNumber, err := phone.FormatToLocalPhoneNumber(sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on FormatToLocalPhoneNumber", "session-id", sessionId, "error", err)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		return res, nil
+	}
+
+	defaultAsset := config.DefaultMpesaAsset()
+
+	amount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read amount entry", "key", storedb.DATA_AMOUNT, "error", err)
+		return res, err
+	}
+
+	// Call the trigger onramp API
+	triggerOnramp, err := h.accountService.MpesaTriggerOnramp(ctx, string(publicKey), phoneNumber, defaultAsset, string(amount))
+	if err != nil {
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on MpesaTriggerOnramp", "error", err)
+		return res, nil
+	}
+
+	logg.InfoCtxf(ctx, "MpesaTriggerOnramp", "transactionCode", triggerOnramp.TransactionCode)
+
+	res.Content = l.Get("Your request has been sent. Thank you for using Sarafu")
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
 }
