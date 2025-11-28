@@ -23,6 +23,13 @@ func TestTruncateDecimalString(t *testing.T) {
 			expectError:   false,
 		},
 		{
+			name:          "precision test",
+			input:         "2.1",
+			decimalPlaces: 2,
+			want:          "2.10",
+			expectError:   false,
+		},
+		{
 			name:          "single decimal",
 			input:         "4.1",
 			decimalPlaces: 2,

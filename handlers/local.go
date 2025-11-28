@@ -85,7 +85,8 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("validate_recipient", appHandlers.ValidateRecipient)
 	ls.DbRs.AddLocalFunc("transaction_reset", appHandlers.TransactionReset)
 	ls.DbRs.AddLocalFunc("invite_valid_recipient", appHandlers.InviteValidRecipient)
-	ls.DbRs.AddLocalFunc("max_amount", appHandlers.MaxAmount)
+	ls.DbRs.AddLocalFunc("send_max_amount", appHandlers.MaxAmount)
+	ls.DbRs.AddLocalFunc("credit_max_amount", appHandlers.MaxAmount)
 	ls.DbRs.AddLocalFunc("validate_amount", appHandlers.ValidateAmount)
 	ls.DbRs.AddLocalFunc("reset_transaction_amount", appHandlers.ResetTransactionAmount)
 	ls.DbRs.AddLocalFunc("get_recipient", appHandlers.GetRecipient)
@@ -136,6 +137,10 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("swap_max_limit", appHandlers.SwapMaxLimit)
 	ls.DbRs.AddLocalFunc("swap_preview", appHandlers.SwapPreview)
 	ls.DbRs.AddLocalFunc("initiate_swap", appHandlers.InitiateSwap)
+	ls.DbRs.AddLocalFunc("transaction_swap_preview", appHandlers.TransactionSwapPreview)
+	ls.DbRs.AddLocalFunc("transaction_initiate_swap", appHandlers.TransactionInitiateSwap)
+	ls.DbRs.AddLocalFunc("clear_trans_type_flag", appHandlers.ClearTransactionTypeFlag)
+
 	ls.first = appHandlers.Init
 
 	return appHandlers, nil

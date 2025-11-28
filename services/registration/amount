@@ -1,2 +1,1 @@
-Maximum amount: {{.max_amount}}
-Enter amount:
+{{.send_max_amount}}

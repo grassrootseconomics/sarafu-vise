@@ -45,3 +45,12 @@ msgstr "Jina: %s\nSarafu: %s"
 
 msgid "Only USD vouchers are allowed to mpesa.sarafu.eth."
 msgstr "Ni sarafu za USD pekee zinazoruhusiwa kwa mpesa.sarafu.eth."
+
+msgid "Maximum amount: %s %s\nEnter amount:"
+msgstr "Kiwango cha juu: %s %s\nWeka kiwango:"
+
+msgid "Credit Available: %s %s\n(You can swap up to %s %s -> %s %s).\nEnter %s amount:"
+msgstr "Kiwango kinachopatikana: %s %s\n(Unaweza kubadilisha hadi %s %s -> %s %s)\nWeka kiwango cha %s:"
+
+msgid "%s will receive %s %s"
+msgstr "%s atapokea %s %s"

@@ -22,12 +22,12 @@ func (h *MenuHandlers) GetPools(ctx context.Context, sym string, input []byte) (
 	}
 	userStore := h.userdataStore
 
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	// call the api to get a list of top 5 pools sorted by swaps
 	topPools, err := h.accountService.FetchTopPools(ctx)
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
 		return res, err
 	}
@@ -129,12 +129,12 @@ func (h *MenuHandlers) ViewPool(ctx context.Context, sym string, input []byte) (
 	}
 
 	if poolData == nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 		// no match found. Call the API using the inputStr as the symbol
 		poolResp, err := h.accountService.RetrievePoolDetails(ctx, inputStr)
 		if err != nil {
-			res.FlagSet = append(res.FlagSet, flag_api_error)
+			res.FlagSet = append(res.FlagSet, flag_api_call_error)
 			return res, nil
 		}
 

@@ -14,13 +14,13 @@ func TestReadSwapData(t *testing.T) {
 
 	// Test swap data
 	swapData := map[storedb.DataTyp]string{
-		storedb.DATA_PUBLIC_KEY:               publicKey,
-		storedb.DATA_ACTIVE_POOL_ADDRESS:      "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
-		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     "AMANI",
-		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: "6",
-		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
-		storedb.DATA_ACTIVE_SWAP_TO_SYM:       "cUSD",
-		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS:   "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+		storedb.DATA_PUBLIC_KEY:             publicKey,
+		storedb.DATA_ACTIVE_POOL_ADDRESS:    "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
+		storedb.DATA_ACTIVE_SYM:             "AMANI",
+		storedb.DATA_ACTIVE_DECIMAL:         "6",
+		storedb.DATA_ACTIVE_ADDRESS:         "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
+		storedb.DATA_ACTIVE_SWAP_TO_SYM:     "cUSD",
+		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
 	}
 
 	// Store the data
@@ -53,15 +53,16 @@ func TestReadSwapPreviewData(t *testing.T) {
 
 	// Test swap preview data
 	swapPreviewData := map[storedb.DataTyp]string{
-		storedb.DATA_PUBLIC_KEY:               publicKey,
-		storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT:   "1339482",
-		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: "6",
-		storedb.DATA_ACTIVE_POOL_ADDRESS:      "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
-		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
-		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     "AMANI",
-		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS:   "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-		storedb.DATA_ACTIVE_SWAP_TO_SYM:       "cUSD",
-		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL:   "18",
+		storedb.DATA_TEMPORARY_VALUE:        "temp",
+		storedb.DATA_PUBLIC_KEY:             publicKey,
+		storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT: "1339482",
+		storedb.DATA_ACTIVE_DECIMAL:         "6",
+		storedb.DATA_ACTIVE_POOL_ADDRESS:    "0x48a953cA5cf5298bc6f6Af3C608351f537AAcb9e",
+		storedb.DATA_ACTIVE_ADDRESS:         "0xc7B78Ac9ACB9E025C8234621FC515bC58179dEAe",
+		storedb.DATA_ACTIVE_SYM:             "AMANI",
+		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+		storedb.DATA_ACTIVE_SWAP_TO_SYM:     "cUSD",
+		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL: "18",
 	}
 
 	// Store the data
@@ -72,6 +73,7 @@ func TestReadSwapPreviewData(t *testing.T) {
 	}
 
 	expectedResult := SwapPreviewData{
+		TemporaryValue:        "temp",
 		PublicKey:             "0X13242618721",
 		ActiveSwapMaxAmount:   "1339482",
 		ActiveSwapFromDecimal: "6",

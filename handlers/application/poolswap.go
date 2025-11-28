@@ -41,7 +41,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	l.AddDomain("default")
 
 	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	inputStr := string(input)
 	if inputStr == "0" {
@@ -88,7 +88,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	// call the api using the ActivePoolAddress and ActiveVoucherAddress to check if it is part of the pool
 	r, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
 		return res, err
 	}
@@ -110,7 +110,7 @@ func (h *MenuHandlers) LoadSwapToList(ctx context.Context, sym string, input []b
 	// call the api using the activePoolAddress to get a list of SwapToSymbolsData
 	swapToList, err := h.accountService.GetPoolSwappableVouchers(ctx, string(activePoolAddress))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on FetchTransactions", "error", err)
 		return res, err
 	}
@@ -165,7 +165,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	}
 
 	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
-	flag_api_error, _ := h.flagManager.GetFlag("flag_api_error")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 	flag_low_swap_amount, _ := h.flagManager.GetFlag("flag_low_swap_amount")
 
 	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher, flag_low_swap_amount)
@@ -202,9 +202,9 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	logg.InfoCtxf(ctx, "Call GetSwapFromTokenMaxLimit with:", "ActivePoolAddress", swapData.ActivePoolAddress, "ActiveSwapFromAddress", swapData.ActiveSwapFromAddress, "ActiveSwapToAddress", swapData.ActiveSwapToAddress, "publicKey", swapData.PublicKey)
 	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, swapData.PublicKey)
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
-		return res, err
+		return res, nil
 	}
 
 	// Scale down the amount
@@ -220,7 +220,7 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	}
 
 	// Format to 2 decimal places
-	maxStr := fmt.Sprintf("%.2f", maxAmountFloat)
+	maxStr, _ := store.TruncateDecimalString(string(maxAmountStr), 2)
 
 	if maxAmountFloat < 0.1 {
 		// return with low amount flag
@@ -310,8 +310,8 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 	// call the API to get the quote
 	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
 	if err != nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
 		return res, nil
@@ -319,14 +319,9 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 
 	// Scale down the quoted amount
 	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
-	qouteAmount, err := strconv.ParseFloat(quoteAmountStr, 64)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to parse quoteAmountStr as float", "value", quoteAmountStr, "error", err)
-		return res, err
-	}
 
 	// Format to 2 decimal places
-	qouteStr := fmt.Sprintf("%.2f", qouteAmount)
+	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
 
 	res.Content = fmt.Sprintf(
 		"You will swap:\n%s %s for %s %s:",
@@ -369,8 +364,8 @@ func (h *MenuHandlers) InitiateSwap(ctx context.Context, sym string, input []byt
 	// Call the poolSwap API
 	r, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
 	if err != nil {
-		flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_error)
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
 		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
 		return res, nil
