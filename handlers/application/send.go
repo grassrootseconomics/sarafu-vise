@@ -335,8 +335,8 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
 
-	// If normal transaction, or if the sym is max_amount, return balance
-	if string(transactionType) == "normal" || sym == "max_amount" {
+	// If normal transaction, or if the sym is send_max_amount, return balance
+	if string(transactionType) == "normal" || sym == "send_max_amount" {
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
