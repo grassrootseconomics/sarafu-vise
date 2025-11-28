@@ -1,3 +1,4 @@
+CATCH no_voucher flag_no_active_voucher 1
 LOAD get_mpesa_max_limit 0
 RELOAD get_mpesa_max_limit
 MAP get_mpesa_max_limit
