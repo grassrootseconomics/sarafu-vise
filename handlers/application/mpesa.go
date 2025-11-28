@@ -504,7 +504,7 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 
 	estimateValue := kshAmount / sendRate
 	estimateStr := fmt.Sprintf("%f", estimateValue)
-	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 0)
+	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 2)
 
 	res.Content = l.Get(
 		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive %s cUSD",
@@ -554,8 +554,14 @@ func (h *MenuHandlers) InitiateSendMpesa(ctx context.Context, sym string, input 
 		return res, err
 	}
 
+	amountInt, err := strconv.Atoi(string(amount))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to convert amount to int", "amount", string(amount), "error", err)
+		return res, err
+	}
+
 	// Call the trigger onramp API
-	triggerOnramp, err := h.accountService.MpesaTriggerOnramp(ctx, string(publicKey), phoneNumber, defaultAsset, string(amount))
+	triggerOnramp, err := h.accountService.MpesaTriggerOnramp(ctx, string(publicKey), phoneNumber, defaultAsset, amountInt)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
