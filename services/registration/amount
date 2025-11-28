@@ -1,1 +1,1 @@
-{{.max_amount}}
+{{.send_max_amount}}

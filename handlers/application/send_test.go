@@ -277,7 +277,7 @@ func TestMaxAmount(t *testing.T) {
 				}
 			}
 
-			res, err := h.MaxAmount(ctx, "max_amount", []byte(""))
+			res, err := h.MaxAmount(ctx, "send_max_amount", []byte(""))
 
 			if tt.expectedError {
 				assert.Error(t, err)
