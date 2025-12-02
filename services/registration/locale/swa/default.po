@@ -58,17 +58,17 @@ msgstr "%s atapokea %s %s"
 msgid "Enter the amount of M-Pesa to get: (Max %s Ksh)\n"
 msgstr "Weka kiasi cha M-Pesa cha kupata: (Kikomo %s Ksh)\n"
 
-msgid "You are sending %s %s in order to receive %s ksh"
-msgstr "Unatuma %s %s ili upoke %s ksh"
+msgid "You are sending %s %s in order to receive ~ %s ksh"
+msgstr "Unatuma ~ %s %s ili upoke %s ksh"
 
-msgid "Your request has been sent. You will receive %s ksh"
-msgstr "Ombi lako limetumwa. Utapokea %s ksh"
+msgid "Your request has been sent. You will receive ~ %s ksh"
+msgstr "Ombi lako limetumwa. Utapokea ~ %s ksh"
 
 msgid "Enter the amount of M-Pesa to send: (Minimum %s Ksh)\n"
 msgstr "Weka kiasi cha M-Pesa cha kutuma: (Kima cha chini %s Ksh)\n"
 
-msgid "You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive %s cUSD"
-msgstr "Utapokea kidokezo cha PIN yako ya M-Pesa hivi karibuni kutuma %s ksh na kupokea %s cUSD"
+msgid "You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s cUSD"
+msgstr "Utapokea kidokezo cha PIN yako ya M-Pesa hivi karibuni kutuma %s ksh na kupokea ~ %s cUSD"
 
 msgid "Your request has been sent. Thank you for using Sarafu"
 msgstr "Ombi lako limetumwa. Asante kwa kutumia huduma ya Sarafu"
