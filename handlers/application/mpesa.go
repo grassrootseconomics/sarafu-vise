@@ -45,7 +45,15 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	rate := config.MpesaRate()
+	// call the mpesa rates API to get the rates
+	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on GetMpesaOnrampRates", "error", err)
+		return res, nil
+	}
+
 	txType := "swap"
 	mpesaAddress := config.DefaultMpesaAddress()
 
@@ -84,7 +92,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		}
 
 		activeFloat, _ := strconv.ParseFloat(string(activeBal), 64)
-		ksh := fmt.Sprintf("%f", activeFloat*rate)
+		ksh := fmt.Sprintf("%f", activeFloat*rates.Buy)
 
 		kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
 
@@ -158,7 +166,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	maxKsh := maxFloat * rate
+	maxKsh := maxFloat * rates.Buy
 	kshStr := fmt.Sprintf("%f", maxKsh)
 	kshFormatted, _ := store.TruncateDecimalString(kshStr, 0)
 
@@ -192,7 +200,15 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	l.AddDomain("default")
 
 	userStore := h.userdataStore
-	rate := config.MpesaRate()
+
+	// call the mpesa rates API to get the rates
+	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on GetMpesaOnrampRates", "error", err)
+		return res, nil
+	}
 
 	// Input in Ksh
 	kshAmount, err := strconv.ParseFloat(inputStr, 64)
@@ -202,8 +218,8 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		return res, nil
 	}
 
-	// divide by the rate
-	inputAmount := kshAmount / rate
+	// divide by the buy rate
+	inputAmount := kshAmount / rates.Buy
 
 	// store the user's raw input amount in the temporary value
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
@@ -252,7 +268,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		}
 
 		res.Content = l.Get(
-			"You are sending %s %s in order to receive %s ksh",
+			"You are sending %s %s in order to receive ~ %s ksh",
 			qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
 		)
 
@@ -311,7 +327,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	qouteInputAmount, _ := store.TruncateDecimalString(quoteInputStr, 2)
 
 	res.Content = l.Get(
-		"You are sending %s %s in order to receive %s ksh",
+		"You are sending %s %s in order to receive ~ %s ksh",
 		qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
 	)
 
@@ -370,7 +386,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 		logg.InfoCtxf(ctx, "TokenTransfer normal", "trackingId", tokenTransfer.TrackingId)
 
-		res.Content = l.Get("Your request has been sent. You will receive %s ksh", data.TemporaryValue)
+		res.Content = l.Get("Your request has been sent. You will receive ~ %s ksh", data.TemporaryValue)
 
 		res.FlagReset = append(res.FlagReset, flag_account_authorized)
 		return res, nil
@@ -418,7 +434,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 	logg.InfoCtxf(ctx, "final TokenTransfer after swap", "trackingId", tokenTransfer.TrackingId)
 
-	res.Content = l.Get("Your request has been sent. You will receive %s ksh", finalKshStr)
+	res.Content = l.Get("Your request has been sent. You will receive ~ %s ksh", finalKshStr)
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
 }
@@ -468,13 +484,22 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 	}
 
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
 	userStore := h.userdataStore
-	sendRate := config.MpesaSendRate()
+
+	// call the mpesa rates API to get the rates
+	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on GetMpesaOnrampRates", "error", err)
+		return res, nil
+	}
 
 	// Input in Ksh
 	kshAmount, err := strconv.ParseFloat(inputStr, 64)
@@ -502,12 +527,12 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	estimateValue := kshAmount / sendRate
+	estimateValue := kshAmount / rates.Sell
 	estimateStr := fmt.Sprintf("%f", estimateValue)
 	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 2)
 
 	res.Content = l.Get(
-		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive %s cUSD",
+		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s cUSD",
 		inputStr, estimateFormatted,
 	)
 
