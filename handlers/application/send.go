@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
@@ -842,7 +843,10 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	}
 
 	swapTrackingId := poolSwap.TrackingId
-	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", swapTrackingId)
+	logg.InfoCtxf(ctx, "send poolSwap before transfer", "swapTrackingId", swapTrackingId)
+
+	// TODO: remove this temporary time delay and replace with a swap and send endpoint
+	time.Sleep(1 * time.Second)
 
 	// Initiate a send
 	recipientPublicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
@@ -874,7 +878,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	}
 
 	trackingId := tokenTransfer.TrackingId
-	logg.InfoCtxf(ctx, "TokenTransfer", "trackingId", trackingId)
+	logg.InfoCtxf(ctx, "send TokenTransfer after swap", "trackingId", trackingId)
 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",

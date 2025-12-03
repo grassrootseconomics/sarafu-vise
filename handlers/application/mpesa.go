@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/common/hex"
@@ -411,7 +412,10 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
-	logg.InfoCtxf(ctx, "poolSwap", "swapTrackingId", poolSwap.TrackingId)
+	logg.InfoCtxf(ctx, "mpesa poolSwap before transfer", "swapTrackingId", poolSwap.TrackingId)
+
+	// TODO: remove this temporary time delay and replace with a swap and send endpoint
+	time.Sleep(1 * time.Second)
 
 	finalKshStr, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 	if err != nil {
