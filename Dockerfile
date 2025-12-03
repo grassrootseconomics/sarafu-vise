@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgdbm-dev \
     git \
     && rm -rf /var/lib/apt/lists/*
-RUN git clone https://git.defalsify.org/vise.git go-vise
+RUN git clone https://github.com/nolash/go-vise go-vise
 COPY . ./sarafu-vise
 
 WORKDIR /build/sarafu-vise/services/registration
