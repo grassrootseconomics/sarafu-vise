@@ -1,0 +1,9 @@
+MAP check_balance
+MOUT get_mpesa 1
+MOUT send_mpesa 2
+MOUT quit 9
+HALT
+INCMP get_mpesa 1
+INCMP send_mpesa 2
+INCMP quit 9
+INCMP . *

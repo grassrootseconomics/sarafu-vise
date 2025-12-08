@@ -1,0 +1,12 @@
+LOAD send_mpesa_preview 0
+MAP send_mpesa_preview
+CATCH invalid_send_mpesa_amount flag_invalid_amount 1
+MOUT back 0
+MOUT quit 9
+HALT
+LOAD authorize_account 6
+RELOAD authorize_account
+CATCH incorrect_pin flag_incorrect_pin 1
+INCMP _ 0
+INCMP quit 9
+INCMP initiate_send_mpesa *
