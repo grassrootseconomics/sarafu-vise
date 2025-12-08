@@ -1,6 +1,7 @@
 package config
 
 import (
+	"strconv"
 	"strings"
 
 	apiconfig "git.grassecon.net/grassrootseconomics/sarafu-api/config"
@@ -86,4 +87,30 @@ func DefaultPoolName() string {
 
 func DefaultPoolSymbol() string {
 	return env.GetEnv("DEFAULT_POOL_SYMBOL", "")
+}
+
+func DefaultMpesaAddress() string {
+	return env.GetEnv("DEFAULT_MPESA_ADDRESS", "")
+}
+
+func MinMpesaSendAmount() float64 {
+	v := env.GetEnv("MIN_MPESA_SEND_AMOUNT", "100")
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 100 // fallback
+	}
+	return f
+}
+
+func MaxMpesaSendAmount() float64 {
+	v := env.GetEnv("MAX_MPESA_SEND_AMOUNT", "250000")
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 250000 // fallback
+	}
+	return f
+}
+
+func DefaultMpesaAsset() string {
+	return env.GetEnv("DEFAULT_MPESA_ASSET", "")
 }

@@ -1,0 +1,6 @@
+MAP send_mpesa_preview
+MOUT retry 1
+MOUT quit 9
+HALT
+INCMP ^ 1
+INCMP quit 9

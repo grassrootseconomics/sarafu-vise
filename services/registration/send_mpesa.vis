@@ -1,0 +1,9 @@
+LOAD send_mpesa_min_limit 0
+RELOAD send_mpesa_min_limit
+MAP send_mpesa_min_limit
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP _ 0
+INCMP quit 9
+INCMP send_mpesa_confirmation *

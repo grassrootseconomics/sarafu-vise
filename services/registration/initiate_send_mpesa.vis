@@ -1,0 +1,4 @@
+LOAD reset_incorrect_pin 6
+CATCH _ flag_account_authorized 0
+LOAD initiate_send_mpesa 0
+HALT
