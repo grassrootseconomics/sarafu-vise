@@ -82,6 +82,7 @@ func main() {
 		MenuSeparator:     menuSeparator,
 		EngineDebug:       engineDebug,
 		ResetOnEmptyInput: true,
+		ResetRoot:         true, // clear the cache once a user quits
 	}
 
 	menuStorageService := storage.NewMenuStorageService(conns)
