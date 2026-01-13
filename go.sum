@@ -2,8 +2,6 @@ git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66 h1:hmtb2Q3lHxq+S
 git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20251127132814-8ceadabbc215 h1:cxWmd3WG3iVEqP6qG8ZeQRa7Ujno3rSKz3YXjZnmTEY=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20251127132814-8ceadabbc215/go.mod h1:wgQJZGIS6QuNLHqDhcsvehsbn5PvgV7aziRebMnJi60=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251128071248-bfdeef125576 h1:Ov4zENfEnzuU4ZpsNGbFjog9NUM0h1A7RYwWkmHRJWo=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251128071248-bfdeef125576/go.mod h1:h/y/lJNJAVTcIzAxCMXXw8Dh2aoLxBFZ6F1nTB8C0nU=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251202085112-45469d4ba326 h1:qH4QulgncvAD7b/YeHGPxcDJTBIychPeoZJACefYryI=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251202085112-45469d4ba326/go.mod h1:h/y/lJNJAVTcIzAxCMXXw8Dh2aoLxBFZ6F1nTB8C0nU=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306 h1:Jo+yWysWw/N5BJQtAyEMN8ePVvAyPHv+JG4lQti+1N4=
@@ -49,8 +47,8 @@ github.com/ethereum/c-kzg-4844/v2 v2.1.5 h1:aVtoLK5xwJ6c5RiqO8g8ptJ5KU+2Hdquf6G3
 github.com/ethereum/c-kzg-4844/v2 v2.1.5/go.mod h1:u59hRTTah4Co6i9fDWtiCjTrblJv0UwsqZKCc0GfgUs=
 github.com/ethereum/go-bigmodexpfix v0.0.0-20250911101455-f9e208c548ab h1:rvv6MJhy07IMfEKuARQ9TKojGqLVNxQajaXEp/BoqSk=
 github.com/ethereum/go-bigmodexpfix v0.0.0-20250911101455-f9e208c548ab/go.mod h1:IuLm4IsPipXKF7CW5Lzf68PIbZ5yl7FFd74l/E0o9A8=
-github.com/ethereum/go-ethereum v1.16.7 h1:qeM4TvbrWK0UC0tgkZ7NiRsmBGwsjqc64BHo20U59UQ=
-github.com/ethereum/go-ethereum v1.16.7/go.mod h1:Fs6QebQbavneQTYcA39PEKv2+zIjX7rPUZ14DER46wk=
+github.com/ethereum/go-ethereum v1.16.8 h1:LLLfkZWijhR5m6yrAXbdlTeXoqontH+Ga2f9igY7law=
+github.com/ethereum/go-ethereum v1.16.8/go.mod h1:Fs6QebQbavneQTYcA39PEKv2+zIjX7rPUZ14DER46wk=
 github.com/ethereum/go-verkle v0.2.2 h1:I2W0WjnrFUIzzVPwm8ykY+7pL2d4VhlsePn4j7cnFk8=
 github.com/ethereum/go-verkle v0.2.2/go.mod h1:M3b90YRnzqKyyzBEWJGqj8Qff4IDeXnzFw0P9bFw3uk=
 github.com/ferranbt/fastssz v0.1.4 h1:OCDB+dYDEQDvAgtAGnTSidK1Pe2tW3nFV40XyMkTeDY=
