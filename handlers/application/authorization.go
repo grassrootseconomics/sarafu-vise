@@ -21,6 +21,7 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	flag_incorrect_pin, _ := h.flagManager.GetFlag("flag_incorrect_pin")
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 	flag_allow_update, _ := h.flagManager.GetFlag("flag_allow_update")
+	flag_account_pin_reset, _ := h.flagManager.GetFlag("flag_account_pin_reset")
 
 	pinInput := string(input)
 
@@ -33,7 +34,9 @@ func (h *MenuHandlers) Authorize(ctx context.Context, sym string, input []byte) 
 	AccountPin, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_PIN)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read AccountPin entry with", "key", storedb.DATA_ACCOUNT_PIN, "error", err)
-		return res, err
+		logg.InfoCtxf(ctx, "Setting the flag_account_pin_reset flag for the user to set their own PIN")
+		res.FlagSet = append(res.FlagSet, flag_account_pin_reset)
+		return res, nil
 	}
 
 	// verify that the user provided the correct PIN
