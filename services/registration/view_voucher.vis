@@ -4,6 +4,7 @@ MOUT quit 9
 LOAD authorize_account 6
 HALT
 RELOAD authorize_account
+CATCH self_reset_pin flag_account_pin_reset 1
 CATCH incorrect_pin flag_incorrect_pin 1
 INCMP _ 0
 INCMP quit 9
