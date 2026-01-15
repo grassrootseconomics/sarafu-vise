@@ -344,8 +344,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	res.FlagSet = append(res.FlagSet, flag_swap_transaction)
-
 	// Resolve active pool address
 	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
 	if err != nil {
@@ -385,7 +383,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 
-		fmt.Println("the FlagReset:", res.FlagReset, "the FlagSet:", res.FlagSet)
 		return res, nil
 	}
 
@@ -416,6 +413,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 		return res, err
 	}
+
+	// only set the flag once all checks pass
+	res.FlagSet = append(res.FlagSet, flag_swap_transaction)
 
 	res.Content = l.Get(
 		"Credit Available: %s %s\n(You can swap up to %s %s -> %s %s).\nEnter %s amount:",
