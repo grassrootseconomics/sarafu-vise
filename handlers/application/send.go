@@ -384,6 +384,8 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+
+		fmt.Println("the FlagReset:", res.FlagReset, "the FlagSet:", res.FlagSet)
 		return res, nil
 	}
 
