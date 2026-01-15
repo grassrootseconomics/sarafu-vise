@@ -380,8 +380,10 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// retrieve the max credit send amounts
 	maxSAT, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		// if an error (such as Swap rates not found for the speficied pool and tokens), fall back to a normal transaction
 		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
 	}
 
