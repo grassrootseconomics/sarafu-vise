@@ -1,0 +1,6 @@
+LOAD calculate_pay_debt 0
+RELOAD calculate_pay_debt
+MAP calculate_pay_debt
+MOUT back 0
+HALT
+INCMP confirm_debt_removal *
