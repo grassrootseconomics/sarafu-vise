@@ -258,6 +258,7 @@ func (h *MenuHandlers) TransactionReset(ctx context.Context, sym string, input [
 
 	flag_invalid_recipient, _ := h.flagManager.GetFlag("flag_invalid_recipient")
 	flag_invalid_recipient_with_invite, _ := h.flagManager.GetFlag("flag_invalid_recipient_with_invite")
+
 	store := h.userdataStore
 	err = store.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(""))
 	if err != nil {
@@ -336,26 +337,11 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
 
-	// If normal transaction, or if the sym is send_max_amount, return balance
-	if string(transactionType) == "normal" || sym == "send_max_amount" {
+	// If normal transaction return balance
+	if string(transactionType) == "normal" {
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
-
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
-
 		return res, nil
-	}
-
-	res.FlagSet = append(res.FlagSet, flag_swap_transaction)
-
-	// Get the recipient's phone number to read other data items
-	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
-	if err != nil {
-		// invalid state
-		return res, err
-	}
-	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
-	if err != nil {
-		return res, err
 	}
 
 	// Resolve active pool address
@@ -372,16 +358,31 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 			logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
 			return res, nil
 		}
+
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
 	}
 
+	// Get the recipient's phone number to read other data items
+	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	if err != nil {
+		// invalid state
+		return res, err
+	}
+	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
+	if err != nil {
+		return res, err
+	}
+
 	// retrieve the max credit send amounts
 	maxSAT, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		// if an error (such as Swap rates not found for the speficied pool and tokens), fall back to a normal transaction
 		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+
 		return res, nil
 	}
 
@@ -412,6 +413,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 		return res, err
 	}
+
+	// only set the flag once all checks pass
+	res.FlagSet = append(res.FlagSet, flag_swap_transaction)
 
 	res.Content = l.Get(
 		"Credit Available: %s %s\n(You can swap up to %s %s -> %s %s).\nEnter %s amount:",
