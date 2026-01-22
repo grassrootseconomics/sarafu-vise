@@ -72,3 +72,9 @@ msgstr "Utapokea kidokezo cha PIN yako ya M-Pesa hivi karibuni kutuma %s ksh na 
 
 msgid "Your request has been sent. Thank you for using Sarafu"
 msgstr "Ombi lako limetumwa. Asante kwa kutumia huduma ya Sarafu"
+
+msgid "You can remove a maximum of %s %s from %s pool\n"
+msgstr "Unaweza kuondoa kiwango cha juu cha %s %s kutoka kwenye bwawa la %s.\n"
+
+msgid "Please confirm that you will use %s %s to remove your debt of %s %s\n"
+msgstr "Tafadhali thibitisha kwamba utatumia %s %s kulipa deni lako la %s %s.\nWeka PIN yako:"
