@@ -345,7 +345,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	}
 
 	// Resolve active pool address
-	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -479,22 +479,53 @@ func (h *MenuHandlers) getRecipientData(ctx context.Context, sessionId string) (
 	return
 }
 
-func (h *MenuHandlers) resolveActivePoolAddress(ctx context.Context, sessionId string) ([]byte, error) {
+func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId string) (defaultPoolAddress, defaultPoolName []byte, err error) {
 	store := h.userdataStore
-	addr, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
-	if err == nil {
-		return addr, nil
+
+	// Try read address
+	defaultPoolAddress, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
+	if err != nil && !db.IsNotFound(err) {
+		logg.ErrorCtxf(ctx, "failed to read active pool address", "error", err)
+		return nil, nil, err
 	}
-	if db.IsNotFound(err) {
-		defaultAddr := []byte(config.DefaultPoolAddress())
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, defaultAddr); err != nil {
-			logg.ErrorCtxf(ctx, "failed to write default pool address", "error", err)
-			return nil, err
-		}
-		return defaultAddr, nil
+
+	// Try read name
+	defaultPoolName, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_NAME)
+	if err != nil && !db.IsNotFound(err) {
+		logg.ErrorCtxf(ctx, "failed to read active pool name", "error", err)
+		return nil, nil, err
 	}
-	logg.ErrorCtxf(ctx, "failed to read active pool address", "error", err)
-	return nil, err
+
+	// If both exist, return them
+	if defaultPoolAddress != nil && defaultPoolName != nil {
+		return defaultPoolAddress, defaultPoolName, nil
+	}
+
+	// Fallback to config defaults
+	defaultPoolAddress = []byte(config.DefaultPoolAddress())
+	defaultPoolName = []byte(config.DefaultPoolName())
+
+	if err := store.WriteEntry(
+		ctx,
+		sessionId,
+		storedb.DATA_ACTIVE_POOL_ADDRESS,
+		defaultPoolAddress,
+	); err != nil {
+		logg.ErrorCtxf(ctx, "failed to write default pool address", "error", err)
+		return nil, nil, err
+	}
+
+	if err := store.WriteEntry(
+		ctx,
+		sessionId,
+		storedb.DATA_ACTIVE_POOL_NAME,
+		defaultPoolName,
+	); err != nil {
+		logg.ErrorCtxf(ctx, "failed to write default pool name", "error", err)
+		return nil, nil, err
+	}
+
+	return defaultPoolAddress, defaultPoolName, nil
 }
 
 func (h *MenuHandlers) calculateSendCreditLimits(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, fromDecimal, toDecimal []byte) (string, string, error) {

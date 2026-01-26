@@ -106,7 +106,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	}
 
 	// Resolve active pool address
-	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
