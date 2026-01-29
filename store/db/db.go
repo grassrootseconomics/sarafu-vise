@@ -93,6 +93,10 @@ const (
 	DATA_SEND_TRANSACTION_TYPE
 	// Holds the recipient formatted phone number
 	DATA_RECIPIENT_PHONE_NUMBER
+	// holds the current credit of the user
+	DATA_CURRENT_CREDIT
+	// holds the current debt of the user
+	DATA_CURRENT_DEBT
 )
 
 const (
