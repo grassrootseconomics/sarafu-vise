@@ -52,7 +52,25 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 			return res, err
 		}
 	}
-	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias))
+
+	// get current credit
+	currentCredit, err := store.ReadEntry(ctx, sessionId, storedb.DATA_CURRENT_CREDIT)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read currentCredit entry with", "key", storedb.DATA_CURRENT_CREDIT, "error", err)
+			return res, err
+		}
+	}
+	// get current debt
+	currentDebt, err := store.ReadEntry(ctx, sessionId, storedb.DATA_CURRENT_DEBT)
+	if err != nil {
+		if !db.IsNotFound(err) {
+			logg.ErrorCtxf(ctx, "failed to read currentDebt entry with", "key", storedb.DATA_CURRENT_DEBT, "error", err)
+			return res, err
+		}
+	}
+
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias), string(currentCredit), string(currentDebt))
 	if err != nil {
 		return res, err
 	}
@@ -62,7 +80,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 }
 
 // loadUserContent loads the main user content in the main menu: the alias, balance and active symbol associated with active voucher
-func loadUserContent(ctx context.Context, activeSym string, balance string, alias string) (string, error) {
+func loadUserContent(ctx context.Context, activeSym, balance, alias, currectCredit, currentDebt string) (string, error) {
 	var content string
 
 	code := codeFromCtx(ctx)
@@ -75,12 +93,25 @@ func loadUserContent(ctx context.Context, activeSym string, balance string, alia
 		formattedAmount = "0.00"
 	}
 
-	// format the final output
+	formattedCredit, err := store.TruncateDecimalString(currectCredit, 0)
+	if err != nil {
+		formattedCredit = "0"
+	}
+
+	formattedDebt, err := store.TruncateDecimalString(currentDebt, 0)
+	if err != nil {
+		formattedDebt = "0"
+	}
+
+	// format the final outputs
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
+	creditStr := fmt.Sprintf("Credit: %s ksh", formattedCredit)
+	debtStr := fmt.Sprintf("Debt: %s ksh", formattedDebt)
+
 	if alias != "" {
-		content = l.Get("%s\nBalance: %s\n", alias, balStr)
+		content = l.Get("%s\nBalance: %s\n%s\n%s", alias, balStr, creditStr, debtStr)
 	} else {
-		content = l.Get("Balance: %s\n", balStr)
+		content = l.Get("Balance: %s\n%s\n%s", balStr, creditStr, debtStr)
 	}
 	return content, nil
 }
