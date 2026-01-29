@@ -176,6 +176,19 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		return res, nil
 	}
 
+	// Filter out the active voucher from swappableVouchers
+	filteredSwappableVouchers := make([]dataserviceapi.TokenHoldings, 0, len(swappableVouchers))
+	for _, s := range swappableVouchers {
+		if s.TokenSymbol != string(activeSym) {
+			filteredSwappableVouchers = append(filteredSwappableVouchers, s)
+		}
+	}
+
+	// Store as filtered swap to list data (excluding the current active voucher) for future reference
+	data := store.ProcessVouchers(filteredSwappableVouchers)
+
+	logg.InfoCtxf(ctx, "ProcessVouchers", "data", data)
+
 	// Find the matching voucher data
 	activeSymStr := string(activeSym)
 	var activeData *dataserviceapi.TokenHoldings
@@ -228,8 +241,12 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	kshFormattedDebt, _ := store.TruncateDecimalString(debtksh, 0)
 
 	dataMap := map[storedb.DataTyp]string{
-		storedb.DATA_CURRENT_CREDIT: kshFormattedCredit,
-		storedb.DATA_CURRENT_DEBT:   kshFormattedDebt,
+		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
+		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
+		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
+		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
+		storedb.DATA_CURRENT_CREDIT:    kshFormattedCredit,
+		storedb.DATA_CURRENT_DEBT:      kshFormattedDebt,
 	}
 
 	// Write data entries
