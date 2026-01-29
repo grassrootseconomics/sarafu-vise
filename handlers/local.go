@@ -147,7 +147,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("send_mpesa_min_limit", appHandlers.SendMpesaMinLimit)
 	ls.DbRs.AddLocalFunc("send_mpesa_preview", appHandlers.SendMpesaPreview)
 	ls.DbRs.AddLocalFunc("initiate_send_mpesa", appHandlers.InitiateSendMpesa)
-	ls.DbRs.AddLocalFunc("calculate_pay_debt", appHandlers.CalculatePayDebt)
+	ls.DbRs.AddLocalFunc("calculate_max_pay_debt", appHandlers.CalculateMaxPayDebt)
 	ls.DbRs.AddLocalFunc("confirm_debt_removal", appHandlers.ConfirmDebtRemoval)
 	ls.DbRs.AddLocalFunc("initiate_pay_debt", appHandlers.InitiatePayDebt)
 
