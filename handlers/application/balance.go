@@ -3,11 +3,13 @@ package application
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
+	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
@@ -127,5 +129,116 @@ func (h *MenuHandlers) FetchCommunityBalance(ctx context.Context, sym string, in
 	//TODO:
 	//Check if the address is a community account,if then,get the actual balance
 	res.Content = l.Get("Community Balance: 0.00")
+	return res, nil
+}
+
+// CalculateCreditAndDebt calls the API to get the credit and debt
+// uses the pretium rates to convert the value to Ksh
+func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	userStore := h.userdataStore
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+
+	// Fetch session data
+	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	// Get active pool address and symbol or fall back to default
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	// call the api using the activePoolAddress to get a list of SwapToSymbolsData
+	swappableVouchers, err := h.accountService.GetPoolSwappableFromVouchers(ctx, string(activePoolAddress), string(publicKey))
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		logg.ErrorCtxf(ctx, "failed on GetPoolSwappableFromVouchers", "error", err)
+		return res, err
+	}
+
+	logg.InfoCtxf(ctx, "GetPoolSwappableFromVouchers", "swappable vouchers", swappableVouchers)
+
+	// Return if there are no vouchers
+	if len(swappableVouchers) == 0 {
+		return res, nil
+	}
+
+	// Find the matching voucher data
+	activeSymStr := string(activeSym)
+	var activeData *dataserviceapi.TokenHoldings
+	for _, voucher := range swappableVouchers {
+		if voucher.TokenSymbol == activeSymStr {
+			activeData = &voucher
+			break
+		}
+	}
+
+	if activeData == nil {
+		logg.InfoCtxf(ctx, "activeSym not found in vouchers, returning 0", "activeSym", activeSymStr)
+		return res, nil
+	}
+
+	// Scale down the active balance (credit)
+	// Max swappable value from pool using the active token
+	scaledCredit := store.ScaleDownBalance(activeData.Balance, activeData.TokenDecimals)
+
+	// Calculate total debt (sum of other vouchers)
+	scaledDebt := "0"
+
+	for _, voucher := range swappableVouchers {
+		// Skip the active token
+		if voucher.TokenSymbol == activeSymStr {
+			continue
+		}
+
+		scaled := store.ScaleDownBalance(voucher.Balance, voucher.TokenDecimals)
+
+		// Add scaled balances (decimal-safe)
+		scaledDebt = store.AddDecimalStrings(scaledDebt, scaled)
+	}
+
+	// call the mpesa rates API to get the rates
+	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on GetMpesaOnrampRates", "error", err)
+		return res, nil
+	}
+
+	creditFloat, _ := strconv.ParseFloat(scaledCredit, 64)
+	creditksh := fmt.Sprintf("%f", creditFloat*rates.Buy)
+	kshFormattedCredit, _ := store.TruncateDecimalString(creditksh, 0)
+
+	debtFloat, _ := strconv.ParseFloat(scaledDebt, 64)
+	debtksh := fmt.Sprintf("%f", debtFloat*rates.Buy)
+	kshFormattedDebt, _ := store.TruncateDecimalString(debtksh, 0)
+
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_CURRENT_CREDIT: kshFormattedCredit,
+		storedb.DATA_CURRENT_DEBT:   kshFormattedDebt,
+	}
+
+	// Write data entries
+	for key, value := range dataMap {
+		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
+			continue
+		}
+	}
+
 	return res, nil
 }
