@@ -225,3 +225,46 @@ func FormatVoucherList(ctx context.Context, symbolsData, balancesData string) []
 	}
 	return combined
 }
+
+// AddDecimalStrings adds two decimal numbers represented as strings
+// and returns the result as a string without losing precision.
+func AddDecimalStrings(a, b string) string {
+	x, ok := new(big.Rat).SetString(a)
+	if !ok {
+		x = new(big.Rat)
+	}
+
+	y, ok := new(big.Rat).SetString(b)
+	if !ok {
+		y = new(big.Rat)
+	}
+
+	x.Add(x, y)
+
+	// Convert back to string without scientific notation
+	return x.FloatString(maxDecimalPlaces(x, y))
+}
+
+// maxDecimalPlaces ensures we preserve enough decimal precision
+func maxDecimalPlaces(rats ...*big.Rat) int {
+	max := 0
+	for _, r := range rats {
+		if r == nil {
+			continue
+		}
+		if d := decimalPlaces(r); d > max {
+			max = d
+		}
+	}
+	return max
+}
+
+func decimalPlaces(r *big.Rat) int {
+	s := r.FloatString(18)
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return len(s) - i - 1
+		}
+	}
+	return 0
+}
