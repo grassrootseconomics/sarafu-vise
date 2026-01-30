@@ -18,6 +18,7 @@ type SwapData struct {
 	ActiveSwapFromAddress string
 	ActiveSwapToSym       string
 	ActiveSwapToAddress   string
+	ActiveSwapToDecimal   string
 }
 
 type SwapPreviewData struct {
@@ -43,6 +44,7 @@ func ReadSwapData(ctx context.Context, store DataStore, sessionId string) (SwapD
 		"ActiveSwapFromAddress": storedb.DATA_ACTIVE_ADDRESS,
 		"ActiveSwapToSym":       storedb.DATA_ACTIVE_SWAP_TO_SYM,
 		"ActiveSwapToAddress":   storedb.DATA_ACTIVE_SWAP_TO_ADDRESS,
+		"ActiveSwapToDecimal":   storedb.DATA_ACTIVE_SWAP_TO_DECIMAL,
 	}
 
 	v := reflect.ValueOf(&data).Elem()
