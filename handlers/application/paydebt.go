@@ -61,7 +61,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		return res, err
 	}
 
-	// call the api using the ActivePoolAddress, ActiveSwapFromAddress as the to (FT), ActiveSwapToAddress as the from (AT) and PublicKey to get the swap max limit
+	// call the api using the ActivePoolAddress, ActiveSwapToAddress as the from (FT), ActiveSwapFromAddress as the to (AT) and PublicKey to get the swap max limit
 	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress, swapData.ActiveSwapFromAddress, swapData.PublicKey)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -76,7 +76,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	}
 
 	// Scale down the amount
-	maxAmountStr := store.ScaleDownBalance(r.Max, swapData.ActiveSwapFromDecimal)
+	maxAmountStr := store.ScaleDownBalance(r.Max, swapData.ActiveSwapToDecimal)
 	if err != nil {
 		return res, err
 	}
@@ -153,17 +153,16 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 		return res, nil
 	}
 
-	// Format the amount to 2 decimal places
-	formattedAmount, err := store.TruncateDecimalString(inputStr, 2)
-	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = inputStr
-		return res, nil
-	}
+	storedMax, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
 
-	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapFromDecimal)
-	if err != nil {
-		return res, err
+	var finalAmountStr string
+	if inputStr == swapData.ActiveSwapMaxAmount {
+		finalAmountStr = string(storedMax)
+	} else {
+		finalAmountStr, err = store.ParseAndScaleAmount(inputStr, swapData.ActiveSwapToDecimal)
+		if err != nil {
+			return res, err
+		}
 	}
 
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT, []byte(finalAmountStr))
@@ -254,7 +253,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when your debt of %s %s has been removed from %s.",
 		swapData.TemporaryValue,
-		swapData.ActiveSwapFromSym,
+		swapData.ActiveSwapToSym,
 		activePoolName,
 	)
 
