@@ -1,6 +1,7 @@
 LOAD calculate_max_pay_debt 0
 RELOAD calculate_max_pay_debt
 MAP calculate_max_pay_debt
+CATCH low_pay_debt_amount flag_low_swap_amount 1
 MOUT back 0
 HALT
 INCMP _ 0
