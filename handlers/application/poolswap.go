@@ -303,7 +303,7 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 	// store the user's input amount in the temporary value
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write inputStr amount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
 		return res, err
 	}
 
