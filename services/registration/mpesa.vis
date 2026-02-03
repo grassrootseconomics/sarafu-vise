@@ -1,9 +1,16 @@
-MAP check_balance
-MOUT get_mpesa 1
-MOUT send_mpesa 2
+LOAD calc_credit_debt 150
+RELOAD calc_credit_debt
+CATCH api_failure flag_api_call_error 1
+MAP calc_credit_debt
+MOUT pay_debt 1
+MOUT get_mpesa 2
+MOUT send_mpesa 3
+MOUT back 0
 MOUT quit 9
 HALT
-INCMP get_mpesa 1
-INCMP send_mpesa 2
+INCMP ^ 0
+INCMP pay_debt 1
+INCMP get_mpesa 2
+INCMP send_mpesa 3
 INCMP quit 9
 INCMP . *
