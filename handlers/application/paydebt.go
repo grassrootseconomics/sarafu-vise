@@ -28,6 +28,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 
 	inputStr := string(input)
 	if inputStr == "0" || inputStr == "9" {
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, nil
 	}
 
@@ -36,11 +37,13 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	// Resolve active pool
 	_, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, err
 	}
 
 	metadata, err := store.GetSwapToVoucherData(ctx, userStore, sessionId, "1")
 	if err != nil {
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
 	}
 	if metadata == nil {
@@ -110,6 +113,8 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		string(activePoolName),
 		swapData.ActiveSwapToSym,
 	)
+
+	res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 
 	return res, nil
 }
