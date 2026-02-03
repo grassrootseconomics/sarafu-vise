@@ -107,13 +107,13 @@ func loadUserContent(ctx context.Context, activeSym, balance, alias, currectCred
 
 	// format the final outputs
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
-	creditStr := fmt.Sprintf("Credit: %s ksh", formattedCredit)
-	debtStr := fmt.Sprintf("Debt: %s ksh", formattedDebt)
+	creditStr := fmt.Sprintf("C: %s ksh", formattedCredit)
+	debtStr := fmt.Sprintf("D: %s ksh", formattedDebt)
 
 	if alias != "" {
-		content = l.Get("%s\nBalance: %s\n%s\n%s", alias, balStr, creditStr, debtStr)
+		content = l.Get("%s\nBal: %s\n%s\n%s", alias, balStr, creditStr, debtStr)
 	} else {
-		content = l.Get("Balance: %s\n%s\n%s", balStr, creditStr, debtStr)
+		content = l.Get("Bal: %s\n%s\n%s", balStr, creditStr, debtStr)
 	}
 	return content, nil
 }
