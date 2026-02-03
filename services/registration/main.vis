@@ -18,6 +18,8 @@ MOUT mpesa 6
 MOUT account 7
 MOUT help 8
 MOUT quit 9
+MNEXT next 11
+MPREV prev 22
 HALT
 INCMP credit_send 1
 INCMP pay_debt 2
@@ -28,4 +30,6 @@ INCMP mpesa 6
 INCMP my_account 7
 INCMP help 8
 INCMP quit 9
+INCMP > 11
+INCMP < 22
 INCMP . *
