@@ -149,6 +149,8 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
+	res.FlagReset = append(res.FlagReset, flag_api_call_error)
+
 	// Fetch session data
 	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
