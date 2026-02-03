@@ -55,24 +55,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		}
 	}
 
-	// get current credit
-	currentCredit, err := store.ReadEntry(ctx, sessionId, storedb.DATA_CURRENT_CREDIT)
-	if err != nil {
-		if !db.IsNotFound(err) {
-			logg.ErrorCtxf(ctx, "failed to read currentCredit entry with", "key", storedb.DATA_CURRENT_CREDIT, "error", err)
-			return res, err
-		}
-	}
-	// get current debt
-	currentDebt, err := store.ReadEntry(ctx, sessionId, storedb.DATA_CURRENT_DEBT)
-	if err != nil {
-		if !db.IsNotFound(err) {
-			logg.ErrorCtxf(ctx, "failed to read currentDebt entry with", "key", storedb.DATA_CURRENT_DEBT, "error", err)
-			return res, err
-		}
-	}
-
-	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias), string(currentCredit), string(currentDebt))
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias))
 	if err != nil {
 		return res, err
 	}
@@ -82,7 +65,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 }
 
 // loadUserContent loads the main user content in the main menu: the alias, balance and active symbol associated with active voucher
-func loadUserContent(ctx context.Context, activeSym, balance, alias, currectCredit, currentDebt string) (string, error) {
+func loadUserContent(ctx context.Context, activeSym, balance, alias string) (string, error) {
 	var content string
 
 	code := codeFromCtx(ctx)
@@ -95,25 +78,13 @@ func loadUserContent(ctx context.Context, activeSym, balance, alias, currectCred
 		formattedAmount = "0.00"
 	}
 
-	formattedCredit, err := store.TruncateDecimalString(currectCredit, 0)
-	if err != nil {
-		formattedCredit = "0"
-	}
-
-	formattedDebt, err := store.TruncateDecimalString(currentDebt, 0)
-	if err != nil {
-		formattedDebt = "0"
-	}
-
 	// format the final outputs
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
-	creditStr := fmt.Sprintf("C: %s ksh", formattedCredit)
-	debtStr := fmt.Sprintf("D: %s ksh", formattedDebt)
 
 	if alias != "" {
-		content = l.Get("%s\nBal: %s\n%s\n%s", alias, balStr, creditStr, debtStr)
+		content = l.Get("%s\nBalance: %s\n", alias, balStr)
 	} else {
-		content = l.Get("Bal: %s\n%s\n%s", balStr, creditStr, debtStr)
+		content = l.Get("Balance: %s\n", balStr)
 	}
 	return content, nil
 }
@@ -149,7 +120,9 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
+	// set the default flag set/reset and content
 	res.FlagReset = append(res.FlagReset, flag_api_call_error)
+	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", "0", "0")
 
 	// Fetch session data
 	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
@@ -247,8 +220,6 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
 		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
 		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
-		storedb.DATA_CURRENT_CREDIT:    kshFormattedCredit,
-		storedb.DATA_CURRENT_DEBT:      kshFormattedDebt,
 	}
 
 	// Write data entries
@@ -258,6 +229,8 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 			continue
 		}
 	}
+
+	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", kshFormattedCredit, kshFormattedDebt)
 
 	return res, nil
 }
