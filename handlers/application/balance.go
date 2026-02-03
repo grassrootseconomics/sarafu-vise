@@ -152,7 +152,8 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	// Fetch session data
 	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
-		return res, err
+		// return if the user does not have an active voucher
+		return res, nil
 	}
 
 	// Get active pool address and symbol or fall back to default
@@ -166,7 +167,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on GetPoolSwappableFromVouchers", "error", err)
-		return res, err
+		return res, nil
 	}
 
 	logg.InfoCtxf(ctx, "GetPoolSwappableFromVouchers", "swappable vouchers", swappableVouchers)
