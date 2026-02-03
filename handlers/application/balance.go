@@ -165,7 +165,6 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	// call the api using the activePoolAddress to get a list of SwapToSymbolsData
 	swappableVouchers, err := h.accountService.GetPoolSwappableFromVouchers(ctx, string(activePoolAddress), string(publicKey))
 	if err != nil {
-		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on GetPoolSwappableFromVouchers", "error", err)
 		return res, nil
 	}
