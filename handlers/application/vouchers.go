@@ -181,7 +181,17 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
 	userStore := h.userdataStore
+
+	// Fetch session data
+	_, _, activeSym, _, _, _, err := h.getSessionData(ctx, sessionId)
+	if err != nil {
+		return res, nil
+	}
 
 	// Read vouchers from the store
 	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
@@ -189,6 +199,11 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
+	}
+
+	if len(voucherData) == 0 {
+		res.Content = l.Get("Your active voucher %s is already set", string(activeSym))
+		return res, nil
 	}
 
 	voucherBalances, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_BALANCES)
@@ -203,7 +218,7 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 
 	logg.InfoCtxf(ctx, "final output for GetVoucherList", "sessionId", sessionId, "finalOutput", finalOutput)
 
-	res.Content = finalOutput
+	res.Content = l.Get("Select number or symbol from your vouchers:\n%s", finalOutput)
 
 	return res, nil
 }
