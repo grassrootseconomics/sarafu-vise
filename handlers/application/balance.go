@@ -119,86 +119,85 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	l.AddDomain("default")
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	flag_no_pay_debt_vouchers, _ := h.flagManager.GetFlag("flag_no_pay_debt_vouchers")
 
-	// set the default flag set/reset and content
+	// default response
 	res.FlagReset = append(res.FlagReset, flag_api_call_error)
 	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", "0", "0")
 
 	// Fetch session data
 	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
-		// return if the user does not have an active voucher
 		return res, nil
 	}
 
-	// Get active pool address and symbol or fall back to default
+	// Resolve active pool
 	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
-	// call the api using the activePoolAddress to get a list of SwapToSymbolsData
+	// Fetch swappable vouchers
 	swappableVouchers, err := h.accountService.GetPoolSwappableFromVouchers(ctx, string(activePoolAddress), string(publicKey))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed on GetPoolSwappableFromVouchers", "error", err)
 		return res, nil
 	}
 
-	logg.InfoCtxf(ctx, "GetPoolSwappableFromVouchers", "swappable vouchers", swappableVouchers)
-
-	// Return if there are no vouchers
 	if len(swappableVouchers) == 0 {
 		return res, nil
 	}
 
-	// Filter out the active voucher from swappableVouchers
-	filteredSwappableVouchers := make([]dataserviceapi.TokenHoldings, 0, len(swappableVouchers))
-	for _, s := range swappableVouchers {
-		if s.TokenSymbol != string(activeSym) {
-			filteredSwappableVouchers = append(filteredSwappableVouchers, s)
+	// Filter stable vouchers (excluding active voucher)
+	filteredSwappableVouchers := make([]dataserviceapi.TokenHoldings, 0)
+	for _, v := range swappableVouchers {
+		if v.TokenSymbol == string(activeSym) {
+			continue
+		}
+		if isStableVoucher(v.TokenAddress) {
+			filteredSwappableVouchers = append(filteredSwappableVouchers, v)
 		}
 	}
 
-	// Store as filtered swap to list data (excluding the current active voucher) for future reference
+	// No stable vouchers → cannot pay debt
+	if len(filteredSwappableVouchers) == 0 {
+		res.FlagSet = append(res.FlagSet, flag_no_pay_debt_vouchers)
+		return res, nil
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_no_pay_debt_vouchers)
+
+	// Process stable vouchers for later use
 	data := store.ProcessVouchers(filteredSwappableVouchers)
 
-	logg.InfoCtxf(ctx, "ProcessVouchers", "data", data)
-
-	// Find the matching voucher data
+	// Find active voucher data
 	activeSymStr := string(activeSym)
 	var activeData *dataserviceapi.TokenHoldings
-	for _, voucher := range swappableVouchers {
-		if voucher.TokenSymbol == activeSymStr {
-			activeData = &voucher
+	for _, v := range swappableVouchers {
+		if v.TokenSymbol == activeSymStr {
+			activeData = &v
 			break
 		}
 	}
 
 	if activeData == nil {
-		logg.InfoCtxf(ctx, "activeSym not found in vouchers, returning 0", "activeSym", activeSymStr)
 		return res, nil
 	}
 
-	// Scale down the active balance (credit)
-	// Max swappable value from pool using the active token
-	scaledCredit := store.ScaleDownBalance(activeData.Balance, activeData.TokenDecimals)
+	// Credit = active voucher balance
+	scaledCredit := store.ScaleDownBalance(
+		activeData.Balance,
+		activeData.TokenDecimals,
+	)
 
-	// Calculate total debt (sum of other vouchers)
+	// Debt = sum of stable vouchers only
 	scaledDebt := "0"
-
-	for _, voucher := range swappableVouchers {
-		// Skip the active token
-		if voucher.TokenSymbol == activeSymStr {
-			continue
-		}
-
-		scaled := store.ScaleDownBalance(voucher.Balance, voucher.TokenDecimals)
-
-		// Add scaled balances (decimal-safe)
+	for _, v := range filteredSwappableVouchers {
+		scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
 		scaledDebt = store.AddDecimalStrings(scaledDebt, scaled)
 	}
 
-	// call the mpesa rates API to get the rates
+	// Fetch MPESA rates
 	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -208,13 +207,15 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	}
 
 	creditFloat, _ := strconv.ParseFloat(scaledCredit, 64)
-	creditksh := fmt.Sprintf("%f", creditFloat*rates.Buy)
-	kshFormattedCredit, _ := store.TruncateDecimalString(creditksh, 0)
-
 	debtFloat, _ := strconv.ParseFloat(scaledDebt, 64)
-	debtksh := fmt.Sprintf("%f", debtFloat*rates.Buy)
-	kshFormattedDebt, _ := store.TruncateDecimalString(debtksh, 0)
 
+	creditKsh := fmt.Sprintf("%f", creditFloat*rates.Buy)
+	debtKsh := fmt.Sprintf("%f", debtFloat*rates.Buy)
+
+	kshFormattedCredit, _ := store.TruncateDecimalString(creditKsh, 0)
+	kshFormattedDebt, _ := store.TruncateDecimalString(debtKsh, 0)
+
+	// Persist swap data
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
 		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
@@ -222,7 +223,6 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
 	}
 
-	// Write data entries
 	for key, value := range dataMap {
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
@@ -230,7 +230,11 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		}
 	}
 
-	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", kshFormattedCredit, kshFormattedDebt)
+	res.Content = l.Get(
+		"Credit: %s KSH\nDebt: %s KSH\n",
+		kshFormattedCredit,
+		kshFormattedDebt,
+	)
 
 	return res, nil
 }

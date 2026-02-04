@@ -114,3 +114,22 @@ func MaxMpesaSendAmount() float64 {
 func DefaultMpesaAsset() string {
 	return env.GetEnv("DEFAULT_MPESA_ASSET", "")
 }
+
+func StableVoucherAddresses() []string {
+	var parsed []string
+
+	raw := env.GetEnv("STABLE_VOUCHER_ADDRESSES", "")
+	if raw == "" {
+		return parsed
+	}
+
+	list := strings.Split(raw, ",")
+	for _, addr := range list {
+		clean := strings.ToLower(strings.TrimSpace(addr))
+		if clean != "" {
+			parsed = append(parsed, clean)
+		}
+	}
+
+	return parsed
+}

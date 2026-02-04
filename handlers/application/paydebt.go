@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"git.defalsify.org/vise.git/resource"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	"gopkg.in/leonelquinteros/gotext.v1"
@@ -264,4 +266,14 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
+}
+
+func isStableVoucher(tokenAddress string) bool {
+	addr := strings.ToLower(strings.TrimSpace(tokenAddress))
+	for _, stable := range config.StableVoucherAddresses() {
+		if addr == stable {
+			return true
+		}
+	}
+	return false
 }
