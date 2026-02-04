@@ -1,4 +1,5 @@
 CATCH no_voucher flag_no_active_voucher 1
+CATCH no_stable_voucher flag_no_pay_debt_vouchers 1
 LOAD calculate_max_pay_debt 0
 RELOAD calculate_max_pay_debt
 MAP calculate_max_pay_debt
