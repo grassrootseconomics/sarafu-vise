@@ -78,3 +78,9 @@ msgstr "Unaweza kuondoa kiwango cha juu cha %s %s kutoka kwenye '%s'\n\nWeka kiw
 
 msgid "Please confirm that you will use %s %s to remove your debt of %s %s\n"
 msgstr "Tafadhali thibitisha kwamba utatumia %s %s kulipa deni lako la %s %s.\nWeka PIN yako:"
+
+msgid "Your active voucher %s is already set"
+msgstr "Sarafu yako %s ishachaguliwa"
+
+msgid "Select number or symbol from your vouchers:\n%s"
+msgstr "Chagua nambari au ishara kutoka kwa sarafu zako:\n%s"
