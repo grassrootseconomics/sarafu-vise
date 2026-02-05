@@ -195,7 +195,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	}
 
 	// Scale down the quoted amount
-	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapToDecimal)
+	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapFromDecimal)
 
 	// Format to 2 decimal places
 	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
