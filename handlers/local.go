@@ -150,6 +150,10 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("calculate_max_pay_debt", appHandlers.CalculateMaxPayDebt)
 	ls.DbRs.AddLocalFunc("confirm_debt_removal", appHandlers.ConfirmDebtRemoval)
 	ls.DbRs.AddLocalFunc("initiate_pay_debt", appHandlers.InitiatePayDebt)
+	ls.DbRs.AddLocalFunc("get_pool_deposit_vouchers", appHandlers.GetPoolDepositVouchers)
+	ls.DbRs.AddLocalFunc("pool_deposit_max_amount", appHandlers.PoolDepositMaxAmount)
+	ls.DbRs.AddLocalFunc("confirm_pool_deposit", appHandlers.ConfirmPoolDeposit)
+	ls.DbRs.AddLocalFunc("initiate_pool_deposit", appHandlers.InitiatePoolDeposit)
 
 	ls.first = appHandlers.Init
 
