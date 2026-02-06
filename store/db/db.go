@@ -65,7 +65,7 @@ const (
 	DATA_ACCOUNT_ALIAS
 	//currently suggested alias by the api awaiting user's confirmation as accepted account alias
 	DATA_SUGGESTED_ALIAS
-	//Key used to store a value of 1 for a user to reset their own PIN once they access the menu. 
+	//Key used to store a value of 1 for a user to reset their own PIN once they access the menu.
 	DATA_SELF_PIN_RESET
 	// Holds the active pool contract address for the swap
 	DATA_ACTIVE_POOL_ADDRESS
@@ -104,7 +104,14 @@ const (
 	DATA_VOUCHER_DECIMALS
 	// List of voucher EVM addresses for vouchers valid in the user context.
 	DATA_VOUCHER_ADDRESSES
-	// List of senders for valid transactions in the user context.
+	// List of stable voucher symbols in the user context.
+	DATA_STABLE_VOUCHER_SYMBOLS
+	// List of stable voucher decimal counts for vouchers valid in the user context.
+	DATA_STABLE_VOUCHER_BALANCES
+	// List of stable voucher decimal counts for vouchers valid in the user context.
+	DATA_STABLE_VOUCHER_DECIMALS
+	// List of stable voucher EVM addresses for vouchers valid in the user context.
+	DATA_STABLE_VOUCHER_ADDRESSES
 )
 
 const (
