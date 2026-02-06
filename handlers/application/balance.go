@@ -119,7 +119,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	l.AddDomain("default")
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-	flag_no_pay_debt_vouchers, _ := h.flagManager.GetFlag("flag_no_pay_debt_vouchers")
+	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
 
 	// default response
 	res.FlagReset = append(res.FlagReset, flag_api_call_error)
@@ -161,11 +161,11 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	// No stable vouchers → cannot pay debt
 	if len(filteredSwappableVouchers) == 0 {
-		res.FlagSet = append(res.FlagSet, flag_no_pay_debt_vouchers)
+		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
 		return res, nil
 	}
 
-	res.FlagReset = append(res.FlagReset, flag_no_pay_debt_vouchers)
+	res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
 
 	// Process stable vouchers for later use
 	data := store.ProcessVouchers(filteredSwappableVouchers)
