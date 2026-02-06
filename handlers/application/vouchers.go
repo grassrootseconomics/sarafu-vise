@@ -16,7 +16,8 @@ import (
 // ManageVouchers retrieves the token holdings from the API using the "PublicKey" and
 // 1. sets the first as the default voucher if no active voucher is set.
 // 2. Stores list of vouchers
-// 3. updates the balance of the active voucher
+// 3. Stores list of filtered stable vouchers
+// 4. updates the balance of the active voucher
 func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	userStore := h.userdataStore
@@ -29,6 +30,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
@@ -164,6 +166,41 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	// Write data entries
 	for key, value := range dataMap {
+		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
+			continue
+		}
+	}
+
+	// Filter stable vouchers
+	filteredStableVouchers := make([]dataserviceapi.TokenHoldings, 0)
+	for _, v := range vouchersResp {
+
+		if isStableVoucher(v.TokenAddress) {
+			filteredStableVouchers = append(filteredStableVouchers, v)
+		}
+	}
+
+	// No stable vouchers
+	if len(filteredStableVouchers) == 0 {
+		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
+		return res, nil
+	}
+
+	res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
+
+	// Process stable vouchers for later use
+	stableVoucherData := store.ProcessVouchers(filteredStableVouchers)
+
+	stableVoucherDataMap := map[storedb.DataTyp]string{
+		storedb.DATA_STABLE_VOUCHER_SYMBOLS:   stableVoucherData.Symbols,
+		storedb.DATA_STABLE_VOUCHER_BALANCES:  stableVoucherData.Balances,
+		storedb.DATA_STABLE_VOUCHER_DECIMALS:  stableVoucherData.Decimals,
+		storedb.DATA_STABLE_VOUCHER_ADDRESSES: stableVoucherData.Addresses,
+	}
+
+	// Write data entries
+	for key, value := range stableVoucherDataMap {
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
