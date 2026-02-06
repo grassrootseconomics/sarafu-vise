@@ -120,6 +120,43 @@ func GetVoucherData(ctx context.Context, store DataStore, sessionId string, inpu
 	}, nil
 }
 
+// GetStableVoucherData retrieves and matches stable voucher data
+func GetStableVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
+	keys := []storedb.DataTyp{
+		storedb.DATA_STABLE_VOUCHER_SYMBOLS,
+		storedb.DATA_STABLE_VOUCHER_BALANCES,
+		storedb.DATA_STABLE_VOUCHER_DECIMALS,
+		storedb.DATA_STABLE_VOUCHER_ADDRESSES,
+	}
+	data := make(map[storedb.DataTyp]string)
+
+	for _, key := range keys {
+		value, err := store.ReadEntry(ctx, sessionId, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
+		}
+		data[key] = string(value)
+	}
+
+	symbol, balance, decimal, address := MatchVoucher(input,
+		data[storedb.DATA_STABLE_VOUCHER_SYMBOLS],
+		data[storedb.DATA_STABLE_VOUCHER_BALANCES],
+		data[storedb.DATA_STABLE_VOUCHER_DECIMALS],
+		data[storedb.DATA_STABLE_VOUCHER_ADDRESSES],
+	)
+
+	if symbol == "" {
+		return nil, nil
+	}
+
+	return &dataserviceapi.TokenHoldings{
+		TokenSymbol:   string(symbol),
+		Balance:       string(balance),
+		TokenDecimals: string(decimal),
+		TokenAddress:  string(address),
+	}, nil
+}
+
 // MatchVoucher finds the matching voucher symbol, balance, decimals and contract address based on the input.
 func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol, balance, decimal, address string) {
 	symList := strings.Split(symbols, "\n")
