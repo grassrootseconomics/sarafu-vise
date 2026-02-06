@@ -1,0 +1,8 @@
+LOAD pool_deposit_max_amount 0
+RELOAD pool_deposit_max_amount
+CATCH _ flag_incorrect_voucher 1
+MAP pool_deposit_max_amount
+MOUT back 0
+HALT
+INCMP _ 0
+INCMP pool_deposit_confirmation *
