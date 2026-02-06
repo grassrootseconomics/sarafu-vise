@@ -1,0 +1,14 @@
+CATCH no_voucher flag_no_active_voucher 1
+CATCH no_stable_voucher flag_no_pay_debt_vouchers 1
+LOAD get_pool_deposit_vouchers 0
+MAP get_pool_deposit_vouchers
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
+INCMP pool_deposit_amount *
