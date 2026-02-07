@@ -585,7 +585,7 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	if inputAmount > balanceValue {
+	if inputAmount > balanceValue || inputAmount < 0.1{
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 		res.Content = amountStr
 		return res, nil
