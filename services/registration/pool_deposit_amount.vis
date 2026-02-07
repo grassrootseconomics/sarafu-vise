@@ -1,8 +1,10 @@
-LOAD pool_deposit_max_amount 0
-RELOAD pool_deposit_max_amount
-CATCH _ flag_incorrect_voucher 1
+LOAD reset_transaction_amount 10
+RELOAD reset_transaction_amount
 MAP pool_deposit_max_amount
 MOUT back 0
 HALT
+LOAD confirm_pool_deposit 140
+RELOAD confirm_pool_deposit
+CATCH invalid_pool_deposit_amount flag_invalid_amount 1
 INCMP _ 0
 INCMP pool_deposit_confirmation *
