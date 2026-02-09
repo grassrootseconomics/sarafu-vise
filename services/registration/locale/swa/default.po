@@ -61,8 +61,8 @@ msgstr "Weka kiasi cha M-Pesa cha kupata: (Kikomo %s Ksh)\n"
 msgid "You are sending %s %s in order to receive ~ %s ksh"
 msgstr "Unatuma ~ %s %s ili upoke %s ksh"
 
-msgid "Your request has been sent. You will receive ~ %s ksh"
-msgstr "Ombi lako limetumwa. Utapokea ~ %s ksh"
+msgid "Your request has been sent. Please await confirmation"
+msgstr "Ombi lako limetumwa. Tafadhali subiri"
 
 msgid "Enter the amount of M-Pesa to send: (Minimum %s Ksh)\n"
 msgstr "Weka kiasi cha M-Pesa cha kutuma: (Kima cha chini %s Ksh)\n"

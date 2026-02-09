@@ -387,11 +387,10 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 		logg.InfoCtxf(ctx, "TokenTransfer normal", "trackingId", tokenTransfer.TrackingId)
 
-		res.Content = l.Get("Your request has been sent. You will receive ~ %s ksh", data.TemporaryValue)
+		res.Content = l.Get("Your request has been sent. Please await confirmation")
 
 		res.FlagReset = append(res.FlagReset, flag_account_authorized)
 		return res, nil
-
 	}
 
 	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
