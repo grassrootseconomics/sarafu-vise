@@ -12,8 +12,8 @@ import (
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
-// GetPoolDepositVouchers returns a list of stable coins
-func (h *MenuHandlers) GetPoolDepositVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+// GetOrderedVouchers returns a list of ordered vouchers with stables at the top
+func (h *MenuHandlers) GetOrderedVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
 	if !ok {
@@ -26,7 +26,7 @@ func (h *MenuHandlers) GetPoolDepositVouchers(ctx context.Context, sym string, i
 
 	userStore := h.userdataStore
 
-	// Read stable vouchers from the store
+	// Read ordered vouchers from the store
 	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ORDERED_VOUCHER_SYMBOLS)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read stable voucherData entires with", "key", storedb.DATA_ORDERED_VOUCHER_SYMBOLS, "error", err)
