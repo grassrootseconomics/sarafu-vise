@@ -123,10 +123,10 @@ func GetVoucherData(ctx context.Context, store DataStore, sessionId string, inpu
 // GetStableVoucherData retrieves and matches stable voucher data
 func GetStableVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
 	keys := []storedb.DataTyp{
-		storedb.DATA_STABLE_VOUCHER_SYMBOLS,
-		storedb.DATA_STABLE_VOUCHER_BALANCES,
-		storedb.DATA_STABLE_VOUCHER_DECIMALS,
-		storedb.DATA_STABLE_VOUCHER_ADDRESSES,
+		storedb.DATA_ORDERED_VOUCHER_SYMBOLS,
+		storedb.DATA_ORDERED_VOUCHER_BALANCES,
+		storedb.DATA_ORDERED_VOUCHER_DECIMALS,
+		storedb.DATA_ORDERED_VOUCHER_ADDRESSES,
 	}
 	data := make(map[storedb.DataTyp]string)
 
@@ -139,10 +139,10 @@ func GetStableVoucherData(ctx context.Context, store DataStore, sessionId string
 	}
 
 	symbol, balance, decimal, address := MatchVoucher(input,
-		data[storedb.DATA_STABLE_VOUCHER_SYMBOLS],
-		data[storedb.DATA_STABLE_VOUCHER_BALANCES],
-		data[storedb.DATA_STABLE_VOUCHER_DECIMALS],
-		data[storedb.DATA_STABLE_VOUCHER_ADDRESSES],
+		data[storedb.DATA_ORDERED_VOUCHER_SYMBOLS],
+		data[storedb.DATA_ORDERED_VOUCHER_BALANCES],
+		data[storedb.DATA_ORDERED_VOUCHER_DECIMALS],
+		data[storedb.DATA_ORDERED_VOUCHER_ADDRESSES],
 	)
 
 	if symbol == "" {

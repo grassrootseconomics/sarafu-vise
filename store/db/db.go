@@ -104,14 +104,14 @@ const (
 	DATA_VOUCHER_DECIMALS
 	// List of voucher EVM addresses for vouchers valid in the user context.
 	DATA_VOUCHER_ADDRESSES
-	// List of stable voucher symbols in the user context.
-	DATA_STABLE_VOUCHER_SYMBOLS
-	// List of stable voucher decimal counts for vouchers valid in the user context.
-	DATA_STABLE_VOUCHER_BALANCES
-	// List of stable voucher decimal counts for vouchers valid in the user context.
-	DATA_STABLE_VOUCHER_DECIMALS
-	// List of stable voucher EVM addresses for vouchers valid in the user context.
-	DATA_STABLE_VOUCHER_ADDRESSES
+	// List of ordered voucher symbols in the user context.
+	DATA_ORDERED_VOUCHER_SYMBOLS
+	// List of ordered voucher balances in the user context.
+	DATA_ORDERED_VOUCHER_BALANCES
+	// List of ordered voucher decimals in the user context.
+	DATA_ORDERED_VOUCHER_DECIMALS
+	// List of ordered voucher EVM addresses in the user context.
+	DATA_ORDERED_VOUCHER_ADDRESSES
 )
 
 const (

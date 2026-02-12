@@ -27,9 +27,9 @@ func (h *MenuHandlers) GetPoolDepositVouchers(ctx context.Context, sym string, i
 	userStore := h.userdataStore
 
 	// Read stable vouchers from the store
-	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_STABLE_VOUCHER_SYMBOLS)
+	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ORDERED_VOUCHER_SYMBOLS)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read stable voucherData entires with", "key", storedb.DATA_STABLE_VOUCHER_SYMBOLS, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read stable voucherData entires with", "key", storedb.DATA_ORDERED_VOUCHER_SYMBOLS, "error", err)
 		return res, err
 	}
 
@@ -37,9 +37,9 @@ func (h *MenuHandlers) GetPoolDepositVouchers(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	voucherBalances, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_STABLE_VOUCHER_BALANCES)
+	voucherBalances, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ORDERED_VOUCHER_BALANCES)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to read stable voucherData entires with", "key", storedb.DATA_STABLE_VOUCHER_BALANCES, "error", err)
+		logg.ErrorCtxf(ctx, "failed to read stable voucherData entires with", "key", storedb.DATA_ORDERED_VOUCHER_BALANCES, "error", err)
 		return res, err
 	}
 
