@@ -102,6 +102,16 @@ func MinMpesaSendAmount() float64 {
 	return f
 }
 
+func MinMpesaWithdrawAmount() float64 {
+	v := env.GetEnv("MIN_MPESA_WITHDRAW_AMOUNT", "20")
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 20 // fallback
+	}
+	return f
+}
+
+
 func MaxMpesaSendAmount() float64 {
 	v := env.GetEnv("MAX_MPESA_SEND_AMOUNT", "250000")
 	f, err := strconv.ParseFloat(v, 64)
