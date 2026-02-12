@@ -148,7 +148,36 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Filter out the active voucher from vouchersResp
+	// Build stable voucher priority (lower index = higher priority)
+	stablePriority := make(map[string]int)
+	stableAddresses := config.StableVoucherAddresses()
+	for i, addr := range stableAddresses {
+		stablePriority[strings.ToLower(addr)] = i
+	}
+
+	// Helper: order vouchers (stable first, priority-based)
+	orderVouchers := func(vouchers []dataserviceapi.TokenHoldings) []dataserviceapi.TokenHoldings {
+		stable := make([]dataserviceapi.TokenHoldings, 0)
+		nonStable := make([]dataserviceapi.TokenHoldings, 0)
+
+		for _, v := range vouchers {
+			if isStableVoucher(v.TokenAddress) {
+				stable = append(stable, v)
+			} else {
+				nonStable = append(nonStable, v)
+			}
+		}
+
+		sort.SliceStable(stable, func(i, j int) bool {
+			ai := stablePriority[strings.ToLower(stable[i].TokenAddress)]
+			aj := stablePriority[strings.ToLower(stable[j].TokenAddress)]
+			return ai < aj
+		})
+
+		return append(stable, nonStable...)
+	}
+
+	// Remove active voucher
 	filteredVouchers := make([]dataserviceapi.TokenHoldings, 0, len(vouchersResp))
 	for _, v := range vouchersResp {
 		if v.TokenSymbol != activeSymStr {
@@ -156,8 +185,11 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Store all voucher data (excluding the current active voucher)
-	data := store.ProcessVouchers(filteredVouchers)
+	// Order remaining vouchers
+	orderedFilteredVouchers := orderVouchers(filteredVouchers)
+
+	// Process & store
+	data := store.ProcessVouchers(orderedFilteredVouchers)
 
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
@@ -170,46 +202,26 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	for key, value := range dataMap {
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
-			continue
 		}
 	}
 
-	// Get stable voucher priority order (lower index = higher priority)
-	stablePriority := make(map[string]int)
-	stableAddresses := config.StableVoucherAddresses()
+	// Order all vouchers
+	orderedVouchers := orderVouchers(vouchersResp)
 
-	for i, addr := range stableAddresses {
-		stablePriority[strings.ToLower(addr)] = i
-	}
-
-	// Split vouchers into stable and non-stable
-	stableVouchers := make([]dataserviceapi.TokenHoldings, 0)
-	nonStableVouchers := make([]dataserviceapi.TokenHoldings, 0)
-
-	for _, v := range vouchersResp {
+	// Stable voucher presence flag (based on full list)
+	hasStable := false
+	for _, v := range orderedVouchers {
 		if isStableVoucher(v.TokenAddress) {
-			stableVouchers = append(stableVouchers, v)
-		} else {
-			nonStableVouchers = append(nonStableVouchers, v)
+			hasStable = true
+			break
 		}
 	}
 
-	// No stable vouchers at all
-	if len(stableVouchers) == 0 {
+	if !hasStable {
 		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
 	} else {
 		res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
 	}
-
-	// Sort stable vouchers by configured priority
-	sort.SliceStable(stableVouchers, func(i, j int) bool {
-		ai := stablePriority[strings.ToLower(stableVouchers[i].TokenAddress)]
-		aj := stablePriority[strings.ToLower(stableVouchers[j].TokenAddress)]
-		return ai < aj
-	})
-
-	// Final ordered list: stable first, then others
-	orderedVouchers := append(stableVouchers, nonStableVouchers...)
 
 	// Process ALL vouchers (stable first)
 	orderedVoucherData := store.ProcessVouchers(orderedVouchers)
