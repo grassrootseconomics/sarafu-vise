@@ -120,8 +120,8 @@ func GetVoucherData(ctx context.Context, store DataStore, sessionId string, inpu
 	}, nil
 }
 
-// GetStableVoucherData retrieves and matches stable voucher data
-func GetStableVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
+// GetOrderedVoucherData retrieves and matches ordered voucher data
+func GetOrderedVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
 	keys := []storedb.DataTyp{
 		storedb.DATA_ORDERED_VOUCHER_SYMBOLS,
 		storedb.DATA_ORDERED_VOUCHER_BALANCES,

@@ -73,7 +73,7 @@ func (h *MenuHandlers) PoolDepositMaxAmount(ctx context.Context, sym string, inp
 	}
 
 	userStore := h.userdataStore
-	metadata, err := store.GetStableVoucherData(ctx, userStore, sessionId, inputStr)
+	metadata, err := store.GetOrderedVoucherData(ctx, userStore, sessionId, inputStr)
 	if err != nil {
 		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
 	}
