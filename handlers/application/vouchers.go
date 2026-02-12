@@ -3,10 +3,12 @@ package application
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -172,35 +174,55 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Filter stable vouchers
-	filteredStableVouchers := make([]dataserviceapi.TokenHoldings, 0)
-	for _, v := range vouchersResp {
+	// Get stable voucher priority order (lower index = higher priority)
+	stablePriority := make(map[string]int)
+	stableAddresses := config.StableVoucherAddresses()
 
+	for i, addr := range stableAddresses {
+		stablePriority[strings.ToLower(addr)] = i
+	}
+
+	// Split vouchers into stable and non-stable
+	stableVouchers := make([]dataserviceapi.TokenHoldings, 0)
+	nonStableVouchers := make([]dataserviceapi.TokenHoldings, 0)
+
+	for _, v := range vouchersResp {
 		if isStableVoucher(v.TokenAddress) {
-			filteredStableVouchers = append(filteredStableVouchers, v)
+			stableVouchers = append(stableVouchers, v)
+		} else {
+			nonStableVouchers = append(nonStableVouchers, v)
 		}
 	}
 
-	// No stable vouchers
-	if len(filteredStableVouchers) == 0 {
+	// No stable vouchers at all
+	if len(stableVouchers) == 0 {
 		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
-		return res, nil
+	} else {
+		res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
 	}
 
-	res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
+	// Sort stable vouchers by configured priority
+	sort.SliceStable(stableVouchers, func(i, j int) bool {
+		ai := stablePriority[strings.ToLower(stableVouchers[i].TokenAddress)]
+		aj := stablePriority[strings.ToLower(stableVouchers[j].TokenAddress)]
+		return ai < aj
+	})
 
-	// Process stable vouchers for later use
-	stableVoucherData := store.ProcessVouchers(filteredStableVouchers)
+	// Final ordered list: stable first, then others
+	orderedVouchers := append(stableVouchers, nonStableVouchers...)
 
-	stableVoucherDataMap := map[storedb.DataTyp]string{
-		storedb.DATA_STABLE_VOUCHER_SYMBOLS:   stableVoucherData.Symbols,
-		storedb.DATA_STABLE_VOUCHER_BALANCES:  stableVoucherData.Balances,
-		storedb.DATA_STABLE_VOUCHER_DECIMALS:  stableVoucherData.Decimals,
-		storedb.DATA_STABLE_VOUCHER_ADDRESSES: stableVoucherData.Addresses,
+	// Process ALL vouchers (stable first)
+	orderedVoucherData := store.ProcessVouchers(orderedVouchers)
+
+	orderedVoucherDataMap := map[storedb.DataTyp]string{
+		storedb.DATA_ORDERED_VOUCHER_SYMBOLS:   orderedVoucherData.Symbols,
+		storedb.DATA_ORDERED_VOUCHER_BALANCES:  orderedVoucherData.Balances,
+		storedb.DATA_ORDERED_VOUCHER_DECIMALS:  orderedVoucherData.Decimals,
+		storedb.DATA_ORDERED_VOUCHER_ADDRESSES: orderedVoucherData.Addresses,
 	}
 
 	// Write data entries
-	for key, value := range stableVoucherDataMap {
+	for key, value := range orderedVoucherDataMap {
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
