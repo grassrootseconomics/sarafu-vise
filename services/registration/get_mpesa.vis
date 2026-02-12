@@ -1,10 +1,15 @@
 CATCH no_voucher flag_no_active_voucher 1
+LOAD get_ordered_vouchers 0
+MAP get_ordered_vouchers
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
 LOAD get_mpesa_max_limit 0
 RELOAD get_mpesa_max_limit
-MAP get_mpesa_max_limit
-MOUT back 0
-MOUT quit 9
-HALT
-INCMP _ 0
-INCMP quit 9
-INCMP get_mpesa_confirmation *
+INCMP mpesa_max_limit *

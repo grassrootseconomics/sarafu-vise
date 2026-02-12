@@ -1,0 +1,13 @@
+LOAD reset_transaction_amount 10
+RELOAD reset_transaction_amount
+MAP get_mpesa_max_limit
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP _ 0
+INCMP quit 9
+LOAD get_mpesa_preview 90
+RELOAD get_mpesa_preview
+CATCH api_failure flag_api_call_error 1
+CATCH invalid_get_mpesa_amount flag_invalid_amount 1
+INCMP get_mpesa_confirmation *
