@@ -210,3 +210,29 @@ func UpdateSwapFromVoucherData(ctx context.Context, store DataStore, sessionId s
 
 	return nil
 }
+
+// ReadSwapFromVoucher retrieves the voucher being swapped into the pool (swap from)
+func ReadSwapFromVoucher(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
+	keys := []storedb.DataTyp{
+		storedb.DATA_ACTIVE_SWAP_FROM_SYM,
+		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL,
+		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS,
+		storedb.DATA_ACTIVE_SWAP_FROM_BALANCE,
+	}
+	data := make(map[storedb.DataTyp]string)
+
+	for _, key := range keys {
+		value, err := store.ReadEntry(ctx, sessionId, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
+		}
+		data[key] = string(value)
+	}
+
+	return &dataserviceapi.TokenHoldings{
+		TokenSymbol:   data[storedb.DATA_ACTIVE_SWAP_FROM_SYM],
+		Balance:       data[storedb.DATA_ACTIVE_SWAP_FROM_BALANCE],
+		TokenDecimals: data[storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL],
+		TokenAddress:  data[storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS],
+	}, nil
+}
