@@ -1,0 +1,10 @@
+LOAD reset_transaction_amount 10
+RELOAD reset_transaction_amount
+MAP calculate_max_pay_debt
+MOUT back 0
+HALT
+LOAD confirm_debt_removal 140
+RELOAD confirm_debt_removal
+CATCH invalid_pay_debt_amount flag_invalid_amount 1
+INCMP _ 0
+INCMP confirm_debt_removal *

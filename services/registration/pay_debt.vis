@@ -1,10 +1,16 @@
 CATCH no_voucher flag_no_active_voucher 1
-CATCH no_stable_voucher flag_no_stable_vouchers 1
+LOAD get_vouchers 0
+MAP get_vouchers
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
 LOAD calculate_max_pay_debt 0
 RELOAD calculate_max_pay_debt
-MAP calculate_max_pay_debt
-CATCH low_pay_debt_amount flag_low_swap_amount 1
-MOUT back 0
-HALT
-INCMP _ 0
-INCMP confirm_debt_removal *
+CATCH . flag_incorrect_voucher 1
+INCMP calculate_max_pay_debt *
