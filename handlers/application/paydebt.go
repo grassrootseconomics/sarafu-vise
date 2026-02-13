@@ -13,7 +13,7 @@ import (
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
-// CalculateMaxPayDebt calculates the max debt removal
+// CalculateMaxPayDebt calculates the max debt removal based on the selected voucher
 func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -29,21 +29,28 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	l.AddDomain("default")
 
 	inputStr := string(input)
-	if inputStr == "0" || inputStr == "9" {
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
 		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, nil
 	}
 
 	userStore := h.userdataStore
 
+	// Fetch session data
+	_, _, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
+	if err != nil {
+		return res, nil
+	}
+
 	// Resolve active pool
-	_, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	activePoolAddress, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, err
 	}
 
-	metadata, err := store.GetSwapToVoucherData(ctx, userStore, sessionId, "1")
+	// get the voucher data based on the input
+	metadata, err := store.GetVoucherData(ctx, userStore, sessionId, inputStr)
 	if err != nil {
 		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
@@ -53,35 +60,26 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		return res, nil
 	}
 
-	logg.InfoCtxf(ctx, "Metadata from GetSwapToVoucherData:", "metadata", metadata)
+	logg.InfoCtxf(ctx, "Metadata from GetVoucherData:", "metadata", metadata)
 
-	// Store the active swap_to data
-	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
+	// Store the active swap from data
+	if err := store.UpdateSwapFromVoucherData(ctx, userStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
 		return res, err
 	}
 
-	swapData, err := store.ReadSwapData(ctx, userStore, sessionId)
-	if err != nil {
-		return res, err
-	}
-
-	// call the api using the ActivePoolAddress, ActiveSwapToAddress as the from (FT), ActiveSwapFromAddress as the to (AT) and PublicKey to get the swap max limit
-	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress, swapData.ActiveSwapFromAddress, swapData.PublicKey)
+	// Get the max swap limit with the selected voucher
+	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, string(activePoolAddress), metadata.TokenAddress, string(activeAddress), string(publicKey))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
 		return res, nil
 	}
 
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(r.Max))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write full max amount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", r.Max, "error", err)
-		return res, err
-	}
+	maxLimit := r.Max
 
 	// Scale down the amount
-	maxAmountStr := store.ScaleDownBalance(r.Max, swapData.ActiveSwapToDecimal)
+	maxAmountStr := store.ScaleDownBalance(maxLimit, metadata.TokenDecimals)
 	if err != nil {
 		return res, err
 	}
@@ -108,12 +106,32 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		return res, err
 	}
 
+	// Do a pool quote to get the max AT that can be removed (gotten)
+	// if we swapped the max of the FT
+
+	// call the API to get the quote
+	qoute, err := h.accountService.GetPoolSwapQuote(ctx, maxLimit, string(publicKey), metadata.TokenAddress, string(activePoolAddress), string(activeAddress))
+	if err != nil {
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
+
+	// Scale down the quoted amount
+	quoteAmountStr := store.ScaleDownBalance(qoute.OutValue, string(activeDecimal))
+
+	// Format to 2 decimal places
+	quoteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
+
 	res.Content = l.Get(
-		"You can remove a maximum of %s %s from '%s'\n\nEnter amount of %s:",
-		maxStr,
-		swapData.ActiveSwapToSym,
+		"You can remove a max of %s %s from '%s'\nEnter amount of %s:(Max: %s)",
+		quoteStr,
+		string(activeSym),
 		string(activePoolName),
-		swapData.ActiveSwapToSym,
+		metadata.TokenSymbol,
+		maxStr,
 	)
 
 	res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
