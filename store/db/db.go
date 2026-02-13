@@ -93,6 +93,8 @@ const (
 	DATA_SEND_TRANSACTION_TYPE
 	// Holds the recipient formatted phone number
 	DATA_RECIPIENT_PHONE_NUMBER
+	// Currently active swap from balance for the swap
+	DATA_ACTIVE_SWAP_FROM_BALANCE
 )
 
 const (
