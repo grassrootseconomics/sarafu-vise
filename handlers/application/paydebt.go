@@ -69,9 +69,9 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	}
 
 	maxLimit := r.Max
-	
+
 	metadata.Balance = maxLimit
-	
+
 	// Store the active swap from data
 	if err := store.UpdateSwapFromVoucherData(ctx, userStore, sessionId, metadata); err != nil {
 		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
@@ -205,7 +205,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
-	
+
 	// call the API to get the quote
 	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), payDebtVoucher.TokenAddress, swapData.ActivePoolAddress, string(activeAddress))
 	if err != nil {
@@ -221,6 +221,13 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 
 	// Format to 2 decimal places
 	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
+
+	// store the quote in the temporary value key
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(qouteStr))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write swap max amount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", qouteStr, "error", err)
+		return res, err
+	}
 
 	res.Content = l.Get(
 		"Please confirm that you will use %s %s to remove your debt of %s %s\n",
@@ -247,9 +254,21 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 
 	userStore := h.userdataStore
 
-	// Resolve active pool
-	_, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	// Fetch session data
+	_, _, activeSym, activeAddress, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
+		return res, nil
+	}
+
+	// Resolve active pool
+	activePoolAddress, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	payDebtVoucher, err := store.ReadSwapFromVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
 		return res, err
 	}
 
@@ -267,7 +286,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 	swapAmountStr := string(swapAmount)
 
 	// Call the poolSwap API
-	r, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapToAddress, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress)
+	r, err := h.accountService.PoolSwap(ctx, swapAmountStr, string(publicKey), payDebtVoucher.TokenAddress, string(activePoolAddress), string(activeAddress))
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -282,7 +301,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when your debt of %s %s has been removed from %s.",
 		swapData.TemporaryValue,
-		swapData.ActiveSwapToSym,
+		string(activeSym),
 		activePoolName,
 	)
 
