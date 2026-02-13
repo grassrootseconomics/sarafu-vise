@@ -189,3 +189,24 @@ func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId str
 
 	return nil
 }
+
+// UpdateSwapFromVoucherData updates the active swap from voucher data in the DataStore.
+func UpdateSwapFromVoucherData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
+	logg.InfoCtxf(ctx, "UpdateSwapFromVoucherData", "data", data)
+	// Active swap to voucher data entries
+	activeEntries := map[storedb.DataTyp][]byte{
+		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     []byte(data.TokenSymbol),
+		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: []byte(data.TokenDecimals),
+		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: []byte(data.TokenAddress),
+		storedb.DATA_ACTIVE_SWAP_FROM_BALANCE: []byte(data.Balance),
+	}
+
+	// Write active data
+	for key, value := range activeEntries {
+		if err := store.WriteEntry(ctx, sessionId, key, value); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
