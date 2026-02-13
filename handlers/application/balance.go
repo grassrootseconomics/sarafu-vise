@@ -3,10 +3,13 @@ package application
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -119,14 +122,13 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	l.AddDomain("default")
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
 
 	// default response
 	res.FlagReset = append(res.FlagReset, flag_api_call_error)
 	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", "0", "0")
 
 	// Fetch session data
-	_, _, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
+	_, activeBal, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, nil
 	}
@@ -148,51 +150,69 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	// Filter stable vouchers (excluding active voucher)
-	filteredSwappableVouchers := make([]dataserviceapi.TokenHoldings, 0)
+	// Build stable voucher priority (lower index = higher priority)
+	stablePriority := make(map[string]int)
+	stableAddresses := config.StableVoucherAddresses()
+	for i, addr := range stableAddresses {
+		stablePriority[strings.ToLower(addr)] = i
+	}
+
+	// Helper: order vouchers (stable first, priority-based)
+	orderVouchers := func(vouchers []dataserviceapi.TokenHoldings) []dataserviceapi.TokenHoldings {
+		stable := make([]dataserviceapi.TokenHoldings, 0)
+		nonStable := make([]dataserviceapi.TokenHoldings, 0)
+
+		for _, v := range vouchers {
+			if isStableVoucher(v.TokenAddress) {
+				stable = append(stable, v)
+			} else {
+				nonStable = append(nonStable, v)
+			}
+		}
+
+		sort.SliceStable(stable, func(i, j int) bool {
+			ai := stablePriority[strings.ToLower(stable[i].TokenAddress)]
+			aj := stablePriority[strings.ToLower(stable[j].TokenAddress)]
+			return ai < aj
+		})
+
+		return append(stable, nonStable...)
+	}
+
+	// Remove active voucher
+	filteredVouchers := make([]dataserviceapi.TokenHoldings, 0, len(swappableVouchers))
 	for _, v := range swappableVouchers {
-		if v.TokenSymbol == string(activeSym) {
+		if v.TokenSymbol != string(activeSym) {
+			filteredVouchers = append(filteredVouchers, v)
+		}
+	}
+
+	// Order remaining vouchers
+	orderedFilteredVouchers := orderVouchers(filteredVouchers)
+
+	// Process & store
+	data := store.ProcessVouchers(orderedFilteredVouchers)
+
+	dataMap := map[storedb.DataTyp]string{
+		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
+		storedb.DATA_VOUCHER_BALANCES:  data.Balances,
+		storedb.DATA_VOUCHER_DECIMALS:  data.Decimals,
+		storedb.DATA_VOUCHER_ADDRESSES: data.Addresses,
+	}
+
+	for key, value := range dataMap {
+		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
 		}
-		if isStableVoucher(v.TokenAddress) {
-			filteredSwappableVouchers = append(filteredSwappableVouchers, v)
-		}
-	}
-
-	// No stable vouchers → cannot pay debt
-	if len(filteredSwappableVouchers) == 0 {
-		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
-		return res, nil
-	}
-
-	res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
-
-	// Process stable vouchers for later use
-	data := store.ProcessVouchers(filteredSwappableVouchers)
-
-	// Find active voucher data
-	activeSymStr := string(activeSym)
-	var activeData *dataserviceapi.TokenHoldings
-	for _, v := range swappableVouchers {
-		if v.TokenSymbol == activeSymStr {
-			activeData = &v
-			break
-		}
-	}
-
-	if activeData == nil {
-		return res, nil
 	}
 
 	// Credit = active voucher balance
-	scaledCredit := store.ScaleDownBalance(
-		activeData.Balance,
-		activeData.TokenDecimals,
-	)
+	scaledCredit := string(activeBal)
 
 	// Debt = sum of stable vouchers only
 	scaledDebt := "0"
-	for _, v := range filteredSwappableVouchers {
+	for _, v := range orderedFilteredVouchers {
 		scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
 		scaledDebt = store.AddDecimalStrings(scaledDebt, scaled)
 	}
@@ -214,21 +234,6 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	kshFormattedCredit, _ := store.TruncateDecimalString(creditKsh, 0)
 	kshFormattedDebt, _ := store.TruncateDecimalString(debtKsh, 0)
-
-	// Persist swap data
-	dataMap := map[storedb.DataTyp]string{
-		storedb.DATA_POOL_TO_SYMBOLS:   data.Symbols,
-		storedb.DATA_POOL_TO_BALANCES:  data.Balances,
-		storedb.DATA_POOL_TO_DECIMALS:  data.Decimals,
-		storedb.DATA_POOL_TO_ADDRESSES: data.Addresses,
-	}
-
-	for key, value := range dataMap {
-		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
-			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
-			continue
-		}
-	}
 
 	res.Content = l.Get(
 		"Credit: %s KSH\nDebt: %s KSH\n",
