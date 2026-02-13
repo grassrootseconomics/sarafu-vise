@@ -60,14 +60,6 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		return res, nil
 	}
 
-	logg.InfoCtxf(ctx, "Metadata from GetVoucherData:", "metadata", metadata)
-
-	// Store the active swap from data
-	if err := store.UpdateSwapFromVoucherData(ctx, userStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
-		return res, err
-	}
-
 	// Get the max swap limit with the selected voucher
 	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, string(activePoolAddress), metadata.TokenAddress, string(activeAddress), string(publicKey))
 	if err != nil {
@@ -77,6 +69,14 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	}
 
 	maxLimit := r.Max
+	
+	metadata.Balance = maxLimit
+	
+	// Store the active swap from data
+	if err := store.UpdateSwapFromVoucherData(ctx, userStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on UpdateSwapFromVoucherData", "error", err)
+		return res, err
+	}
 
 	// Scale down the amount
 	maxAmountStr := store.ScaleDownBalance(maxLimit, metadata.TokenDecimals)
@@ -160,6 +160,18 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 
 	userStore := h.userdataStore
 
+	// Fetch session data
+	_, _, activeSym, activeAddress, publicKey, _, err := h.getSessionData(ctx, sessionId)
+	if err != nil {
+		return res, nil
+	}
+
+	payDebtVoucher, err := store.ReadSwapFromVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
 	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
 	if err != nil {
 		return res, err
@@ -172,19 +184,17 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	}
 
 	inputAmount, err := strconv.ParseFloat(inputStr, 64)
-	if err != nil || inputAmount > maxValue {
+	if err != nil || inputAmount > maxValue || inputAmount < 0.1 {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 		res.Content = inputStr
 		return res, nil
 	}
 
-	storedMax, _ := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
-
 	var finalAmountStr string
 	if inputStr == swapData.ActiveSwapMaxAmount {
-		finalAmountStr = string(storedMax)
+		finalAmountStr = string(payDebtVoucher.Balance)
 	} else {
-		finalAmountStr, err = store.ParseAndScaleAmount(inputStr, swapData.ActiveSwapToDecimal)
+		finalAmountStr, err = store.ParseAndScaleAmount(inputStr, payDebtVoucher.TokenDecimals)
 		if err != nil {
 			return res, err
 		}
@@ -195,15 +205,9 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
-	// store the user's input amount in the temporary value
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write inputStr amount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
-		return res, err
-	}
-
+	
 	// call the API to get the quote
-	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, swapData.PublicKey, swapData.ActiveSwapToAddress, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress)
+	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), payDebtVoucher.TokenAddress, swapData.ActivePoolAddress, string(activeAddress))
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -220,7 +224,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 
 	res.Content = l.Get(
 		"Please confirm that you will use %s %s to remove your debt of %s %s\n",
-		inputStr, swapData.ActiveSwapToSym, qouteStr, swapData.ActiveSwapFromSym,
+		inputStr, payDebtVoucher.TokenSymbol, qouteStr, string(activeSym),
 	)
 
 	return res, nil
