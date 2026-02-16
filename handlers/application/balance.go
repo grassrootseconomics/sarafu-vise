@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strconv"
-	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
@@ -128,7 +127,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", "0", "0")
 
 	// Fetch session data
-	_, activeBal, activeSym, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
+	_, activeBal, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, nil
 	}
@@ -154,14 +153,14 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	stablePriority := make(map[string]int)
 	stableAddresses := config.StableVoucherAddresses()
 	for i, addr := range stableAddresses {
-		stablePriority[strings.ToLower(addr)] = i
+		stablePriority[addr] = i
 	}
+
+	stable := make([]dataserviceapi.TokenHoldings, 0)
+	nonStable := make([]dataserviceapi.TokenHoldings, 0)
 
 	// Helper: order vouchers (stable first, priority-based)
 	orderVouchers := func(vouchers []dataserviceapi.TokenHoldings) []dataserviceapi.TokenHoldings {
-		stable := make([]dataserviceapi.TokenHoldings, 0)
-		nonStable := make([]dataserviceapi.TokenHoldings, 0)
-
 		for _, v := range vouchers {
 			if isStableVoucher(v.TokenAddress) {
 				stable = append(stable, v)
@@ -171,8 +170,8 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		}
 
 		sort.SliceStable(stable, func(i, j int) bool {
-			ai := stablePriority[strings.ToLower(stable[i].TokenAddress)]
-			aj := stablePriority[strings.ToLower(stable[j].TokenAddress)]
+			ai := stablePriority[stable[i].TokenAddress]
+			aj := stablePriority[stable[j].TokenAddress]
 			return ai < aj
 		})
 
@@ -207,15 +206,41 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		}
 	}
 
-	// Credit = active voucher balance
-	scaledCredit := string(activeBal)
+	// Credit calculation: How much Active Token (such as ALF) that can be swapped for a stable coin
+	// + any stables sendable to Pretium (in KSH value)
+	scaledCredit := "0"
 
-	// Debt = sum of stable vouchers only
-	scaledDebt := "0"
-	for _, v := range orderedFilteredVouchers {
-		scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
-		scaledDebt = store.AddDecimalStrings(scaledDebt, scaled)
+	finalAmountStr, err := store.ParseAndScaleAmount(string(activeBal), string(activeDecimal))
+	if err != nil {
+		return res, err
 	}
+	// do a swap quote to get the max I can get when I swap my active voucher
+	// for a stable coin (say I can get 4 USD). Then I add that to my exisitng
+	// stable coins and covert to Ksh
+	stableAddress := stableAddresses[0]
+	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), string(activeAddress), string(activePoolAddress), stableAddress)
+	if err != nil {
+		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = l.Get("Your request failed. Please try again later.")
+		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+		return res, nil
+	}
+
+	finalQuote := store.ScaleDownBalance(r.OutValue, "6")
+
+	scaledCredit = store.AddDecimalStrings(scaledCredit, finalQuote)
+
+	for _, v := range stable {
+		scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
+		scaledCredit = store.AddDecimalStrings(scaledCredit, scaled)
+	}
+
+	// DEBT calculation: All outstanding active token that is in the current pool
+	// (how much of AT that is in the active Pool)
+	scaledDebt := "0"
+	// convert the current balance to Ksh
+	scaledDebt = string(activeBal)
 
 	// Fetch MPESA rates
 	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
