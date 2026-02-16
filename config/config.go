@@ -142,3 +142,11 @@ func StableVoucherAddresses() []string {
 
 	return parsed
 }
+
+func DefaultStableVoucherAddress() string {
+	return env.GetEnv("DEFAULT_STABLE_VOUCHER_ADDRESS", "")
+}
+
+func DefaultStableVoucherDecimals() string {
+	return env.GetEnv("DEFAULT_STABLE_VOUCHER_DECIMALS", "")
+}
