@@ -161,7 +161,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	userStore := h.userdataStore
 
 	// Fetch session data
-	_, _, activeSym, activeAddress, publicKey, _, err := h.getSessionData(ctx, sessionId)
+	_, _, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, nil
 	}
@@ -172,12 +172,19 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 		return res, err
 	}
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
-	maxValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	swapMaxAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapMaxAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "error", err)
+		return res, err
+	}
+
+	maxValue, err := strconv.ParseFloat(string(swapMaxAmount), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
 		return res, err
@@ -191,7 +198,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	}
 
 	var finalAmountStr string
-	if inputStr == swapData.ActiveSwapMaxAmount {
+	if inputStr == string(swapMaxAmount) {
 		finalAmountStr = string(payDebtVoucher.Balance)
 	} else {
 		finalAmountStr, err = store.ParseAndScaleAmount(inputStr, payDebtVoucher.TokenDecimals)
@@ -207,7 +214,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	}
 
 	// call the API to get the quote
-	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), payDebtVoucher.TokenAddress, swapData.ActivePoolAddress, string(activeAddress))
+	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), payDebtVoucher.TokenAddress, string(activePoolAddress), string(activeAddress))
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -216,8 +223,8 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 		return res, nil
 	}
 
-	// Scale down the quoted amount
-	quoteAmountStr := store.ScaleDownBalance(r.OutValue, swapData.ActiveSwapFromDecimal)
+	// Scale down the quoted amount (for the AT)
+	quoteAmountStr := store.ScaleDownBalance(r.OutValue, string(activeDecimal))
 
 	// Format to 2 decimal places
 	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
@@ -272,14 +279,15 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 		return res, err
 	}
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
-	if err != nil {
-		return res, err
-	}
-
 	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
+		return res, err
+	}
+
+	debtQuotedAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read debtQuotedAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 
@@ -300,7 +308,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when your debt of %s %s has been removed from %s.",
-		swapData.TemporaryValue,
+		string(debtQuotedAmount),
 		string(activeSym),
 		activePoolName,
 	)
