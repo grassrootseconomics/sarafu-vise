@@ -111,7 +111,6 @@ func MinMpesaWithdrawAmount() float64 {
 	return f
 }
 
-
 func MaxMpesaSendAmount() float64 {
 	v := env.GetEnv("MAX_MPESA_SEND_AMOUNT", "250000")
 	f, err := strconv.ParseFloat(v, 64)
@@ -135,7 +134,7 @@ func StableVoucherAddresses() []string {
 
 	list := strings.Split(raw, ",")
 	for _, addr := range list {
-		clean := strings.ToLower(strings.TrimSpace(addr))
+		clean := strings.TrimSpace(addr)
 		if clean != "" {
 			parsed = append(parsed, clean)
 		}

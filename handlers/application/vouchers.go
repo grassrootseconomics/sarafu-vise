@@ -152,7 +152,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	stablePriority := make(map[string]int)
 	stableAddresses := config.StableVoucherAddresses()
 	for i, addr := range stableAddresses {
-		stablePriority[strings.ToLower(addr)] = i
+		stablePriority[addr] = i
 	}
 
 	// Helper: order vouchers (stable first, priority-based)
@@ -169,8 +169,8 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 
 		sort.SliceStable(stable, func(i, j int) bool {
-			ai := stablePriority[strings.ToLower(stable[i].TokenAddress)]
-			aj := stablePriority[strings.ToLower(stable[j].TokenAddress)]
+			ai := stablePriority[stable[i].TokenAddress]
+			aj := stablePriority[stable[j].TokenAddress]
 			return ai < aj
 		})
 

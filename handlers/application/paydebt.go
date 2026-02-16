@@ -310,7 +310,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 }
 
 func isStableVoucher(tokenAddress string) bool {
-	addr := strings.ToLower(strings.TrimSpace(tokenAddress))
+	addr := strings.TrimSpace(tokenAddress)
 	for _, stable := range config.StableVoucherAddresses() {
 		if addr == stable {
 			return true
