@@ -206,7 +206,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		}
 	}
 
-	// Credit calculation: How much Active Token (such as ALF) that can be swapped for a stable coin
+	// Credit calculation: How much Active Token that can be swapped for a stable coin
 	// + any stables sendable to Pretium (in KSH value)
 	scaledCredit := "0"
 
@@ -214,10 +214,10 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	if err != nil {
 		return res, err
 	}
-	// do a swap quote to get the max I can get when I swap my active voucher
-	// for a stable coin (say I can get 4 USD). Then I add that to my exisitng
-	// stable coins and covert to Ksh
-	stableAddress := stableAddresses[0]
+	// do a swap quote for default stable coin from active voucher
+	stableAddress := config.DefaultStableVoucherAddress()
+	stableDecimals := config.DefaultStableVoucherDecimals()
+
 	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), string(activeAddress), string(activePoolAddress), stableAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
@@ -227,7 +227,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	finalQuote := store.ScaleDownBalance(r.OutValue, "6")
+	finalQuote := store.ScaleDownBalance(r.OutValue, stableDecimals)
 
 	scaledCredit = store.AddDecimalStrings(scaledCredit, finalQuote)
 
