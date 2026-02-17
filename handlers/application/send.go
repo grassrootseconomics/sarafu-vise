@@ -203,11 +203,11 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 	publicKey []byte,
 	recipientPhoneNumber []byte,
 ) error {
-	store := h.userdataStore
+	userStore := h.userdataStore
 	txType := "swap"
 
 	// Read sender's active address
-	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	senderActiveAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
 		return err
@@ -215,7 +215,7 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 
 	var recipientActiveAddress []byte
 	if recipientPhoneNumber != nil {
-		recipientActiveAddress, _ = store.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
+		recipientActiveAddress, _ = userStore.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
 	}
 
 	// recipient has no active token → normal transaction
@@ -227,15 +227,32 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 	}
 
 	// Save the transaction type
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
 		return err
 	}
 
 	// Save the recipient's phone number only if it exists
 	if recipientPhoneNumber != nil {
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
+		if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "type", txType, "error", err)
+			return err
+		}
+
+		// fetch data for use (to_voucher data)
+		recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
+		if err != nil {
+			return err
+		}
+		swapMetadata := &dataserviceapi.TokenHoldings{
+			TokenAddress:  string(recipientActiveAddress),
+			TokenSymbol:   string(recipientActiveSym),
+			TokenDecimals: string(recipientActiveDecimal),
+		}
+
+		// Store the active swap_to data
+		if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, swapMetadata); err != nil {
+			logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 			return err
 		}
 	} else {
@@ -309,6 +326,7 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 }
 
 // MaxAmount checks the transaction type to determine the displayed max amount.
+// Checks whether the user selected a custom voucher
 // If the transaction type is "swap", it checks the max swappable amount and sets this as the content.
 // If the transaction type is "normal", gets the current sender's balance from the store and sets it as
 // the result content.
@@ -334,8 +352,40 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				return res, err
+			}
+
+			activeSym = []byte(customTransactionVoucher.TokenSymbol)
+			activeBal = []byte(customTransactionVoucher.Balance)
+			activeDecimal = []byte(customTransactionVoucher.TokenDecimals)
+			activeAddress = []byte(customTransactionVoucher.TokenAddress)
+		}
+	}
+
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
+
+	// confirm the transaction type
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	if string(swapToVoucher.TokenAddress) == string(activeAddress) {
+		// recipient has active token same as selected token → normal transaction
+		transactionType = []byte("normal")
+	} else {
+		transactionType = []byte("swap")
+	}
 
 	// If normal transaction return balance
 	if string(transactionType) == "normal" {
@@ -939,10 +989,11 @@ func (h *MenuHandlers) ClearTransactionTypeFlag(ctx context.Context, sym string,
 	var res resource.Result
 
 	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
+	flag_multiple_voucher, _ := h.flagManager.GetFlag("flag_multiple_voucher")
 
 	inputStr := string(input)
 	if inputStr == "0" {
-		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction, flag_multiple_voucher)
 		return res, nil
 	}
 
