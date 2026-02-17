@@ -95,6 +95,8 @@ const (
 	DATA_RECIPIENT_PHONE_NUMBER
 	// Currently active swap from balance for the swap
 	DATA_ACTIVE_SWAP_FROM_BALANCE
+	// Holds the state whether the transaction uses a custom voucher
+	DATA_TRANSACTION_CUSTOM_VOUCHER
 )
 
 const (
