@@ -33,7 +33,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
-	flag_single_voucher, _ := h.flagManager.GetFlag("flag_single_voucher")
+	flag_multiple_voucher, _ := h.flagManager.GetFlag("flag_multiple_voucher")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
@@ -76,9 +76,9 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	// only set the flag if the user has a single voucher
 	if len(vouchersResp) == 1 {
-		res.FlagSet = append(res.FlagSet, flag_single_voucher)
+		res.FlagReset = append(res.FlagReset, flag_multiple_voucher)
 	} else {
-		res.FlagReset = append(res.FlagReset, flag_single_voucher)
+		res.FlagSet = append(res.FlagSet, flag_multiple_voucher)
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
@@ -409,6 +409,53 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	res.Content = fmt.Sprintf(
 		"Name: %s\nSymbol: %s\nProduct: %s\nLocation: %s", voucherData.TokenName, symbol, voucherData.TokenCommodity, voucherData.TokenLocation,
 	)
+
+	return res, nil
+}
+
+// ValidateCreditVoucher sets the selected voucher as the active transaction voucher
+func (h *MenuHandlers) ValidateCreditVoucher(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
+
+	inputStr := string(input)
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
+		return res, nil
+	}
+
+	userStore := h.userdataStore
+	metadata, err := store.GetOrderedVoucherData(ctx, userStore, sessionId, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
+	}
+	if metadata == nil {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
+	// Store the transaction voucher data
+	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+		return res, err
+	}
+
+	// Store the state of the custom transaction voucher
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, []byte("1"))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write custom transaction voucher", "key", storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, "error", err)
+		return res, err
+	}
 
 	return res, nil
 }
