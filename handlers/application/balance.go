@@ -122,15 +122,16 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
-	// default response
-	res.FlagReset = append(res.FlagReset, flag_api_call_error)
-	res.Content = l.Get("Credit: %s KSH\nDebt: %s KSH\n", "0", "0")
-
 	// Fetch session data
 	_, activeBal, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, nil
 	}
+
+	// default response
+	formattedDebt, _ := store.TruncateDecimalString(string(activeBal), 2)
+	res.FlagReset = append(res.FlagReset, flag_api_call_error)
+	res.Content = l.Get("Credit: %s KSH\nDebt: %s %s\n", "0", formattedDebt, string(activeSym))
 
 	// Resolve active pool
 	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
@@ -238,9 +239,6 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	// DEBT calculation: All outstanding active token that is in the current pool
 	// (how much of AT that is in the active Pool)
-	scaledDebt := "0"
-	// convert the current balance to Ksh
-	scaledDebt = string(activeBal)
 
 	// Fetch MPESA rates
 	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
@@ -252,18 +250,16 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	}
 
 	creditFloat, _ := strconv.ParseFloat(scaledCredit, 64)
-	debtFloat, _ := strconv.ParseFloat(scaledDebt, 64)
 
 	creditKsh := fmt.Sprintf("%f", creditFloat*rates.Buy)
-	debtKsh := fmt.Sprintf("%f", debtFloat*rates.Buy)
 
 	kshFormattedCredit, _ := store.TruncateDecimalString(creditKsh, 0)
-	kshFormattedDebt, _ := store.TruncateDecimalString(debtKsh, 0)
 
 	res.Content = l.Get(
-		"Credit: %s KSH\nDebt: %s KSH\n",
+		"Credit: %s KSH\nDebt: %s %s\n",
 		kshFormattedCredit,
-		kshFormattedDebt,
+		formattedDebt,
+		string(activeSym),
 	)
 
 	return res, nil
