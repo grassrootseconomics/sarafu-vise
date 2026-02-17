@@ -560,6 +560,13 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
+
+	inputStr := string(input)
+	if inputStr == "0" {
+		res.FlagReset = append(res.FlagReset, flag_invalid_amount)
+		return res, nil
+	}
+
 	userStore := h.userdataStore
 
 	var balanceValue float64
@@ -577,7 +584,7 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 	}
 
 	// Extract numeric part from the input amount
-	amountStr := strings.TrimSpace(string(input))
+	amountStr := strings.TrimSpace(inputStr)
 	inputAmount, err := strconv.ParseFloat(amountStr, 64)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
@@ -585,7 +592,7 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, nil
 	}
 
-	if inputAmount > balanceValue || inputAmount < 0.1{
+	if inputAmount > balanceValue || inputAmount < 0.1 {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 		res.Content = amountStr
 		return res, nil
