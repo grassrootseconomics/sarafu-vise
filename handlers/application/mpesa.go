@@ -487,7 +487,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 	}
 
 	// Initiate a send to mpesa after the swap
-	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount),string(publicKey), mpesaAddress, swapToVoucher.TokenAddress)
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), string(publicKey), mpesaAddress, swapToVoucher.TokenAddress)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
@@ -525,7 +525,7 @@ func (h *MenuHandlers) SendMpesaMinLimit(ctx context.Context, sym string, input 
 	kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
 
 	res.Content = l.Get(
-		"Enter the amount of Mpesa to send: (Minimum %s Ksh)\n",
+		"Enter the amount of credit to receive: (Minimum %s Ksh)\n",
 		kshFormatted,
 	)
 
@@ -594,9 +594,11 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 	estimateStr := fmt.Sprintf("%f", estimateValue)
 	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 2)
 
+	defaultAsset := config.DefaultMpesaAsset()
+
 	res.Content = l.Get(
-		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s cUSD",
-		inputStr, estimateFormatted,
+		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s %s",
+		inputStr, estimateFormatted, defaultAsset,
 	)
 
 	return res, nil
