@@ -154,6 +154,7 @@ func (ls *LocalHandlerService) GetHandler(accountService remote.AccountService) 
 	ls.DbRs.AddLocalFunc("pool_deposit_max_amount", appHandlers.PoolDepositMaxAmount)
 	ls.DbRs.AddLocalFunc("confirm_pool_deposit", appHandlers.ConfirmPoolDeposit)
 	ls.DbRs.AddLocalFunc("initiate_pool_deposit", appHandlers.InitiatePoolDeposit)
+	ls.DbRs.AddLocalFunc("validate_credit_voucher", appHandlers.ValidateCreditVoucher)
 
 	ls.first = appHandlers.Init
 
