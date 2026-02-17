@@ -33,6 +33,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
+	flag_single_voucher, _ := h.flagManager.GetFlag("flag_single_voucher")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
@@ -71,6 +72,13 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 		return res, nil
+	}
+
+	// only set the flag if the user has a single voucher
+	if len(vouchersResp) == 1 {
+		res.FlagSet = append(res.FlagSet, flag_single_voucher)
+	} else {
+		res.FlagReset = append(res.FlagReset, flag_single_voucher)
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)

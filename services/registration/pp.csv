@@ -37,3 +37,4 @@ flag,flag_low_swap_amount,43,this is set when the swap max limit is less than 0.
 flag,flag_alias_unavailable,44,this is set when the preferred alias is not available
 flag,flag_swap_transaction,45,this is set when the transaction will involve performing a swap
 flag,flag_no_stable_vouchers,46,this is set when the user does not have a stable voucher
+flag,flag_single_voucher,47,this is set when the user only has a single voucher
