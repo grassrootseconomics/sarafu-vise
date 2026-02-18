@@ -452,7 +452,7 @@ func TestGetAmount(t *testing.T) {
 	assert.Equal(t, formattedAmount, res.Content)
 }
 
-func TestInitiateTransaction(t *testing.T) {
+func TestInitiateNormalTransaction(t *testing.T) {
 	sessionId := "254712345678"
 	ctx, store := InitializeTestStore(t)
 	ctx = context.WithValue(ctx, "SessionId", sessionId)
@@ -538,7 +538,7 @@ func TestInitiateTransaction(t *testing.T) {
 			mockAccountService.On("TokenTransfer").Return(tt.TransferResponse, nil)
 
 			// Call the method under test
-			res, _ := h.InitiateTransaction(ctx, "transaction_reset_amount", []byte(""))
+			res, _ := h.InitiateNormalTransaction(ctx, "transaction_reset_amount", []byte(""))
 
 			// Assert that no errors occurred
 			assert.NoError(t, err)
