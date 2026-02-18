@@ -118,7 +118,7 @@ func TestStoreTemporaryVoucher(t *testing.T) {
 	}
 
 	// Execute the function being tested
-	err := StoreTemporaryVoucher(ctx, store, sessionId, voucherData)
+	err := StoreTransactionVoucher(ctx, store, sessionId, voucherData)
 	require.NoError(t, err)
 
 	// Verify stored data
@@ -142,11 +142,11 @@ func TestGetTemporaryVoucherData(t *testing.T) {
 	}
 
 	// Store the data
-	err := StoreTemporaryVoucher(ctx, store, sessionId, tempData)
+	err := StoreTransactionVoucher(ctx, store, sessionId, tempData)
 	require.NoError(t, err)
 
 	// Execute the function being tested
-	data, err := GetTemporaryVoucherData(ctx, store, sessionId)
+	data, err := GetTransactionVoucherData(ctx, store, sessionId)
 	require.NoError(t, err)
 	require.Equal(t, tempData, data)
 }
@@ -170,7 +170,7 @@ func TestUpdateVoucherData(t *testing.T) {
 		TokenDecimals: "8",
 		TokenAddress:  "0xold",
 	}
-	require.NoError(t, StoreTemporaryVoucher(ctx, store, sessionId, tempData))
+	require.NoError(t, StoreTransactionVoucher(ctx, store, sessionId, tempData))
 
 	// Execute update
 	err := UpdateVoucherData(ctx, store, sessionId, newData)

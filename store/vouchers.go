@@ -185,8 +185,8 @@ func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol,
 	return
 }
 
-// StoreTemporaryVoucher saves voucher metadata as temporary entries in the DataStore.
-func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
+// StoreTransactionVoucher saves voucher metadata in the DataStore.
+func StoreTransactionVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
 	tempData := fmt.Sprintf("%s,%s,%s,%s", data.TokenSymbol, data.Balance, data.TokenDecimals, data.TokenAddress)
 
 	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, []byte(tempData)); err != nil {
@@ -196,8 +196,8 @@ func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId strin
 	return nil
 }
 
-// GetTemporaryVoucherData retrieves temporary voucher metadata from the DataStore.
-func GetTemporaryVoucherData(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
+// GetTransactionVoucherData retrieves the transaction voucher metadata from the DataStore.
+func GetTransactionVoucherData(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
 	temp_data, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER)
 	if err != nil {
 		return nil, err

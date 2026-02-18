@@ -51,8 +51,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	}
 
 	// Store the active transaction voucher data (from token)
-	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
 		return res, err
 	}
 
@@ -265,9 +265,9 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	}
 
 	// get the selected voucher
-	mpesaWithdrawalVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	mpesaWithdrawalVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 
@@ -406,9 +406,9 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 	}
 
 	// get the selected voucher
-	mpesaWithdrawalVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	mpesaWithdrawalVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 

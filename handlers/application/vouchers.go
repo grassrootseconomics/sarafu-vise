@@ -333,8 +333,8 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
 		return res, err
 	}
 
@@ -362,9 +362,9 @@ func (h *MenuHandlers) SetVoucher(ctx context.Context, sym string, input []byte)
 	}
 
 	// Get temporary data
-	tempData, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	tempData, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 
@@ -445,8 +445,8 @@ func (h *MenuHandlers) ValidateCreditVoucher(ctx context.Context, sym string, in
 	}
 
 	// Store the transaction voucher data
-	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
 		return res, err
 	}
 

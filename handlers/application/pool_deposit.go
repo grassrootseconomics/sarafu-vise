@@ -83,8 +83,8 @@ func (h *MenuHandlers) PoolDepositMaxAmount(ctx context.Context, sym string, inp
 	}
 
 	// Store the pool deposit voucher data
-	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
 		return res, err
 	}
 
@@ -119,9 +119,9 @@ func (h *MenuHandlers) ConfirmPoolDeposit(ctx context.Context, sym string, input
 
 	userStore := h.userdataStore
 
-	poolDepositVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	poolDepositVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 
@@ -179,9 +179,9 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 		return res, err
 	}
 
-	poolDepositVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	poolDepositVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 

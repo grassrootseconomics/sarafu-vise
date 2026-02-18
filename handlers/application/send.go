@@ -357,9 +357,9 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
 		if customVoucherValue == 1 {
 			// use the custom voucher
-			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 				return res, err
 			}
 
@@ -625,15 +625,15 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
-	
+
 	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
 	if err == nil {
 		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
 		if customVoucherValue == 1 {
 			// use the custom voucher
-			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 				return res, err
 			}
 
@@ -760,9 +760,9 @@ func (h *MenuHandlers) NormalTransactionPreview(ctx context.Context, sym string,
 		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
 		if customVoucherValue == 1 {
 			// use the custom voucher
-			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 				return res, err
 			}
 
@@ -811,9 +811,9 @@ func (h *MenuHandlers) InitiateNormalTransaction(ctx context.Context, sym string
 		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
 		if customVoucherValue == 1 {
 			// use the custom voucher
-			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 			if err != nil {
-				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 				return res, err
 			}
 
