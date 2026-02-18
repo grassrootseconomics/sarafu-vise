@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
@@ -104,6 +105,7 @@ func (h *MenuHandlers) GetDefaultPool(ctx context.Context, sym string, input []b
 
 // ViewPool retrieves the pool details from the user store
 // and displays it to the user for them to select it.
+// if the data does not exist, it calls the API to get the pool details
 func (h *MenuHandlers) ViewPool(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -131,8 +133,11 @@ func (h *MenuHandlers) ViewPool(ctx context.Context, sym string, input []byte) (
 	if poolData == nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 
+		// convert to uppercase before the call
+		poolSymbol := strings.ToUpper(inputStr)
+
 		// no match found. Call the API using the inputStr as the symbol
-		poolResp, err := h.accountService.RetrievePoolDetails(ctx, inputStr)
+		poolResp, err := h.accountService.RetrievePoolDetails(ctx, poolSymbol)
 		if err != nil {
 			res.FlagSet = append(res.FlagSet, flag_api_call_error)
 			return res, nil
