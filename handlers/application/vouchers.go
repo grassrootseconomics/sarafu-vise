@@ -451,9 +451,9 @@ func (h *MenuHandlers) ValidateCreditVoucher(ctx context.Context, sym string, in
 	}
 
 	// Store the state of the custom transaction voucher
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, []byte("1"))
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE, []byte("1"))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write custom transaction voucher", "key", storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write custom transaction voucher", "key", storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE, "error", err)
 		return res, err
 	}
 
