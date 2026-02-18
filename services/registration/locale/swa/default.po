@@ -90,3 +90,6 @@ msgstr "Utaweka %s %s kwenye %s\n"
 
 msgid "Your request has been sent. You will receive an SMS when %s %s has been deposited into %s."
 msgstr "Ombi lako limetumwa. Utapokea ujumbe wakati %s %s itawekwa kwenye %s."
+
+msgid "%s will receive %s %s from %s"
+msgstr %s atapokea %s %s kutoka kwa %s"
