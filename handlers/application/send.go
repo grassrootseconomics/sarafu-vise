@@ -48,10 +48,10 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 		return res, nil
 	}
 
-	// save the recipient as the temporaryRecipient
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recipient))
+	// save the recipient under recipient input
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT, []byte(recipient))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write recipient input entry with", "key", storedb.DATA_RECIPIENT_INPUT, "value", recipient, "error", err)
 		return res, err
 	}
 
@@ -352,7 +352,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 
-	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER)
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
 	if err == nil {
 		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
 		if customVoucherValue == 1 {
@@ -619,40 +619,46 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 
 	userStore := h.userdataStore
 
-	var balanceValue float64
-
 	// retrieve the active balance
 	activeBal, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
-	balanceValue, err = strconv.ParseFloat(string(activeBal), 64)
+	
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				return res, err
+			}
+
+			activeBal = []byte(customTransactionVoucher.Balance)
+		}
+	}
+
+	maxValue, err := strconv.ParseFloat(string(activeBal), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the activeBal to a float", "error", err)
 		return res, err
 	}
 
-	// Extract numeric part from the input amount
-	amountStr := strings.TrimSpace(inputStr)
-	inputAmount, err := strconv.ParseFloat(amountStr, 64)
-	if err != nil {
+	inputAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil || inputAmount > maxValue || inputAmount < 0.1 {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
-		return res, nil
-	}
-
-	if inputAmount > balanceValue || inputAmount < 0.1 {
-		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
+		res.Content = inputStr
 		return res, nil
 	}
 
 	// Format the amount to 2 decimal places before saving (truncated)
-	formattedAmount, err := store.TruncateDecimalString(amountStr, 2)
+	formattedAmount, err := store.TruncateDecimalString(inputStr, 2)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
+		res.Content = inputStr
 		return res, nil
 	}
 
@@ -724,8 +730,62 @@ func (h *MenuHandlers) GetAmount(ctx context.Context, sym string, input []byte) 
 	return res, nil
 }
 
-// InitiateTransaction calls the TokenTransfer and returns a confirmation based on the result.
-func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+// NormalTransactionPreview displays the token transfer preview awaiting authorization
+func (h *MenuHandlers) NormalTransactionPreview(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	// Input in RAT
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				return res, err
+			}
+
+			data.ActiveSym = customTransactionVoucher.TokenSymbol
+			data.ActiveDecimal = customTransactionVoucher.TokenDecimals
+			data.ActiveAddress = customTransactionVoucher.TokenAddress
+		}
+	}
+
+	res.Content = l.Get(
+		"%s will receive %s %s from %s",
+		data.RecipientInput,
+		data.Amount,
+		data.ActiveSym,
+		sessionId,
+	)
+
+	return res, nil
+}
+
+// InitiateNormalTransaction calls the TokenTransfer and returns a confirmation based on the result.
+// used for non-swap transactions
+func (h *MenuHandlers) InitiateNormalTransaction(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	var err error
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -735,6 +795,8 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 
+	userStore := h.userdataStore
+
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
@@ -742,6 +804,23 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
 	if err != nil {
 		return res, err
+	}
+
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+				return res, err
+			}
+
+			data.ActiveSym = customTransactionVoucher.TokenSymbol
+			data.ActiveDecimal = customTransactionVoucher.TokenDecimals
+			data.ActiveAddress = customTransactionVoucher.TokenAddress
+		}
 	}
 
 	finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
@@ -775,7 +854,7 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",
-		data.TemporaryValue,
+		data.RecipientInput,
 		data.Amount,
 		data.ActiveSym,
 		sessionId,
@@ -807,7 +886,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	userStore := h.userdataStore
 
-	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	recipientInput, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT)
 	if err != nil {
 		// invalid state
 		return res, err
@@ -871,7 +950,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	// Format the qouteAmount amount to 2 decimal places
 	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
 
-	// store the qouteAmount in the temporary value
+	// store the qouteAmount in the temporary value (display)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(qouteAmount))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write temporary qouteAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", qouteAmount, "error", err)
@@ -887,7 +966,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	res.Content = l.Get(
 		"%s will receive %s %s",
-		string(recipientPhoneNumber), qouteAmount, swapData.ActiveSwapToSym,
+		string(recipientInput), qouteAmount, swapData.ActiveSwapToSym,
 	)
 
 	return res, nil
@@ -946,7 +1025,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
 		return res, err
 	}
-	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	recipientInput, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT)
 	if err != nil {
 		// invalid state
 		return res, err
@@ -974,7 +1053,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",
-		string(recipientPhoneNumber),
+		string(recipientInput),
 		swapData.TemporaryValue,
 		swapData.ActiveSwapToSym,
 		sessionId,
