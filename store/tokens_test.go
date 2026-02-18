@@ -221,7 +221,7 @@ func TestReadTransactionData(t *testing.T) {
 
 	// Test transaction data
 	transactionData := map[storedb.DataTyp]string{
-		storedb.DATA_TEMPORARY_VALUE: "0712345678",
+		storedb.DATA_RECIPIENT_INPUT: "0712345678",
 		storedb.DATA_ACTIVE_SYM:      "SRF",
 		storedb.DATA_AMOUNT:          "1000000",
 		storedb.DATA_PUBLIC_KEY:      publicKey,
@@ -238,7 +238,7 @@ func TestReadTransactionData(t *testing.T) {
 	}
 
 	expectedResult := TransactionData{
-		TemporaryValue: "0712345678",
+		RecipientInput: "0712345678",
 		ActiveSym:      "SRF",
 		Amount:         "1000000",
 		PublicKey:      publicKey,
