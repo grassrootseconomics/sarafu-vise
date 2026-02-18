@@ -886,19 +886,40 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	userStore := h.userdataStore
 
+	// the initial recipient that the sender input
 	recipientInput, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT)
 	if err != nil {
 		// invalid state
 		return res, err
 	}
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
+	// get the selected voucher
+	selectedVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+		return res, err
+	}
+
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	swapMaxAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapMaxAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "error", err)
+		return res, err
+	}
+
 	// use the stored max RAT
-	maxRATValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	maxRATValue, err := strconv.ParseFloat(string(swapMaxAmount), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
 		return res, err
@@ -919,13 +940,13 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapToDecimal)
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapToVoucher.TokenDecimals)
 	if err != nil {
 		return res, err
 	}
 
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, finalAmountStr)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -945,7 +966,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	}
 
 	// Scale down the quoted output amount
-	quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapData.ActiveSwapToDecimal)
+	quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapToVoucher.TokenDecimals)
 
 	// Format the qouteAmount amount to 2 decimal places
 	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
@@ -966,7 +987,9 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	res.Content = l.Get(
 		"%s will receive %s %s",
-		string(recipientInput), qouteAmount, swapData.ActiveSwapToSym,
+		string(recipientInput),
+		qouteAmount,
+		swapToVoucher.TokenSymbol,
 	)
 
 	return res, nil
@@ -990,8 +1013,34 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 
 	userStore := h.userdataStore
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
+		return res, err
+	}
+
+	// get the selected voucher
+	selectedVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+		return res, err
+	}
+
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	quotedAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read quotedAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 
@@ -1004,7 +1053,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	swapAmountStr := string(swapAmount)
 
 	// Call the poolSwap API
-	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, string(publicKey), selectedVoucher.TokenAddress, string(activePoolAddress), swapToVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -1039,7 +1088,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	}
 
 	// Call TokenTransfer with the expected swap amount
-	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), string(publicKey), string(recipientPublicKey), swapToVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -1054,8 +1103,8 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",
 		string(recipientInput),
-		swapData.TemporaryValue,
-		swapData.ActiveSwapToSym,
+		string(quotedAmount),
+		swapToVoucher.TokenSymbol,
 		sessionId,
 	)
 
