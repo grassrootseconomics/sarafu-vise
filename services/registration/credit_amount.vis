@@ -13,7 +13,4 @@ LOAD validate_amount 64
 RELOAD validate_amount
 CATCH invalid_amount flag_invalid_amount 1
 INCMP _ 0
-LOAD get_recipient 0
-LOAD get_sender 64
-LOAD get_amount 32
 INCMP transaction_pin *
