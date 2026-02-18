@@ -767,10 +767,10 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	amountInt.Mul(amountInt, big.NewInt(1015))
 	amountInt.Div(amountInt, big.NewInt(1000))
 
-	finalAmountStr = amountInt.String()
+	scaledFinalAmountStr := amountInt.String()
 
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, scaledFinalAmountStr)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -782,8 +782,8 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
 	sendOutputAmount := r.OutputAmount // amount of RAT that will be received
 
-	// store the sendOutputAmount as the final amount (that will be sent)
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(sendOutputAmount))
+	// store the finalAmountStr as the final amount (that will be sent after the swap)
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(finalAmountStr))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", sendOutputAmount, "error", err)
 		return res, err
