@@ -189,7 +189,7 @@ func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol,
 func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
 	tempData := fmt.Sprintf("%s,%s,%s,%s", data.TokenSymbol, data.Balance, data.TokenDecimals, data.TokenAddress)
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tempData)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, []byte(tempData)); err != nil {
 		return err
 	}
 
@@ -198,7 +198,7 @@ func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId strin
 
 // GetTemporaryVoucherData retrieves temporary voucher metadata from the DataStore.
 func GetTemporaryVoucherData(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
-	temp_data, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	temp_data, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER)
 	if err != nil {
 		return nil, err
 	}

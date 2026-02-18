@@ -99,6 +99,8 @@ const (
 	DATA_TRANSACTION_CUSTOM_VOUCHER_STATE
 	// Holds the initial recipient input given by the user
 	DATA_RECIPIENT_INPUT
+	// Holds the transaction voucher
+	DATA_TRANSACTION_CUSTOM_VOUCHER
 )
 
 const (
