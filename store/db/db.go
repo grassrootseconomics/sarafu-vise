@@ -97,6 +97,8 @@ const (
 	DATA_ACTIVE_SWAP_FROM_BALANCE
 	// Holds the state whether the transaction uses a custom voucher
 	DATA_TRANSACTION_CUSTOM_VOUCHER
+	// Holds the initial recipient input given by the user
+	DATA_RECIPIENT_INPUT
 )
 
 const (
