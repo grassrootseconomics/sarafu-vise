@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -945,8 +946,19 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, err
 	}
 
+	// multiply by 1.015 (i.e. * 1015 / 1000)
+	amountInt, ok := new(big.Int).SetString(finalAmountStr, 10)
+	if !ok {
+		return res, fmt.Errorf("invalid amount: %s", finalAmountStr)
+	}
+
+	amountInt.Mul(amountInt, big.NewInt(1015))
+	amountInt.Div(amountInt, big.NewInt(1000))
+
+	scaledFinalAmountStr := amountInt.String()
+
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, finalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, scaledFinalAmountStr)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -958,23 +970,23 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
 	sendOutputAmount := r.OutputAmount // amount of RAT that will be received
 
-	// store the sendOutputAmount as the final amount (that will be sent)
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(sendOutputAmount))
+	// store the finalAmountStr as the final amount (that will be sent after the swap)
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(finalAmountStr))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", sendOutputAmount, "error", err)
 		return res, err
 	}
 
 	// Scale down the quoted output amount
-	quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapToVoucher.TokenDecimals)
+	// quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapData.ActiveSwapToDecimal)
 
 	// Format the qouteAmount amount to 2 decimal places
-	qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
+	// qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
 
-	// store the qouteAmount in the temporary value (display)
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(qouteAmount))
+	// store the qouteAmount in the temporary value
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporary qouteAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", qouteAmount, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write temporary inputStr entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
 		return res, err
 	}
 
@@ -988,7 +1000,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	res.Content = l.Get(
 		"%s will receive %s %s",
 		string(recipientInput),
-		qouteAmount,
+		inputStr,
 		swapToVoucher.TokenSymbol,
 	)
 
