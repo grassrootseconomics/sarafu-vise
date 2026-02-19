@@ -145,14 +145,14 @@ func (h *MenuHandlers) ConfirmPoolDeposit(ctx context.Context, sym string, input
 	}
 
 	// Resolve active pool
-	_, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	_, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
 	res.Content = l.Get(
 		"You will deposit %s %s into %s\n",
-		inputStr, poolDepositVoucher.TokenSymbol, activePoolName,
+		inputStr, poolDepositVoucher.TokenSymbol, activePoolSymbol,
 	)
 
 	return res, nil
@@ -174,7 +174,7 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 	l.AddDomain("default")
 
 	// Resolve active pool
-	activePoolAddress, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	activePoolAddress, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -212,7 +212,7 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 		"Your request has been sent. You will receive an SMS when %s %s has been deposited into %s.",
 		poolDepositdata.Amount,
 		poolDepositVoucher.TokenSymbol,
-		activePoolName,
+		activePoolSymbol,
 	)
 
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)

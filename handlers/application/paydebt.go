@@ -43,7 +43,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	}
 
 	// Resolve active pool
-	activePoolAddress, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	activePoolAddress, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error)
 		return res, err
@@ -129,7 +129,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 		"You can remove a max of %s %s from '%s'\nEnter amount of %s:(Max: %s)",
 		quoteStr,
 		string(activeSym),
-		string(activePoolName),
+		string(activePoolSymbol),
 		metadata.TokenSymbol,
 		maxStr,
 	)
@@ -268,7 +268,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 	}
 
 	// Resolve active pool
-	activePoolAddress, activePoolName, err := h.resolveActivePoolDetails(ctx, sessionId)
+	activePoolAddress, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -310,7 +310,7 @@ func (h *MenuHandlers) InitiatePayDebt(ctx context.Context, sym string, input []
 		"Your request has been sent. You will receive an SMS when your debt of %s %s has been removed from %s.",
 		string(debtQuotedAmount),
 		string(activeSym),
-		activePoolName,
+		activePoolSymbol,
 	)
 
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)

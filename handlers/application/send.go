@@ -530,7 +530,7 @@ func (h *MenuHandlers) getRecipientData(ctx context.Context, sessionId string) (
 	return
 }
 
-func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId string) (defaultPoolAddress, defaultPoolName []byte, err error) {
+func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId string) (defaultPoolAddress, defaultPoolSymbol []byte, err error) {
 	store := h.userdataStore
 
 	// Try read address
@@ -540,21 +540,21 @@ func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId s
 		return nil, nil, err
 	}
 
-	// Try read name
-	defaultPoolName, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_NAME)
+	// Try read symbol
+	defaultPoolSymbol, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_SYM)
 	if err != nil && !db.IsNotFound(err) {
 		logg.ErrorCtxf(ctx, "failed to read active pool name", "error", err)
 		return nil, nil, err
 	}
 
 	// If both exist, return them
-	if defaultPoolAddress != nil && defaultPoolName != nil {
-		return defaultPoolAddress, defaultPoolName, nil
+	if defaultPoolAddress != nil && defaultPoolSymbol != nil {
+		return defaultPoolAddress, defaultPoolSymbol, nil
 	}
 
 	// Fallback to config defaults
 	defaultPoolAddress = []byte(config.DefaultPoolAddress())
-	defaultPoolName = []byte(config.DefaultPoolName())
+	defaultPoolSymbol = []byte(config.DefaultPoolSymbol())
 
 	if err := store.WriteEntry(
 		ctx,
@@ -569,14 +569,14 @@ func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId s
 	if err := store.WriteEntry(
 		ctx,
 		sessionId,
-		storedb.DATA_ACTIVE_POOL_NAME,
-		defaultPoolName,
+		storedb.DATA_ACTIVE_POOL_SYM,
+		defaultPoolSymbol,
 	); err != nil {
-		logg.ErrorCtxf(ctx, "failed to write default pool name", "error", err)
+		logg.ErrorCtxf(ctx, "failed to write default pool symbol", "error", err)
 		return nil, nil, err
 	}
 
-	return defaultPoolAddress, defaultPoolName, nil
+	return defaultPoolAddress, defaultPoolSymbol, nil
 }
 
 func (h *MenuHandlers) calculateSendCreditLimits(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, fromDecimal, toDecimal []byte) (string, string, error) {
