@@ -64,6 +64,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	r, err := h.accountService.GetSwapFromTokenMaxLimit(ctx, string(activePoolAddress), metadata.TokenAddress, string(activeAddress), string(publicKey))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = "0"
 		logg.ErrorCtxf(ctx, "failed on GetSwapFromTokenMaxLimit", "error", err)
 		return res, nil
 	}
