@@ -128,10 +128,8 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	// default response
-	formattedDebt, _ := store.TruncateDecimalString(string(activeBal), 2)
+	// default flag reset
 	res.FlagReset = append(res.FlagReset, flag_api_call_error)
-	res.Content = l.Get("Credit: %s KSH\nDebt: %s %s\n", "0", formattedDebt, string(activeSym))
 
 	// Resolve active pool
 	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
@@ -143,6 +141,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	swappableVouchers, err := h.accountService.GetPoolSwappableFromVouchers(ctx, string(activePoolAddress), string(publicKey))
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed on GetPoolSwappableFromVouchers", "error", err)
+		res.Content = l.Get("Credit: %s KSH\nDebt: %s %s\n", "0", "0", string(activeSym))
 		return res, nil
 	}
 
@@ -208,30 +207,42 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	}
 
 	// Credit calculation: How much Active Token that can be swapped for a stable coin
-	// + any stables sendable to Pretium (in KSH value)
+	// that's on the pool + any stables sendable to Pretium (in KSH value)
+
+	// Find first stable voucher from swappableVouchers
+	var firstStable *dataserviceapi.TokenHoldings
+	for i := range swappableVouchers {
+		if isStableVoucher(swappableVouchers[i].TokenAddress) {
+			firstStable = &swappableVouchers[i]
+			break
+		}
+	}
+
 	scaledCredit := "0"
 
-	finalAmountStr, err := store.ParseAndScaleAmount(string(activeBal), string(activeDecimal))
-	if err != nil {
-		return res, err
+	if firstStable != nil {
+		finalAmountStr, err := store.ParseAndScaleAmount(string(activeBal), string(activeDecimal))
+		if err != nil {
+			logg.ErrorCtxf(ctx, "failed on ParseAndScaleAmount", "error", err)
+			return res, err
+		}
+
+		// swap active -> FIRST stable from pool list
+		r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), string(activeAddress), string(activePoolAddress), firstStable.TokenAddress)
+		if err != nil {
+			flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+			res.FlagSet = append(res.FlagSet, flag_api_call_error)
+			res.Content = l.Get("Your request failed. Please try again later.")
+			logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
+			return res, nil
+		}
+
+		// scale using REAL stable decimals
+		finalQuote := store.ScaleDownBalance(r.OutValue, firstStable.TokenDecimals)
+		scaledCredit = store.AddDecimalStrings(scaledCredit, finalQuote)
 	}
-	// do a swap quote for default stable coin from active voucher
-	stableAddress := config.DefaultStableVoucherAddress()
-	stableDecimals := config.DefaultStableVoucherDecimals()
 
-	r, err := h.accountService.GetPoolSwapQuote(ctx, finalAmountStr, string(publicKey), string(activeAddress), string(activePoolAddress), stableAddress)
-	if err != nil {
-		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-		res.FlagSet = append(res.FlagSet, flag_api_call_error)
-		res.Content = l.Get("Your request failed. Please try again later.")
-		logg.ErrorCtxf(ctx, "failed on poolSwap", "error", err)
-		return res, nil
-	}
-
-	finalQuote := store.ScaleDownBalance(r.OutValue, stableDecimals)
-
-	scaledCredit = store.AddDecimalStrings(scaledCredit, finalQuote)
-
+	// Add existing stable balances
 	for _, v := range stable {
 		scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
 		scaledCredit = store.AddDecimalStrings(scaledCredit, scaled)
@@ -239,6 +250,21 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	// DEBT calculation: All outstanding active token that is in the current pool
 	// (how much of AT that is in the active Pool)
+	scaledDebt := "0"
+
+	// If active voucher is NOT stable,
+	// check if it exists in swappableVouchers
+	if !isStableVoucher(string(activeAddress)) {
+		for _, v := range swappableVouchers {
+			if v.TokenSymbol == string(activeSym) {
+				scaledDebt = store.ScaleDownBalance(v.Balance, v.TokenDecimals)
+				break
+			}
+		}
+	}
+
+	// Format (2 decimal places)
+	formattedDebt, _ := store.TruncateDecimalString(scaledDebt, 2)
 
 	// Fetch MPESA rates
 	rates, err := h.accountService.GetMpesaOnrampRates(ctx)
