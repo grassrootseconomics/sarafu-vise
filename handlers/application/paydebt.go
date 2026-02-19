@@ -126,7 +126,7 @@ func (h *MenuHandlers) CalculateMaxPayDebt(ctx context.Context, sym string, inpu
 	quoteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
 
 	res.Content = l.Get(
-		"You can remove a max of %s %s from '%s'\nEnter amount of %s:(Max: %s)",
+		"You can remove a max of %s %s from '%s' pool\nEnter amount of %s:(Max: %s)",
 		quoteStr,
 		string(activeSym),
 		string(activePoolSymbol),
