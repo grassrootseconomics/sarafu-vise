@@ -968,20 +968,13 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 	}
 
 	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
-	sendOutputAmount := r.OutputAmount // amount of RAT that will be received
 
 	// store the finalAmountStr as the final amount (that will be sent after the swap)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(finalAmountStr))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", sendOutputAmount, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
-
-	// Scale down the quoted output amount
-	// quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapData.ActiveSwapToDecimal)
-
-	// Format the qouteAmount amount to 2 decimal places
-	// qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
 
 	// store the qouteAmount in the temporary value
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
