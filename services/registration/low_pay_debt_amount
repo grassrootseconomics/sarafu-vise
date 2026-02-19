@@ -1,1 +1,1 @@
-You have a low debt amount
+Available amount {{.calculate_max_pay_debt}} is too low, please choose a different voucher:
