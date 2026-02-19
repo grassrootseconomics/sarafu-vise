@@ -236,8 +236,8 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 	}
 
 	res.Content = fmt.Sprintf(
-		"Maximum: %s\n\nEnter amount of %s to swap for %s:",
-		maxStr, swapData.ActiveSwapFromSym, swapData.ActiveSwapToSym,
+		"Maximum: %s %s\n\nEnter amount of %s to swap for %s:",
+		maxStr, swapData.ActiveSwapFromSym, swapData.ActiveSwapFromSym, swapData.ActiveSwapToSym,
 	)
 
 	return res, nil
