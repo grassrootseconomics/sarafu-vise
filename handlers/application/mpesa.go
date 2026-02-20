@@ -36,7 +36,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 
 	inputStr := string(input)
 	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
-		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher)
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
 		return res, nil
 	}
 
@@ -142,6 +142,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 
 	if !canSwap.CanSwapFrom { // pool issue (CATCH on .vis)
 		res.FlagSet = append(res.FlagSet, flag_incorrect_pool)
+		res.Content = "0"
 		return res, nil
 	}
 
@@ -198,6 +199,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		minKshFormatted,
 		maxKshFormatted,
 	)
+
+	res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
 
 	return res, nil
 }
