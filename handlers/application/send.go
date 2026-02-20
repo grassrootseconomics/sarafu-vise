@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -946,19 +945,8 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, err
 	}
 
-	// multiply by 1.015 (i.e. * 1015 / 1000)
-	amountInt, ok := new(big.Int).SetString(finalAmountStr, 10)
-	if !ok {
-		return res, fmt.Errorf("invalid amount: %s", finalAmountStr)
-	}
-
-	amountInt.Mul(amountInt, big.NewInt(1015))
-	amountInt.Div(amountInt, big.NewInt(1000))
-
-	scaledFinalAmountStr := amountInt.String()
-
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, scaledFinalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, finalAmountStr)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -967,7 +955,7 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
+	sendInputAmount := r.InputAmount // amount of SAT that should be swapped
 
 	// store the finalAmountStr as the final amount (that will be sent after the swap)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(finalAmountStr))
