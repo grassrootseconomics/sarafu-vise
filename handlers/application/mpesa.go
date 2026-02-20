@@ -149,6 +149,7 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	_, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, []byte(metadata.TokenAddress), recipientActiveAddress, publicKey, []byte(metadata.TokenDecimals), recipientActiveDecimal)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = "0"
 		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
 		return res, nil
 	}
