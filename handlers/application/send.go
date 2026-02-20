@@ -414,8 +414,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	fmt.Println("got 2")
-
 	// Get the recipient's phone number to read other data items (*)
 	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
 	if err != nil || !phone.IsValidPhoneNumber(string(recipientPhoneNumber)) {
@@ -425,14 +423,10 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	fmt.Println("got 3:", string(recipientPhoneNumber))
-
 	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 	if err != nil {
 		return res, err
 	}
-	fmt.Println("got 4")
-
 
 	// retrieve the max credit send amounts
 	maxSAT, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
