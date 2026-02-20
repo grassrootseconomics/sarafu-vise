@@ -414,12 +414,15 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	// Get the recipient's phone number to read other data items
+	// Get the recipient's phone number to read other data items (*)
 	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
 	if err != nil {
-		// invalid state
-		return res, err
+		// revert to normal transaction
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+		return res, nil
 	}
+
 	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 	if err != nil {
 		return res, err
