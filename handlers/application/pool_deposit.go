@@ -173,9 +173,12 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
+	userStore := h.userdataStore
+
 	// Resolve active pool
 	activePoolAddress, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on resolveActivePoolDetails", "error", err)
 		return res, err
 	}
 
@@ -185,18 +188,26 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 		return res, err
 	}
 
-	poolDepositdata, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
 		return res, err
 	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(poolDepositdata.Amount, poolDepositVoucher.TokenDecimals)
+	amount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read amount entry", "key", storedb.DATA_AMOUNT, "error", err)
+		return res, err
+	}
+
+	finalAmountStr, err := store.ParseAndScaleAmount(string(amount), poolDepositVoucher.TokenDecimals)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ParseAndScaleAmount", "error", err)
 		return res, err
 	}
 
 	// Call pool deposit API
-	r, err := h.accountService.PoolDeposit(ctx, finalAmountStr, poolDepositdata.PublicKey, string(activePoolAddress), poolDepositVoucher.TokenAddress)
+	r, err := h.accountService.PoolDeposit(ctx, finalAmountStr, string(publicKey), string(activePoolAddress), poolDepositVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -210,7 +221,7 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 
 	res.Content = l.Get(
 		"Your request has been sent. You will receive an SMS when %s %s has been deposited into %s.",
-		poolDepositdata.Amount,
+		string(amount),
 		poolDepositVoucher.TokenSymbol,
 		activePoolSymbol,
 	)
