@@ -418,7 +418,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 
 	// Get the recipient's phone number to read other data items (*)
 	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
-	if err != nil {
+	if err != nil || !phone.IsValidPhoneNumber(string(recipientPhoneNumber)) {
 		// revert to normal transaction
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
