@@ -425,7 +425,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	fmt.Println("got 3")
+	fmt.Println("got 3:", string(recipientPhoneNumber))
 
 	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 	if err != nil {
