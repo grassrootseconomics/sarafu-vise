@@ -123,6 +123,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 			maxKshFormatted,
 		)
 
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
+
 		return res, nil
 	}
 
@@ -155,6 +157,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, nil
 	}
 
+	res.FlagReset = append(res.FlagReset, flag_api_call_error)
+
 	// Fallback if below minimum
 	maxFloat, _ := strconv.ParseFloat(maxRAT, 64)
 	if maxFloat < 0.1 {
@@ -163,6 +167,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		res.FlagSet = append(res.FlagSet, flag_low_swap_amount)
 		return res, nil
 	}
+
+	res.FlagReset = append(res.FlagReset, flag_low_swap_amount)
 
 	// Save max RAT amount to be used in validating the user's input
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxRAT))
