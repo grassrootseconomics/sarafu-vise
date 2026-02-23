@@ -267,7 +267,7 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 
 	if len(voucherData) == 0 {
 		if sym == "get_paydebt_voucher_list" {
-			res.Content = l.Get("You need another voucher to proceed. Only found %s", string(activeSym))
+			res.Content = l.Get("You need another voucher to proceed. Only found %s.", string(activeSym))
 		} else {
 			res.Content = l.Get("Your active voucher %s is already set", string(activeSym))
 		}
