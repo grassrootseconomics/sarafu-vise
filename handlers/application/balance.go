@@ -125,6 +125,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 	// Fetch session data
 	_, activeBal, activeSym, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
+		res.Content = l.Get("Credit: %s KSH\nDebt: %s %s\n", "0", "0", string(activeSym))
 		return res, nil
 	}
 
