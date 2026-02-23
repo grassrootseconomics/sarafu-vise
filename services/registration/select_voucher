@@ -1,1 +1,1 @@
-{{.get_vouchers}}
+{{.get_voucher_list}}
