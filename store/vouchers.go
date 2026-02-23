@@ -159,6 +159,10 @@ func GetOrderedVoucherData(ctx context.Context, store DataStore, sessionId strin
 
 // MatchVoucher finds the matching voucher symbol, balance, decimals and contract address based on the input.
 func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol, balance, decimal, address string) {
+	// case for invalid input with no current symbols
+	if symbols == "" {
+		return
+	}
 	symList := strings.Split(symbols, "\n")
 	balList := strings.Split(balances, "\n")
 	decList := strings.Split(decimals, "\n")
