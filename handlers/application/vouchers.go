@@ -17,8 +17,8 @@ import (
 
 // ManageVouchers retrieves the token holdings from the API using the "PublicKey" and
 // 1. sets the first as the default voucher if no active voucher is set.
-// 2. Stores list of vouchers
-// 3. Stores list of filtered stable vouchers
+// 2. Stores list of filtered ordered vouchers (exclude the active voucher)
+// 3. Stores list of  ordered vouchers (all vouchers)
 // 4. updates the balance of the active voucher
 func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
@@ -32,7 +32,6 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
-	flag_no_stable_vouchers, _ := h.flagManager.GetFlag("flag_no_stable_vouchers")
 	flag_multiple_voucher, _ := h.flagManager.GetFlag("flag_multiple_voucher")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
@@ -216,21 +215,6 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	// Order all vouchers
 	orderedVouchers := orderVouchers(vouchersResp)
 
-	// Stable voucher presence flag (based on full list)
-	hasStable := false
-	for _, v := range orderedVouchers {
-		if isStableVoucher(v.TokenAddress) {
-			hasStable = true
-			break
-		}
-	}
-
-	if !hasStable {
-		res.FlagSet = append(res.FlagSet, flag_no_stable_vouchers)
-	} else {
-		res.FlagReset = append(res.FlagReset, flag_no_stable_vouchers)
-	}
-
 	// Process ALL vouchers (stable first)
 	orderedVoucherData := store.ProcessVouchers(orderedVouchers)
 
@@ -253,6 +237,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 }
 
 // GetVoucherList fetches the list of vouchers from the store and formats them.
+// does not include the active voucher and is used in select_voucher and pay_debt
 func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -281,7 +266,12 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 	}
 
 	if len(voucherData) == 0 {
-		res.Content = l.Get("Your active voucher %s is already set", string(activeSym))
+		if sym == "get_paydebt_voucher_list" {
+			res.Content = l.Get("You need another voucher to proceed. Only found %s", string(activeSym))
+		} else {
+			res.Content = l.Get("Your active voucher %s is already set", string(activeSym))
+		}
+
 		return res, nil
 	}
 
