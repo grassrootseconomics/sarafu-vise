@@ -100,8 +100,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	}
 
 	// Fetch min withdrawal amount from config/env
-	minksh := fmt.Sprintf("%f", config.MinMpesaWithdrawAmount())
-	minKshFormatted, _ := store.TruncateDecimalString(minksh, 0)
+	minWithdraw := config.MinMpesaWithdrawAmount() // float64 (20)
+	minKshFormatted, _ := store.TruncateDecimalString(fmt.Sprintf("%f", minWithdraw), 0)
 
 	// If SAT is the same as RAT (default USDm),
 	// or if the voucher is a stable coin
@@ -115,9 +115,16 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		}
 
 		activeFloat, _ := strconv.ParseFloat(string(metadata.Balance), 64)
-		ksh := fmt.Sprintf("%f", activeFloat*rates.Buy)
+		kshValue := activeFloat * rates.Buy
 
-		maxKshFormatted, _ := store.TruncateDecimalString(ksh, 0)
+		maxKshFormatted, _ := store.TruncateDecimalString(fmt.Sprintf("%f", kshValue), 0)
+
+		// Ensure that the max is greater than the min
+		if kshValue < minWithdraw {
+			res.FlagSet = append(res.FlagSet, flag_low_swap_amount)
+			res.Content = l.Get("%s Ksh", maxKshFormatted)
+			return res, nil
+		}
 
 		res.Content = l.Get(
 			"Enter the amount of Mpesa to withdraw: (Min: Ksh %s, Max %s Ksh)\n",
