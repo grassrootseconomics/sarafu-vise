@@ -103,8 +103,10 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	minksh := fmt.Sprintf("%f", config.MinMpesaWithdrawAmount())
 	minKshFormatted, _ := store.TruncateDecimalString(minksh, 0)
 
-	// If SAT is the same as RAT, return early with KSH format
-	if string(metadata.TokenAddress) == string(recipientActiveAddress) {
+	// If SAT is the same as RAT (default USDm),
+	// or if the voucher is a stable coin
+	// return early with KSH format
+	if string(metadata.TokenAddress) == string(recipientActiveAddress) || isStableVoucher(metadata.TokenAddress) {
 		txType = "normal"
 		// Save the transaction type
 		if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
