@@ -102,6 +102,15 @@ func MinMpesaSendAmount() float64 {
 	return f
 }
 
+func MinMpesaWithdrawAmount() float64 {
+	v := env.GetEnv("MIN_MPESA_WITHDRAW_AMOUNT", "20")
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return 20 // fallback
+	}
+	return f
+}
+
 func MaxMpesaSendAmount() float64 {
 	v := env.GetEnv("MAX_MPESA_SEND_AMOUNT", "250000")
 	f, err := strconv.ParseFloat(v, 64)
@@ -113,4 +122,31 @@ func MaxMpesaSendAmount() float64 {
 
 func DefaultMpesaAsset() string {
 	return env.GetEnv("DEFAULT_MPESA_ASSET", "")
+}
+
+func StableVoucherAddresses() []string {
+	var parsed []string
+
+	raw := env.GetEnv("STABLE_VOUCHER_ADDRESSES", "")
+	if raw == "" {
+		return parsed
+	}
+
+	list := strings.Split(raw, ",")
+	for _, addr := range list {
+		clean := strings.TrimSpace(addr)
+		if clean != "" {
+			parsed = append(parsed, clean)
+		}
+	}
+
+	return parsed
+}
+
+func DefaultStableVoucherAddress() string {
+	return env.GetEnv("DEFAULT_STABLE_VOUCHER_ADDRESS", "")
+}
+
+func DefaultStableVoucherDecimals() string {
+	return env.GetEnv("DEFAULT_STABLE_VOUCHER_DECIMALS", "")
 }

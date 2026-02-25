@@ -1,0 +1,6 @@
+MAP calculate_max_pay_debt
+MOUT back 0
+MOUT quit 9
+HALT
+INCMP _ 0
+INCMP quit 9

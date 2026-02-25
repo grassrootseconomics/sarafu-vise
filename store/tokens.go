@@ -13,7 +13,7 @@ import (
 )
 
 type TransactionData struct {
-	TemporaryValue string
+	RecipientInput string
 	ActiveSym      string
 	Amount         string
 	PublicKey      string
@@ -77,7 +77,7 @@ func ParseAndScaleAmount(storedAmount, activeDecimal string) (string, error) {
 func ReadTransactionData(ctx context.Context, store DataStore, sessionId string) (TransactionData, error) {
 	data := TransactionData{}
 	fieldToKey := map[string]storedb.DataTyp{
-		"TemporaryValue": storedb.DATA_TEMPORARY_VALUE,
+		"RecipientInput": storedb.DATA_RECIPIENT_INPUT,
 		"ActiveSym":      storedb.DATA_ACTIVE_SYM,
 		"Amount":         storedb.DATA_AMOUNT,
 		"PublicKey":      storedb.DATA_PUBLIC_KEY,

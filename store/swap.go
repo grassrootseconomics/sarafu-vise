@@ -18,6 +18,7 @@ type SwapData struct {
 	ActiveSwapFromAddress string
 	ActiveSwapToSym       string
 	ActiveSwapToAddress   string
+	ActiveSwapToDecimal   string
 }
 
 type SwapPreviewData struct {
@@ -43,6 +44,7 @@ func ReadSwapData(ctx context.Context, store DataStore, sessionId string) (SwapD
 		"ActiveSwapFromAddress": storedb.DATA_ACTIVE_ADDRESS,
 		"ActiveSwapToSym":       storedb.DATA_ACTIVE_SWAP_TO_SYM,
 		"ActiveSwapToAddress":   storedb.DATA_ACTIVE_SWAP_TO_ADDRESS,
+		"ActiveSwapToDecimal":   storedb.DATA_ACTIVE_SWAP_TO_DECIMAL,
 	}
 
 	v := reflect.ValueOf(&data).Elem()
@@ -186,4 +188,75 @@ func UpdateSwapToVoucherData(ctx context.Context, store DataStore, sessionId str
 	}
 
 	return nil
+}
+
+// UpdateSwapFromVoucherData updates the active swap from voucher data in the DataStore.
+func UpdateSwapFromVoucherData(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
+	logg.InfoCtxf(ctx, "UpdateSwapFromVoucherData", "data", data)
+	// Active swap to voucher data entries
+	activeEntries := map[storedb.DataTyp][]byte{
+		storedb.DATA_ACTIVE_SWAP_FROM_SYM:     []byte(data.TokenSymbol),
+		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL: []byte(data.TokenDecimals),
+		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS: []byte(data.TokenAddress),
+		storedb.DATA_ACTIVE_SWAP_FROM_BALANCE: []byte(data.Balance),
+	}
+
+	// Write active data
+	for key, value := range activeEntries {
+		if err := store.WriteEntry(ctx, sessionId, key, value); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ReadSwapFromVoucher retrieves the voucher being swapped into the pool (swap from)
+func ReadSwapFromVoucher(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
+	keys := []storedb.DataTyp{
+		storedb.DATA_ACTIVE_SWAP_FROM_SYM,
+		storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL,
+		storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS,
+		storedb.DATA_ACTIVE_SWAP_FROM_BALANCE,
+	}
+	data := make(map[storedb.DataTyp]string)
+
+	for _, key := range keys {
+		value, err := store.ReadEntry(ctx, sessionId, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
+		}
+		data[key] = string(value)
+	}
+
+	return &dataserviceapi.TokenHoldings{
+		TokenSymbol:   data[storedb.DATA_ACTIVE_SWAP_FROM_SYM],
+		Balance:       data[storedb.DATA_ACTIVE_SWAP_FROM_BALANCE],
+		TokenDecimals: data[storedb.DATA_ACTIVE_SWAP_FROM_DECIMAL],
+		TokenAddress:  data[storedb.DATA_ACTIVE_SWAP_FROM_ADDRESS],
+	}, nil
+}
+
+// ReadSwapToVoucher retrieves the swap to voucher being swapped from the pool
+func ReadSwapToVoucher(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
+	keys := []storedb.DataTyp{
+		storedb.DATA_ACTIVE_SWAP_TO_SYM,
+		storedb.DATA_ACTIVE_SWAP_TO_DECIMAL,
+		storedb.DATA_ACTIVE_SWAP_TO_ADDRESS,
+	}
+	data := make(map[storedb.DataTyp]string)
+
+	for _, key := range keys {
+		value, err := store.ReadEntry(ctx, sessionId, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
+		}
+		data[key] = string(value)
+	}
+
+	return &dataserviceapi.TokenHoldings{
+		TokenSymbol:   data[storedb.DATA_ACTIVE_SWAP_TO_SYM],
+		TokenDecimals: data[storedb.DATA_ACTIVE_SWAP_TO_DECIMAL],
+		TokenAddress:  data[storedb.DATA_ACTIVE_SWAP_TO_ADDRESS],
+	}, nil
 }

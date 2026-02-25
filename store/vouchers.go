@@ -120,8 +120,49 @@ func GetVoucherData(ctx context.Context, store DataStore, sessionId string, inpu
 	}, nil
 }
 
+// GetOrderedVoucherData retrieves and matches ordered voucher data
+func GetOrderedVoucherData(ctx context.Context, store DataStore, sessionId string, input string) (*dataserviceapi.TokenHoldings, error) {
+	keys := []storedb.DataTyp{
+		storedb.DATA_ORDERED_VOUCHER_SYMBOLS,
+		storedb.DATA_ORDERED_VOUCHER_BALANCES,
+		storedb.DATA_ORDERED_VOUCHER_DECIMALS,
+		storedb.DATA_ORDERED_VOUCHER_ADDRESSES,
+	}
+	data := make(map[storedb.DataTyp]string)
+
+	for _, key := range keys {
+		value, err := store.ReadEntry(ctx, sessionId, key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data key %x: %v", key, err)
+		}
+		data[key] = string(value)
+	}
+
+	symbol, balance, decimal, address := MatchVoucher(input,
+		data[storedb.DATA_ORDERED_VOUCHER_SYMBOLS],
+		data[storedb.DATA_ORDERED_VOUCHER_BALANCES],
+		data[storedb.DATA_ORDERED_VOUCHER_DECIMALS],
+		data[storedb.DATA_ORDERED_VOUCHER_ADDRESSES],
+	)
+
+	if symbol == "" {
+		return nil, nil
+	}
+
+	return &dataserviceapi.TokenHoldings{
+		TokenSymbol:   string(symbol),
+		Balance:       string(balance),
+		TokenDecimals: string(decimal),
+		TokenAddress:  string(address),
+	}, nil
+}
+
 // MatchVoucher finds the matching voucher symbol, balance, decimals and contract address based on the input.
 func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol, balance, decimal, address string) {
+	// case for invalid input with no current symbols
+	if symbols == "" {
+		return
+	}
 	symList := strings.Split(symbols, "\n")
 	balList := strings.Split(balances, "\n")
 	decList := strings.Split(decimals, "\n")
@@ -148,20 +189,20 @@ func MatchVoucher(input, symbols, balances, decimals, addresses string) (symbol,
 	return
 }
 
-// StoreTemporaryVoucher saves voucher metadata as temporary entries in the DataStore.
-func StoreTemporaryVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
+// StoreTransactionVoucher saves voucher metadata in the DataStore.
+func StoreTransactionVoucher(ctx context.Context, store DataStore, sessionId string, data *dataserviceapi.TokenHoldings) error {
 	tempData := fmt.Sprintf("%s,%s,%s,%s", data.TokenSymbol, data.Balance, data.TokenDecimals, data.TokenAddress)
 
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(tempData)); err != nil {
+	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER, []byte(tempData)); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// GetTemporaryVoucherData retrieves temporary voucher metadata from the DataStore.
-func GetTemporaryVoucherData(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
-	temp_data, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+// GetTransactionVoucherData retrieves the transaction voucher metadata from the DataStore.
+func GetTransactionVoucherData(ctx context.Context, store DataStore, sessionId string) (*dataserviceapi.TokenHoldings, error) {
+	temp_data, err := store.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER)
 	if err != nil {
 		return nil, err
 	}
@@ -224,4 +265,47 @@ func FormatVoucherList(ctx context.Context, symbolsData, balancesData string) []
 		}
 	}
 	return combined
+}
+
+// AddDecimalStrings adds two decimal numbers represented as strings
+// and returns the result as a string without losing precision.
+func AddDecimalStrings(a, b string) string {
+	x, ok := new(big.Rat).SetString(a)
+	if !ok {
+		x = new(big.Rat)
+	}
+
+	y, ok := new(big.Rat).SetString(b)
+	if !ok {
+		y = new(big.Rat)
+	}
+
+	x.Add(x, y)
+
+	// Convert back to string without scientific notation
+	return x.FloatString(maxDecimalPlaces(x, y))
+}
+
+// maxDecimalPlaces ensures we preserve enough decimal precision
+func maxDecimalPlaces(rats ...*big.Rat) int {
+	max := 0
+	for _, r := range rats {
+		if r == nil {
+			continue
+		}
+		if d := decimalPlaces(r); d > max {
+			max = d
+		}
+	}
+	return max
+}
+
+func decimalPlaces(r *big.Rat) int {
+	s := r.FloatString(18)
+	for i := len(s) - 1; i >= 0; i-- {
+		if s[i] == '.' {
+			return len(s) - i - 1
+		}
+	}
+	return 0
 }

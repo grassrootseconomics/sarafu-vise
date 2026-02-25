@@ -28,20 +28,36 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 	flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 	flag_low_swap_amount, _ := h.flagManager.GetFlag("flag_low_swap_amount")
 	flag_incorrect_pool, _ := h.flagManager.GetFlag("flag_incorrect_pool")
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
 
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
 
 	inputStr := string(input)
-	if inputStr == "0" || inputStr == "9" {
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
 		return res, nil
 	}
 
 	userStore := h.userdataStore
+	metadata, err := store.GetOrderedVoucherData(ctx, userStore, sessionId, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
+	}
+	if metadata == nil {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
+	// Store the active transaction voucher data (from token)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
+		return res, err
+	}
 
 	// Fetch session data
-	_, activeBal, _, activeAddress, publicKey, activeDecimal, err := h.getSessionData(ctx, sessionId)
+	_, _, _, _, publicKey, _, err := h.getSessionData(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -77,14 +93,18 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	// fetch data for verification
+	// fetch data for verification (to_voucher data)
 	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 	if err != nil {
 		return res, err
 	}
 
-	// If RAT is the same as SAT, return early with KSH format
-	if string(activeAddress) == string(recipientActiveAddress) {
+	// Fetch min withdrawal amount from config/env
+	minksh := fmt.Sprintf("%f", config.MinMpesaWithdrawAmount())
+	minKshFormatted, _ := store.TruncateDecimalString(minksh, 0)
+
+	// If SAT is the same as RAT, return early with KSH format
+	if string(metadata.TokenAddress) == string(recipientActiveAddress) {
 		txType = "normal"
 		// Save the transaction type
 		if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
@@ -92,45 +112,52 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 			return res, err
 		}
 
-		activeFloat, _ := strconv.ParseFloat(string(activeBal), 64)
+		activeFloat, _ := strconv.ParseFloat(string(metadata.Balance), 64)
 		ksh := fmt.Sprintf("%f", activeFloat*rates.Buy)
 
-		kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
+		maxKshFormatted, _ := store.TruncateDecimalString(ksh, 0)
 
 		res.Content = l.Get(
-			"Enter the amount of Mpesa to get: (Max %s Ksh)\n",
-			kshFormatted,
+			"Enter the amount of Mpesa to withdraw: (Min: Ksh %s, Max %s Ksh)\n",
+			minKshFormatted,
+			maxKshFormatted,
 		)
+
+		res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
 
 		return res, nil
 	}
 
 	// Resolve active pool address
-	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
-	// Check if sender token is swappable
-	canSwap, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(activeAddress))
+	// Check if selected token is swappable
+	canSwap, err := h.accountService.CheckTokenInPool(ctx, string(activePoolAddress), string(metadata.TokenAddress))
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		logg.ErrorCtxf(ctx, "failed on CheckTokenInPool", "error", err)
 		return res, nil
 	}
 
-	if !canSwap.CanSwapFrom { // pool issue (TODO on vis)
+	if !canSwap.CanSwapFrom { // pool issue (CATCH on .vis)
 		res.FlagSet = append(res.FlagSet, flag_incorrect_pool)
+		res.Content = "0"
 		return res, nil
 	}
 
 	// retrieve the max credit send amounts
-	_, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, activeAddress, recipientActiveAddress, publicKey, activeDecimal, recipientActiveDecimal)
+	_, maxRAT, err := h.calculateSendCreditLimits(ctx, activePoolAddress, []byte(metadata.TokenAddress), recipientActiveAddress, publicKey, []byte(metadata.TokenDecimals), recipientActiveDecimal)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
+		res.Content = "0"
 		logg.ErrorCtxf(ctx, "failed on calculateSendCreditLimits", "error", err)
 		return res, nil
 	}
+
+	res.FlagReset = append(res.FlagReset, flag_api_call_error)
 
 	// Fallback if below minimum
 	maxFloat, _ := strconv.ParseFloat(maxRAT, 64)
@@ -140,6 +167,8 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		res.FlagSet = append(res.FlagSet, flag_low_swap_amount)
 		return res, nil
 	}
+
+	res.FlagReset = append(res.FlagReset, flag_low_swap_amount)
 
 	// Save max RAT amount to be used in validating the user's input
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, []byte(maxRAT))
@@ -154,27 +183,30 @@ func (h *MenuHandlers) GetMpesaMaxLimit(ctx context.Context, sym string, input [
 		return res, err
 	}
 
-	// save swap related data for the swap preview
-	metadata := &dataserviceapi.TokenHoldings{
+	// save swap related data for the swap preview (the swap to)
+	swapMetadata := &dataserviceapi.TokenHoldings{
 		TokenAddress:  string(recipientActiveAddress),
 		TokenSymbol:   string(recipientActiveSym),
 		TokenDecimals: string(recipientActiveDecimal),
 	}
 
 	// Store the active swap_to data
-	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, metadata); err != nil {
+	if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, swapMetadata); err != nil {
 		logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 		return res, err
 	}
 
 	maxKsh := maxFloat * rates.Buy
 	kshStr := fmt.Sprintf("%f", maxKsh)
-	kshFormatted, _ := store.TruncateDecimalString(kshStr, 0)
+	maxKshFormatted, _ := store.TruncateDecimalString(kshStr, 0)
 
 	res.Content = l.Get(
-		"Enter the amount of Mpesa to get: (Max %s Ksh)\n",
-		kshFormatted,
+		"Enter the amount of Mpesa to withdraw: (Min: Ksh %s, Max %s Ksh)\n",
+		minKshFormatted,
+		maxKshFormatted,
 	)
+
+	res.FlagReset = append(res.FlagReset, flag_low_swap_amount, flag_api_call_error, flag_incorrect_voucher, flag_incorrect_pool)
 
 	return res, nil
 }
@@ -189,7 +221,7 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 
 	// INPUT IN RAT Ksh
 	inputStr := string(input)
-	if inputStr == "9" {
+	if inputStr == "0" || inputStr == "9" {
 		return res, nil
 	}
 
@@ -219,17 +251,20 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		return res, nil
 	}
 
+	min := config.MinMpesaWithdrawAmount()
+
+	if kshAmount < min {
+		// if the input is below the minimum
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
+
 	// divide by the buy rate
 	inputAmount := kshAmount / rates.Buy
 
-	// store the user's raw input amount in the temporary value
-	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporary inputStr entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
-		return res, err
-	}
-
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -239,19 +274,21 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		return res, err
 	}
 
-	if string(transactionType) == "normal" {
-		activeBal, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
-		if err != nil {
-			logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
-			return res, err
-		}
-		balanceValue, err := strconv.ParseFloat(string(activeBal), 64)
-		if err != nil {
-			logg.ErrorCtxf(ctx, "Failed to convert the activeBal to a float", "error", err)
-			return res, err
-		}
+	// get the selected voucher
+	mpesaWithdrawalVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+		return res, err
+	}
 
-		if inputAmount > balanceValue {
+	if string(transactionType) == "normal" {
+		// get the max based on the selected voucher balance
+		maxValue, err := strconv.ParseFloat(mpesaWithdrawalVoucher.Balance, 64)
+		if err != nil {
+			logg.ErrorCtxf(ctx, "Failed to convert the stored balance string to a float", "error", err)
+			return res, err
+		}
+		if inputAmount > maxValue {
 			res.FlagSet = append(res.FlagSet, flag_invalid_amount)
 			res.Content = inputStr
 			return res, nil
@@ -270,14 +307,26 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 
 		res.Content = l.Get(
 			"You are sending %s %s in order to receive ~ %s ksh",
-			qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
+			qouteInputAmount, mpesaWithdrawalVoucher.TokenSymbol, inputStr,
 		)
 
 		return res, nil
 	}
 
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	swapMaxAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapMaxAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "error", err)
+		return res, err
+	}
+
 	// use the stored max RAT
-	maxRATValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	maxRATValue, err := strconv.ParseFloat(string(swapMaxAmount), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
 		return res, err
@@ -289,15 +338,21 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 		return res, nil
 	}
 
-	formattedAmount := fmt.Sprintf("%f", inputAmount)
+	// Format the amount to 2 decimal places
+	formattedAmount, err := store.TruncateDecimalString(fmt.Sprintf("%f", inputAmount), 2)
+	if err != nil {
+		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
+		res.Content = inputStr
+		return res, nil
+	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapToDecimal)
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapToVoucher.TokenDecimals)
 	if err != nil {
 		return res, err
 	}
 
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, finalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), mpesaWithdrawalVoucher.TokenAddress, swapToVoucher.TokenAddress, finalAmountStr)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
@@ -323,13 +378,13 @@ func (h *MenuHandlers) GetMpesaPreview(ctx context.Context, sym string, input []
 	}
 
 	// covert for display
-	quoteInputStr := store.ScaleDownBalance(sendInputAmount, swapData.ActiveSwapFromDecimal)
+	quoteInputStr := store.ScaleDownBalance(sendInputAmount, mpesaWithdrawalVoucher.TokenDecimals)
 	// Format the quoteInputStr amount to 2 decimal places
 	qouteInputAmount, _ := store.TruncateDecimalString(quoteInputStr, 2)
 
 	res.Content = l.Get(
 		"You are sending %s %s in order to receive ~ %s ksh",
-		qouteInputAmount, swapData.ActiveSwapFromSym, inputStr,
+		qouteInputAmount, mpesaWithdrawalVoucher.TokenSymbol, inputStr,
 	)
 
 	return res, nil
@@ -355,13 +410,15 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 	mpesaAddress := config.DefaultMpesaAddress()
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	transactionType, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE)
 	if err != nil {
 		return res, err
 	}
 
-	transactionType, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE)
+	// get the selected voucher
+	mpesaWithdrawalVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 
@@ -372,12 +429,12 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 			return res, err
 		}
 
-		finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
+		finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, mpesaWithdrawalVoucher.TokenDecimals)
 		if err != nil {
 			return res, err
 		}
 
-		tokenTransfer, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, mpesaAddress, data.ActiveAddress)
+		tokenTransfer, err := h.accountService.TokenTransfer(ctx, finalAmountStr, data.PublicKey, mpesaAddress, mpesaWithdrawalVoucher.TokenAddress)
 		if err != nil {
 			res.FlagSet = append(res.FlagSet, flag_api_call_error)
 			res.Content = l.Get("Your request failed. Please try again later.")
@@ -387,11 +444,28 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 		logg.InfoCtxf(ctx, "TokenTransfer normal", "trackingId", tokenTransfer.TrackingId)
 
-		res.Content = l.Get("Your request has been sent. You will receive ~ %s ksh", data.TemporaryValue)
+		res.Content = l.Get("Your request has been sent. Please await confirmation")
 
 		res.FlagReset = append(res.FlagReset, flag_account_authorized)
 		return res, nil
+	}
 
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
+	if err != nil {
+		return res, err
 	}
 
 	swapAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_AMOUNT)
@@ -403,7 +477,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 	swapAmountStr := string(swapAmount)
 
 	// Call the poolSwap API
-	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, string(publicKey), mpesaWithdrawalVoucher.TokenAddress, string(activePoolAddress), swapToVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -417,18 +491,13 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 	// TODO: remove this temporary time delay and replace with a swap and send endpoint
 	time.Sleep(1 * time.Second)
 
-	finalKshStr, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
-	if err != nil {
-		return res, err
-	}
-
 	amount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_AMOUNT)
 	if err != nil {
 		return res, err
 	}
 
 	// Initiate a send to mpesa after the swap
-	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, mpesaAddress, swapData.ActiveSwapToAddress)
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), string(publicKey), mpesaAddress, swapToVoucher.TokenAddress)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
 		res.Content = l.Get("Your request failed. Please try again later.")
@@ -438,7 +507,7 @@ func (h *MenuHandlers) InitiateGetMpesa(ctx context.Context, sym string, input [
 
 	logg.InfoCtxf(ctx, "final TokenTransfer after swap", "trackingId", tokenTransfer.TrackingId)
 
-	res.Content = l.Get("Your request has been sent. You will receive ~ %s ksh", finalKshStr)
+	res.Content = l.Get("Your request has been sent. Please await confirmation")
 	res.FlagReset = append(res.FlagReset, flag_account_authorized)
 	return res, nil
 }
@@ -466,7 +535,7 @@ func (h *MenuHandlers) SendMpesaMinLimit(ctx context.Context, sym string, input 
 	kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
 
 	res.Content = l.Get(
-		"Enter the amount of Mpesa to send: (Minimum %s Ksh)\n",
+		"Enter the amount of credit to deposit: (Minimum %s Ksh)\n",
 		kshFormatted,
 	)
 
@@ -535,9 +604,11 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 	estimateStr := fmt.Sprintf("%f", estimateValue)
 	estimateFormatted, _ := store.TruncateDecimalString(estimateStr, 2)
 
+	defaultAsset := config.DefaultMpesaAsset()
+
 	res.Content = l.Get(
-		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s cUSD",
-		inputStr, estimateFormatted,
+		"You will get a prompt for your Mpesa PIN shortly to send %s ksh and receive ~ %s %s",
+		inputStr, estimateFormatted, defaultAsset,
 	)
 
 	return res, nil

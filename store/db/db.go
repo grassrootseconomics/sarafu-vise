@@ -65,7 +65,7 @@ const (
 	DATA_ACCOUNT_ALIAS
 	//currently suggested alias by the api awaiting user's confirmation as accepted account alias
 	DATA_SUGGESTED_ALIAS
-	//Key used to store a value of 1 for a user to reset their own PIN once they access the menu. 
+	//Key used to store a value of 1 for a user to reset their own PIN once they access the menu.
 	DATA_SELF_PIN_RESET
 	// Holds the active pool contract address for the swap
 	DATA_ACTIVE_POOL_ADDRESS
@@ -93,6 +93,14 @@ const (
 	DATA_SEND_TRANSACTION_TYPE
 	// Holds the recipient formatted phone number
 	DATA_RECIPIENT_PHONE_NUMBER
+	// Currently active swap from balance for the swap
+	DATA_ACTIVE_SWAP_FROM_BALANCE
+	// Holds the state whether the transaction uses a custom voucher
+	DATA_TRANSACTION_CUSTOM_VOUCHER_STATE
+	// Holds the initial recipient input given by the user
+	DATA_RECIPIENT_INPUT
+	// Holds the transaction voucher
+	DATA_TRANSACTION_CUSTOM_VOUCHER
 )
 
 const (
@@ -104,7 +112,14 @@ const (
 	DATA_VOUCHER_DECIMALS
 	// List of voucher EVM addresses for vouchers valid in the user context.
 	DATA_VOUCHER_ADDRESSES
-	// List of senders for valid transactions in the user context.
+	// List of ordered voucher symbols in the user context.
+	DATA_ORDERED_VOUCHER_SYMBOLS
+	// List of ordered voucher balances in the user context.
+	DATA_ORDERED_VOUCHER_BALANCES
+	// List of ordered voucher decimals in the user context.
+	DATA_ORDERED_VOUCHER_DECIMALS
+	// List of ordered voucher EVM addresses in the user context.
+	DATA_ORDERED_VOUCHER_ADDRESSES
 )
 
 const (

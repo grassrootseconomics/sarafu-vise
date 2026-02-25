@@ -1,0 +1,15 @@
+LOAD get_ordered_vouchers 0
+MAP get_ordered_vouchers
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
+LOAD validate_credit_voucher 67
+RELOAD validate_credit_voucher
+CATCH . flag_incorrect_voucher 1
+INCMP credit_amount *

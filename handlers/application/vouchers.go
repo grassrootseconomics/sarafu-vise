@@ -3,10 +3,12 @@ package application
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"git.defalsify.org/vise.git/db"
 	"git.defalsify.org/vise.git/resource"
+	"git.grassecon.net/grassrootseconomics/sarafu-vise/config"
 	"git.grassecon.net/grassrootseconomics/sarafu-vise/store"
 	storedb "git.grassecon.net/grassrootseconomics/sarafu-vise/store/db"
 	dataserviceapi "github.com/grassrootseconomics/ussd-data-service/pkg/api"
@@ -15,8 +17,9 @@ import (
 
 // ManageVouchers retrieves the token holdings from the API using the "PublicKey" and
 // 1. sets the first as the default voucher if no active voucher is set.
-// 2. Stores list of vouchers
-// 3. updates the balance of the active voucher
+// 2. Stores list of filtered ordered vouchers (exclude the active voucher)
+// 3. Stores list of  ordered vouchers (all vouchers)
+// 4. updates the balance of the active voucher
 func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	userStore := h.userdataStore
@@ -29,6 +32,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 	flag_no_active_voucher, _ := h.flagManager.GetFlag("flag_no_active_voucher")
 	flag_api_error, _ := h.flagManager.GetFlag("flag_api_call_error")
+	flag_multiple_voucher, _ := h.flagManager.GetFlag("flag_multiple_voucher")
 
 	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
 	if err != nil {
@@ -67,6 +71,13 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 
 		res.FlagSet = append(res.FlagSet, flag_no_active_voucher)
 		return res, nil
+	}
+
+	// only set the flag if the user has a single voucher
+	if len(vouchersResp) == 1 {
+		res.FlagReset = append(res.FlagReset, flag_multiple_voucher)
+	} else {
+		res.FlagSet = append(res.FlagSet, flag_multiple_voucher)
 	}
 
 	res.FlagReset = append(res.FlagReset, flag_no_active_voucher)
@@ -144,7 +155,36 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Filter out the active voucher from vouchersResp
+	// Build stable voucher priority (lower index = higher priority)
+	stablePriority := make(map[string]int)
+	stableAddresses := config.StableVoucherAddresses()
+	for i, addr := range stableAddresses {
+		stablePriority[addr] = i
+	}
+
+	// Helper: order vouchers (stable first, priority-based)
+	orderVouchers := func(vouchers []dataserviceapi.TokenHoldings) []dataserviceapi.TokenHoldings {
+		stable := make([]dataserviceapi.TokenHoldings, 0)
+		nonStable := make([]dataserviceapi.TokenHoldings, 0)
+
+		for _, v := range vouchers {
+			if isStableVoucher(v.TokenAddress) {
+				stable = append(stable, v)
+			} else {
+				nonStable = append(nonStable, v)
+			}
+		}
+
+		sort.SliceStable(stable, func(i, j int) bool {
+			ai := stablePriority[stable[i].TokenAddress]
+			aj := stablePriority[stable[j].TokenAddress]
+			return ai < aj
+		})
+
+		return append(stable, nonStable...)
+	}
+
+	// Remove active voucher
 	filteredVouchers := make([]dataserviceapi.TokenHoldings, 0, len(vouchersResp))
 	for _, v := range vouchersResp {
 		if v.TokenSymbol != activeSymStr {
@@ -152,8 +192,11 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 		}
 	}
 
-	// Store all voucher data (excluding the current active voucher)
-	data := store.ProcessVouchers(filteredVouchers)
+	// Order remaining vouchers
+	orderedFilteredVouchers := orderVouchers(filteredVouchers)
+
+	// Process & store
+	data := store.ProcessVouchers(orderedFilteredVouchers)
 
 	dataMap := map[storedb.DataTyp]string{
 		storedb.DATA_VOUCHER_SYMBOLS:   data.Symbols,
@@ -166,6 +209,26 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 	for key, value := range dataMap {
 		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
+		}
+	}
+
+	// Order all vouchers
+	orderedVouchers := orderVouchers(vouchersResp)
+
+	// Process ALL vouchers (stable first)
+	orderedVoucherData := store.ProcessVouchers(orderedVouchers)
+
+	orderedVoucherDataMap := map[storedb.DataTyp]string{
+		storedb.DATA_ORDERED_VOUCHER_SYMBOLS:   orderedVoucherData.Symbols,
+		storedb.DATA_ORDERED_VOUCHER_BALANCES:  orderedVoucherData.Balances,
+		storedb.DATA_ORDERED_VOUCHER_DECIMALS:  orderedVoucherData.Decimals,
+		storedb.DATA_ORDERED_VOUCHER_ADDRESSES: orderedVoucherData.Addresses,
+	}
+
+	// Write data entries
+	for key, value := range orderedVoucherDataMap {
+		if err := userStore.WriteEntry(ctx, sessionId, key, []byte(value)); err != nil {
+			logg.ErrorCtxf(ctx, "Failed to write data entry for sessionId: %s", sessionId, "key", key, "error", err)
 			continue
 		}
 	}
@@ -174,6 +237,7 @@ func (h *MenuHandlers) ManageVouchers(ctx context.Context, sym string, input []b
 }
 
 // GetVoucherList fetches the list of vouchers from the store and formats them.
+// does not include the active voucher and is used in select_voucher and pay_debt
 func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -181,7 +245,17 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
 	userStore := h.userdataStore
+
+	// Fetch session data
+	_, _, activeSym, _, _, _, err := h.getSessionData(ctx, sessionId)
+	if err != nil {
+		return res, nil
+	}
 
 	// Read vouchers from the store
 	voucherData, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_SYMBOLS)
@@ -189,6 +263,16 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 	if err != nil {
 		logg.ErrorCtxf(ctx, "failed to read voucherData entires with", "key", storedb.DATA_VOUCHER_SYMBOLS, "error", err)
 		return res, err
+	}
+
+	if len(voucherData) == 0 {
+		if sym == "get_paydebt_voucher_list" {
+			res.Content = l.Get("You need another voucher to proceed. Only found %s.", string(activeSym))
+		} else {
+			res.Content = l.Get("Your active voucher %s is already set", string(activeSym))
+		}
+
+		return res, nil
 	}
 
 	voucherBalances, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_VOUCHER_BALANCES)
@@ -203,7 +287,7 @@ func (h *MenuHandlers) GetVoucherList(ctx context.Context, sym string, input []b
 
 	logg.InfoCtxf(ctx, "final output for GetVoucherList", "sessionId", sessionId, "finalOutput", finalOutput)
 
-	res.Content = finalOutput
+	res.Content = l.Get("Select number or symbol from your vouchers:\n%s", finalOutput)
 
 	return res, nil
 }
@@ -239,8 +323,8 @@ func (h *MenuHandlers) ViewVoucher(ctx context.Context, sym string, input []byte
 		return res, nil
 	}
 
-	if err := store.StoreTemporaryVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
-		logg.ErrorCtxf(ctx, "failed on StoreTemporaryVoucher", "error", err)
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
 		return res, err
 	}
 
@@ -268,9 +352,9 @@ func (h *MenuHandlers) SetVoucher(ctx context.Context, sym string, input []byte)
 	}
 
 	// Get temporary data
-	tempData, err := store.GetTemporaryVoucherData(ctx, h.userdataStore, sessionId)
+	tempData, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on GetTemporaryVoucherData", "error", err)
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
 		return res, err
 	}
 
@@ -315,6 +399,53 @@ func (h *MenuHandlers) GetVoucherDetails(ctx context.Context, sym string, input 
 	res.Content = fmt.Sprintf(
 		"Name: %s\nSymbol: %s\nProduct: %s\nLocation: %s", voucherData.TokenName, symbol, voucherData.TokenCommodity, voucherData.TokenLocation,
 	)
+
+	return res, nil
+}
+
+// ValidateCreditVoucher sets the selected voucher as the active transaction voucher
+func (h *MenuHandlers) ValidateCreditVoucher(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	flag_incorrect_voucher, _ := h.flagManager.GetFlag("flag_incorrect_voucher")
+
+	res.FlagReset = append(res.FlagReset, flag_incorrect_voucher)
+
+	inputStr := string(input)
+	if inputStr == "0" || inputStr == "99" || inputStr == "88" || inputStr == "98" {
+		return res, nil
+	}
+
+	userStore := h.userdataStore
+	metadata, err := store.GetOrderedVoucherData(ctx, userStore, sessionId, inputStr)
+	if err != nil {
+		return res, fmt.Errorf("failed to retrieve swap to voucher data: %v", err)
+	}
+	if metadata == nil {
+		res.FlagSet = append(res.FlagSet, flag_incorrect_voucher)
+		return res, nil
+	}
+
+	// Store the transaction voucher data
+	if err := store.StoreTransactionVoucher(ctx, h.userdataStore, sessionId, metadata); err != nil {
+		logg.ErrorCtxf(ctx, "failed on StoreTransactionVoucher", "error", err)
+		return res, err
+	}
+
+	// Store the state of the custom transaction voucher
+	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE, []byte("1"))
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to write custom transaction voucher", "key", storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE, "error", err)
+		return res, err
+	}
 
 	return res, nil
 }

@@ -1,0 +1,16 @@
+CATCH no_voucher flag_no_active_voucher 1
+LOAD get_ordered_vouchers 0
+MAP get_ordered_vouchers
+MOUT back 0
+MOUT quit 99
+MNEXT next 88
+MPREV prev 98
+HALT
+INCMP > 88
+INCMP < 98
+INCMP _ 0
+INCMP quit 99
+LOAD pool_deposit_max_amount 120
+RELOAD pool_deposit_max_amount
+CATCH . flag_incorrect_voucher 1
+INCMP pool_deposit_amount *

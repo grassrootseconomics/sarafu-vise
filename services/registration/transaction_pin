@@ -1,2 +1,2 @@
-{{.get_recipient}} will receive {{.get_amount}} from {{.get_sender}}
+{{.normal_transaction_preview}}
 Please enter your PIN to confirm:

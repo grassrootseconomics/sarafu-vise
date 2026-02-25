@@ -1,9 +1,5 @@
-RELOAD get_amount
-MAP get_amount
-RELOAD get_recipient
-MAP get_recipient
-RELOAD get_sender
-MAP get_sender
+LOAD normal_transaction_preview 0
+MAP normal_transaction_preview
 MOUT back 0
 MOUT quit 9
 LOAD authorize_account 6

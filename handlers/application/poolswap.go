@@ -175,6 +175,10 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 		return res, nil
 	}
 
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
 	userStore := h.userdataStore
 	metadata, err := store.GetSwapToVoucherData(ctx, userStore, sessionId, inputStr)
 	if err != nil {
@@ -235,9 +239,9 @@ func (h *MenuHandlers) SwapMaxLimit(ctx context.Context, sym string, input []byt
 		return res, err
 	}
 
-	res.Content = fmt.Sprintf(
-		"Maximum: %s\n\nEnter amount of %s to swap for %s:",
-		maxStr, swapData.ActiveSwapFromSym, swapData.ActiveSwapToSym,
+	res.Content = l.Get(
+		"Maximum: %s %s\n\nEnter amount of %s to swap for %s:",
+		maxStr, swapData.ActiveSwapFromSym, swapData.ActiveSwapFromSym, swapData.ActiveSwapToSym,
 	)
 
 	return res, nil
@@ -303,7 +307,7 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 	// store the user's input amount in the temporary value
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write swap amount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "value", finalAmountStr, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write inputStr amount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", inputStr, "error", err)
 		return res, err
 	}
 
@@ -323,8 +327,8 @@ func (h *MenuHandlers) SwapPreview(ctx context.Context, sym string, input []byte
 	// Format to 2 decimal places
 	qouteStr, _ := store.TruncateDecimalString(string(quoteAmountStr), 2)
 
-	res.Content = fmt.Sprintf(
-		"You will swap:\n%s %s for %s %s:",
+	res.Content = l.Get(
+		"You will swap %s %s for %s %s:",
 		inputStr, swapData.ActiveSwapFromSym, qouteStr, swapData.ActiveSwapToSym,
 	)
 

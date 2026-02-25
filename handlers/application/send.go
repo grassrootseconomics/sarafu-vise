@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 	"time"
@@ -49,10 +48,10 @@ func (h *MenuHandlers) ValidateRecipient(ctx context.Context, sym string, input 
 		return res, nil
 	}
 
-	// save the recipient as the temporaryRecipient
-	err = store.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(recipient))
+	// save the recipient under recipient input
+	err = store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT, []byte(recipient))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write temporaryRecipient entry with", "key", storedb.DATA_TEMPORARY_VALUE, "value", recipient, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write recipient input entry with", "key", storedb.DATA_RECIPIENT_INPUT, "value", recipient, "error", err)
 		return res, err
 	}
 
@@ -204,11 +203,11 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 	publicKey []byte,
 	recipientPhoneNumber []byte,
 ) error {
-	store := h.userdataStore
+	userStore := h.userdataStore
 	txType := "swap"
 
 	// Read sender's active address
-	senderActiveAddress, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
+	senderActiveAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_ADDRESS)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to read sender active address", "error", err)
 		return err
@@ -216,7 +215,7 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 
 	var recipientActiveAddress []byte
 	if recipientPhoneNumber != nil {
-		recipientActiveAddress, _ = store.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
+		recipientActiveAddress, _ = userStore.ReadEntry(ctx, string(recipientPhoneNumber), storedb.DATA_ACTIVE_ADDRESS)
 	}
 
 	// recipient has no active token → normal transaction
@@ -228,15 +227,32 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 	}
 
 	// Save the transaction type
-	if err := store.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
+	if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_SEND_TRANSACTION_TYPE, []byte(txType)); err != nil {
 		logg.ErrorCtxf(ctx, "Failed to write transaction type", "type", txType, "error", err)
 		return err
 	}
 
 	// Save the recipient's phone number only if it exists
 	if recipientPhoneNumber != nil {
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
+		if err := userStore.WriteEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER, recipientPhoneNumber); err != nil {
 			logg.ErrorCtxf(ctx, "Failed to write recipient phone number", "type", txType, "error", err)
+			return err
+		}
+
+		// fetch data for use (to_voucher data)
+		recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
+		if err != nil {
+			return err
+		}
+		swapMetadata := &dataserviceapi.TokenHoldings{
+			TokenAddress:  string(recipientActiveAddress),
+			TokenSymbol:   string(recipientActiveSym),
+			TokenDecimals: string(recipientActiveDecimal),
+		}
+
+		// Store the active swap_to data
+		if err := store.UpdateSwapToVoucherData(ctx, userStore, sessionId, swapMetadata); err != nil {
+			logg.ErrorCtxf(ctx, "failed on UpdateSwapToVoucherData", "error", err)
 			return err
 		}
 	} else {
@@ -310,6 +326,7 @@ func (h *MenuHandlers) ResetTransactionAmount(ctx context.Context, sym string, i
 }
 
 // MaxAmount checks the transaction type to determine the displayed max amount.
+// Checks whether the user selected a custom voucher
 // If the transaction type is "swap", it checks the max swappable amount and sets this as the content.
 // If the transaction type is "normal", gets the current sender's balance from the store and sets it as
 // the result content.
@@ -335,8 +352,40 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+				return res, err
+			}
+
+			activeSym = []byte(customTransactionVoucher.TokenSymbol)
+			activeBal = []byte(customTransactionVoucher.Balance)
+			activeDecimal = []byte(customTransactionVoucher.TokenDecimals)
+			activeAddress = []byte(customTransactionVoucher.TokenAddress)
+		}
+	}
+
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
+
+	// confirm the transaction type
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	if string(swapToVoucher.TokenAddress) == string(activeAddress) {
+		// recipient has active token same as selected token → normal transaction
+		transactionType = []byte("normal")
+	} else {
+		transactionType = []byte("swap")
+	}
 
 	// If normal transaction return balance
 	if string(transactionType) == "normal" {
@@ -346,7 +395,7 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	}
 
 	// Resolve active pool address
-	activePoolAddress, err := h.resolveActivePoolAddress(ctx, sessionId)
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
@@ -365,12 +414,15 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, nil
 	}
 
-	// Get the recipient's phone number to read other data items
+	// Get the recipient's phone number to read other data items (*)
 	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
-	if err != nil {
-		// invalid state
-		return res, err
+	if err != nil || !phone.IsValidPhoneNumber(string(recipientPhoneNumber)) {
+		// revert to normal transaction
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+		return res, nil
 	}
+
 	recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 	if err != nil {
 		return res, err
@@ -480,22 +532,53 @@ func (h *MenuHandlers) getRecipientData(ctx context.Context, sessionId string) (
 	return
 }
 
-func (h *MenuHandlers) resolveActivePoolAddress(ctx context.Context, sessionId string) ([]byte, error) {
+func (h *MenuHandlers) resolveActivePoolDetails(ctx context.Context, sessionId string) (defaultPoolAddress, defaultPoolSymbol []byte, err error) {
 	store := h.userdataStore
-	addr, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
-	if err == nil {
-		return addr, nil
+
+	// Try read address
+	defaultPoolAddress, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS)
+	if err != nil && !db.IsNotFound(err) {
+		logg.ErrorCtxf(ctx, "failed to read active pool address", "error", err)
+		return nil, nil, err
 	}
-	if db.IsNotFound(err) {
-		defaultAddr := []byte(config.DefaultPoolAddress())
-		if err := store.WriteEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_ADDRESS, defaultAddr); err != nil {
-			logg.ErrorCtxf(ctx, "failed to write default pool address", "error", err)
-			return nil, err
-		}
-		return defaultAddr, nil
+
+	// Try read symbol
+	defaultPoolSymbol, err = store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_POOL_SYM)
+	if err != nil && !db.IsNotFound(err) {
+		logg.ErrorCtxf(ctx, "failed to read active pool name", "error", err)
+		return nil, nil, err
 	}
-	logg.ErrorCtxf(ctx, "failed to read active pool address", "error", err)
-	return nil, err
+
+	// If both exist, return them
+	if defaultPoolAddress != nil && defaultPoolSymbol != nil {
+		return defaultPoolAddress, defaultPoolSymbol, nil
+	}
+
+	// Fallback to config defaults
+	defaultPoolAddress = []byte(config.DefaultPoolAddress())
+	defaultPoolSymbol = []byte(config.DefaultPoolSymbol())
+
+	if err := store.WriteEntry(
+		ctx,
+		sessionId,
+		storedb.DATA_ACTIVE_POOL_ADDRESS,
+		defaultPoolAddress,
+	); err != nil {
+		logg.ErrorCtxf(ctx, "failed to write default pool address", "error", err)
+		return nil, nil, err
+	}
+
+	if err := store.WriteEntry(
+		ctx,
+		sessionId,
+		storedb.DATA_ACTIVE_POOL_SYM,
+		defaultPoolSymbol,
+	); err != nil {
+		logg.ErrorCtxf(ctx, "failed to write default pool symbol", "error", err)
+		return nil, nil, err
+	}
+
+	return defaultPoolAddress, defaultPoolSymbol, nil
 }
 
 func (h *MenuHandlers) calculateSendCreditLimits(ctx context.Context, poolAddress, fromAddress, toAddress, publicKey, fromDecimal, toDecimal []byte) (string, string, error) {
@@ -530,9 +613,14 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		return res, fmt.Errorf("missing session")
 	}
 	flag_invalid_amount, _ := h.flagManager.GetFlag("flag_invalid_amount")
-	userStore := h.userdataStore
 
-	var balanceValue float64
+	inputStr := string(input)
+	if inputStr == "0" {
+		res.FlagReset = append(res.FlagReset, flag_invalid_amount)
+		return res, nil
+	}
+
+	userStore := h.userdataStore
 
 	// retrieve the active balance
 	activeBal, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
@@ -540,32 +628,40 @@ func (h *MenuHandlers) ValidateAmount(ctx context.Context, sym string, input []b
 		logg.ErrorCtxf(ctx, "failed to read activeBal entry with", "key", storedb.DATA_ACTIVE_BAL, "error", err)
 		return res, err
 	}
-	balanceValue, err = strconv.ParseFloat(string(activeBal), 64)
+
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+				return res, err
+			}
+
+			activeBal = []byte(customTransactionVoucher.Balance)
+		}
+	}
+
+	maxValue, err := strconv.ParseFloat(string(activeBal), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the activeBal to a float", "error", err)
 		return res, err
 	}
 
-	// Extract numeric part from the input amount
-	amountStr := strings.TrimSpace(string(input))
-	inputAmount, err := strconv.ParseFloat(amountStr, 64)
-	if err != nil {
+	inputAmount, err := strconv.ParseFloat(inputStr, 64)
+	if err != nil || inputAmount > maxValue || inputAmount < 0.1 {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
-		return res, nil
-	}
-
-	if inputAmount > balanceValue {
-		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
+		res.Content = inputStr
 		return res, nil
 	}
 
 	// Format the amount to 2 decimal places before saving (truncated)
-	formattedAmount, err := store.TruncateDecimalString(amountStr, 2)
+	formattedAmount, err := store.TruncateDecimalString(inputStr, 2)
 	if err != nil {
 		res.FlagSet = append(res.FlagSet, flag_invalid_amount)
-		res.Content = amountStr
+		res.Content = inputStr
 		return res, nil
 	}
 
@@ -637,8 +733,62 @@ func (h *MenuHandlers) GetAmount(ctx context.Context, sym string, input []byte) 
 	return res, nil
 }
 
-// InitiateTransaction calls the TokenTransfer and returns a confirmation based on the result.
-func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+// NormalTransactionPreview displays the token transfer preview awaiting authorization
+func (h *MenuHandlers) NormalTransactionPreview(ctx context.Context, sym string, input []byte) (resource.Result, error) {
+	var res resource.Result
+	sessionId, ok := ctx.Value("SessionId").(string)
+	if !ok {
+		return res, fmt.Errorf("missing session")
+	}
+
+	// Input in RAT
+	inputStr := string(input)
+	if inputStr == "0" {
+		return res, nil
+	}
+
+	code := codeFromCtx(ctx)
+	l := gotext.NewLocale(translationDir, code)
+	l.AddDomain("default")
+
+	userStore := h.userdataStore
+
+	data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+				return res, err
+			}
+
+			data.ActiveSym = customTransactionVoucher.TokenSymbol
+			data.ActiveDecimal = customTransactionVoucher.TokenDecimals
+			data.ActiveAddress = customTransactionVoucher.TokenAddress
+		}
+	}
+
+	res.Content = l.Get(
+		"%s will receive %s %s from %s",
+		data.RecipientInput,
+		data.Amount,
+		data.ActiveSym,
+		sessionId,
+	)
+
+	return res, nil
+}
+
+// InitiateNormalTransaction calls the TokenTransfer and returns a confirmation based on the result.
+// used for non-swap transactions
+func (h *MenuHandlers) InitiateNormalTransaction(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var res resource.Result
 	var err error
 	sessionId, ok := ctx.Value("SessionId").(string)
@@ -648,6 +798,8 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 
 	flag_account_authorized, _ := h.flagManager.GetFlag("flag_account_authorized")
 
+	userStore := h.userdataStore
+
 	code := codeFromCtx(ctx)
 	l := gotext.NewLocale(translationDir, code)
 	l.AddDomain("default")
@@ -655,6 +807,23 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 	data, err := store.ReadTransactionData(ctx, h.userdataStore, sessionId)
 	if err != nil {
 		return res, err
+	}
+
+	customVoucherSelection, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TRANSACTION_CUSTOM_VOUCHER_STATE)
+	if err == nil {
+		customVoucherValue, _ := strconv.ParseUint(string(customVoucherSelection), 0, 64)
+		if customVoucherValue == 1 {
+			// use the custom voucher
+			customTransactionVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+			if err != nil {
+				logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+				return res, err
+			}
+
+			data.ActiveSym = customTransactionVoucher.TokenSymbol
+			data.ActiveDecimal = customTransactionVoucher.TokenDecimals
+			data.ActiveAddress = customTransactionVoucher.TokenAddress
+		}
 	}
 
 	finalAmountStr, err := store.ParseAndScaleAmount(data.Amount, data.ActiveDecimal)
@@ -688,7 +857,7 @@ func (h *MenuHandlers) InitiateTransaction(ctx context.Context, sym string, inpu
 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",
-		data.TemporaryValue,
+		data.RecipientInput,
 		data.Amount,
 		data.ActiveSym,
 		sessionId,
@@ -720,19 +889,40 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	userStore := h.userdataStore
 
-	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	// the initial recipient that the sender input
+	recipientInput, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT)
 	if err != nil {
 		// invalid state
 		return res, err
 	}
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
 		return res, err
 	}
 
+	// get the selected voucher
+	selectedVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+		return res, err
+	}
+
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	swapMaxAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read swapMaxAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_MAX_AMOUNT, "error", err)
+		return res, err
+	}
+
 	// use the stored max RAT
-	maxRATValue, err := strconv.ParseFloat(swapData.ActiveSwapMaxAmount, 64)
+	maxRATValue, err := strconv.ParseFloat(string(swapMaxAmount), 64)
 	if err != nil {
 		logg.ErrorCtxf(ctx, "Failed to convert the swapMaxAmount to a float", "error", err)
 		return res, err
@@ -753,24 +943,13 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapData.ActiveSwapToDecimal)
+	finalAmountStr, err := store.ParseAndScaleAmount(formattedAmount, swapToVoucher.TokenDecimals)
 	if err != nil {
 		return res, err
 	}
 
-	// multiply by 1.015 (i.e. * 1015 / 1000)
-	amountInt, ok := new(big.Int).SetString(finalAmountStr, 10)
-	if !ok {
-		return res, fmt.Errorf("invalid amount: %s", finalAmountStr)
-	}
-
-	amountInt.Mul(amountInt, big.NewInt(1015))
-	amountInt.Div(amountInt, big.NewInt(1000))
-
-	scaledFinalAmountStr := amountInt.String()
-
 	// call the credit send API to get the reverse quote
-	r, err := h.accountService.GetCreditSendReverseQuote(ctx, swapData.ActivePoolAddress, swapData.ActiveSwapFromAddress, swapData.ActiveSwapToAddress, scaledFinalAmountStr)
+	r, err := h.accountService.GetCreditSendReverseQuote(ctx, string(activePoolAddress), selectedVoucher.TokenAddress, swapToVoucher.TokenAddress, finalAmountStr)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -779,21 +958,14 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 		return res, nil
 	}
 
-	sendInputAmount := r.InputAmount   // amount of SAT that should be swapped
-	sendOutputAmount := r.OutputAmount // amount of RAT that will be received
+	sendInputAmount := r.InputAmount // amount of SAT that should be swapped
 
 	// store the finalAmountStr as the final amount (that will be sent after the swap)
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_AMOUNT, []byte(finalAmountStr))
 	if err != nil {
-		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", sendOutputAmount, "error", err)
+		logg.ErrorCtxf(ctx, "failed to write output amount value entry with", "key", storedb.DATA_AMOUNT, "value", finalAmountStr, "error", err)
 		return res, err
 	}
-
-	// Scale down the quoted output amount
-	// quoteAmountStr := store.ScaleDownBalance(sendOutputAmount, swapData.ActiveSwapToDecimal)
-
-	// Format the qouteAmount amount to 2 decimal places
-	// qouteAmount, _ := store.TruncateDecimalString(quoteAmountStr, 2)
 
 	// store the qouteAmount in the temporary value
 	err = userStore.WriteEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE, []byte(inputStr))
@@ -811,7 +983,9 @@ func (h *MenuHandlers) TransactionSwapPreview(ctx context.Context, sym string, i
 
 	res.Content = l.Get(
 		"%s will receive %s %s",
-		string(recipientPhoneNumber), inputStr, swapData.ActiveSwapToSym,
+		string(recipientInput),
+		inputStr,
+		swapToVoucher.TokenSymbol,
 	)
 
 	return res, nil
@@ -835,8 +1009,34 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 
 	userStore := h.userdataStore
 
-	swapData, err := store.ReadSwapPreviewData(ctx, userStore, sessionId)
+	// Resolve active pool
+	activePoolAddress, _, err := h.resolveActivePoolDetails(ctx, sessionId)
 	if err != nil {
+		return res, err
+	}
+
+	// get the selected voucher
+	selectedVoucher, err := store.GetTransactionVoucherData(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on GetTransactionVoucherData", "error", err)
+		return res, err
+	}
+
+	publicKey, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_PUBLIC_KEY)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read publicKey entry", "key", storedb.DATA_PUBLIC_KEY, "error", err)
+		return res, err
+	}
+
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		return res, err
+	}
+
+	quotedAmount, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_TEMPORARY_VALUE)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed to read quotedAmount entry with", "key", storedb.DATA_TEMPORARY_VALUE, "error", err)
 		return res, err
 	}
 
@@ -849,7 +1049,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	swapAmountStr := string(swapAmount)
 
 	// Call the poolSwap API
-	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, swapData.PublicKey, swapData.ActiveSwapFromAddress, swapData.ActivePoolAddress, swapData.ActiveSwapToAddress)
+	poolSwap, err := h.accountService.PoolSwap(ctx, swapAmountStr, string(publicKey), selectedVoucher.TokenAddress, string(activePoolAddress), swapToVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -870,7 +1070,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 		logg.ErrorCtxf(ctx, "failed to read swapAmount entry with", "key", storedb.DATA_ACTIVE_SWAP_AMOUNT, "error", err)
 		return res, err
 	}
-	recipientPhoneNumber, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_PHONE_NUMBER)
+	recipientInput, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT_INPUT)
 	if err != nil {
 		// invalid state
 		return res, err
@@ -884,7 +1084,7 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 	}
 
 	// Call TokenTransfer with the expected swap amount
-	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), swapData.PublicKey, string(recipientPublicKey), swapData.ActiveSwapToAddress)
+	tokenTransfer, err := h.accountService.TokenTransfer(ctx, string(amount), string(publicKey), string(recipientPublicKey), swapToVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
@@ -898,9 +1098,9 @@ func (h *MenuHandlers) TransactionInitiateSwap(ctx context.Context, sym string, 
 
 	res.Content = l.Get(
 		"Your request has been sent. %s will receive %s %s from %s.",
-		string(recipientPhoneNumber),
-		swapData.TemporaryValue,
-		swapData.ActiveSwapToSym,
+		string(recipientInput),
+		string(quotedAmount),
+		swapToVoucher.TokenSymbol,
 		sessionId,
 	)
 
@@ -913,10 +1113,11 @@ func (h *MenuHandlers) ClearTransactionTypeFlag(ctx context.Context, sym string,
 	var res resource.Result
 
 	flag_swap_transaction, _ := h.flagManager.GetFlag("flag_swap_transaction")
+	flag_multiple_voucher, _ := h.flagManager.GetFlag("flag_multiple_voucher")
 
 	inputStr := string(input)
 	if inputStr == "0" {
-		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction, flag_multiple_voucher)
 		return res, nil
 	}
 

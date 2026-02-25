@@ -1,2 +1,0 @@
-{{.get_recipient}} atapokea {{.get_amount}} kutoka kwa {{.get_sender}}
-Tafadhali weka PIN yako kudhibitisha:

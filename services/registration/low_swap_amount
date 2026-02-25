@@ -1,1 +1,1 @@
-Available amount {{.swap_max_limit}} is too low, please try again:
+Available amount {{.swap_max_limit}} is too low, please choose a different voucher:
