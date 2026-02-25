@@ -160,7 +160,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 
 	scaledCredit := "0"
 
-	// 1️. Find first stable voucher in POOL (for swap target)
+	// 1. Find first stable voucher in POOL (for swap target)
 	var firstPoolStable *dataserviceapi.TokenHoldings
 	for i := range swappableVouchers {
 		if isStableVoucher(swappableVouchers[i].TokenAddress) {
@@ -169,7 +169,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		}
 	}
 
-	// 2️. If pool has a stable, get swap quote
+	// 2. If pool has a stable, get swap quote
 	if firstPoolStable != nil {
 		finalAmountStr, err := store.ParseAndScaleAmount(
 			string(activeBal),
@@ -194,7 +194,7 @@ func (h *MenuHandlers) CalculateCreditAndDebt(ctx context.Context, sym string, i
 		scaledCredit = store.AddDecimalStrings(scaledCredit, finalQuote)
 	}
 
-	// 3️. Add ALL wallet stable balances (from FetchVouchers)
+	// 3. Add ALL wallet stable balances (from FetchVouchers)
 	for _, v := range allVouchers {
 		if isStableVoucher(v.TokenAddress) {
 			scaled := store.ScaleDownBalance(v.Balance, v.TokenDecimals)
