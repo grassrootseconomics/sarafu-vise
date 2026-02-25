@@ -380,6 +380,19 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 
+	// Case for M-Pesa
+	// if the recipient is Mpesa (address), check if the sender's voucher is a stable coin
+	recipientAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "Failed to read recipient's address", "error", err)
+		return res, err
+	}
+	if string(recipientAddress) == config.DefaultMpesaAddress() && isStableVoucher(string(activeAddress)) {
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+		return res, nil
+	}
+
 	if string(swapToVoucher.TokenAddress) == string(activeAddress) {
 		// recipient has active token same as selected token → normal transaction
 		transactionType = []byte("normal")
