@@ -535,7 +535,7 @@ func (h *MenuHandlers) SendMpesaMinLimit(ctx context.Context, sym string, input 
 	kshFormatted, _ := store.TruncateDecimalString(ksh, 0)
 
 	res.Content = l.Get(
-		"Enter the amount of credit to receive: (Minimum %s Ksh)\n",
+		"Enter the amount of credit to deposit: (Minimum %s Ksh)\n",
 		kshFormatted,
 	)
 
@@ -607,7 +607,7 @@ func (h *MenuHandlers) SendMpesaPreview(ctx context.Context, sym string, input [
 	defaultAsset := config.DefaultMpesaAsset()
 
 	res.Content = l.Get(
-		"You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s %s",
+		"You will get a prompt for your Mpesa PIN shortly to send %s ksh and receive ~ %s %s",
 		inputStr, estimateFormatted, defaultAsset,
 	)
 

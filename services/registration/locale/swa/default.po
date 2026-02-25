@@ -59,7 +59,7 @@ msgid "Enter the amount of M-Pesa to get: (Max %s Ksh)\n"
 msgstr "Weka kiasi cha M-Pesa cha kupata: (Kikomo %s Ksh)\n"
 
 msgid "You are sending %s %s in order to receive ~ %s ksh"
-msgstr "Unatuma ~ %s %s ili upoke %s ksh"
+msgstr "Unatuma ~ %s %s ili upokee %s ksh"
 
 msgid "Your request has been sent. Please await confirmation"
 msgstr "Ombi lako limetumwa. Tafadhali subiri"
@@ -67,8 +67,8 @@ msgstr "Ombi lako limetumwa. Tafadhali subiri"
 msgid "Enter the amount of M-Pesa to send: (Minimum %s Ksh)\n"
 msgstr "Weka kiasi cha M-Pesa cha kutuma: (Kima cha chini %s Ksh)\n"
 
-msgid "You will get a prompt for your M-Pesa PIN shortly to send %s ksh and receive ~ %s cUSD"
-msgstr "Utapokea kidokezo cha PIN yako ya M-Pesa hivi karibuni kutuma %s ksh na kupokea ~ %s cUSD"
+msgid "You will get a prompt for your Mpesa PIN shortly to send %s ksh and receive ~ %s %s"
+msgstr "Utapokea kidokezo cha PIN yako ya Mpesa hivi karibuni kutuma %s ksh na kupokea ~ %s %s"
 
 msgid "Your request has been sent. Thank you for using Sarafu"
 msgstr "Ombi lako limetumwa. Asante kwa kutumia huduma ya Sarafu"
@@ -76,7 +76,7 @@ msgstr "Ombi lako limetumwa. Asante kwa kutumia huduma ya Sarafu"
 msgid "You can remove a max of %s %s from '%s' pool\nEnter amount of %s:(Max: %s)"
 msgstr "Unaweza kuondoa kiwango cha juu cha %s %s kutoka kwenye '%s'\n\nWeka kiwango cha %s:(Kikomo: %s)"
 
-msgid "Please confirm that you will use %s %s to remove your debt of %s %s\n"
+msgid "Please confirm that you will use %s %s to remove your debt of %s %s\nEnter your PIN:"
 msgstr "Tafadhali thibitisha kwamba utatumia %s %s kulipa deni lako la %s %s.\nWeka PIN yako:"
 
 msgid "Your active voucher %s is already set"
@@ -96,3 +96,18 @@ msgstr %s atapokea %s %s kutoka kwa %s"
 
 msgid "You need another voucher to proceed. Only found %s."
 msgstr "Unahitaji kua na sarafu nyingine. Tumepata tu %s."
+
+msgid "Maximum: %s %s\n\nEnter amount of %s to swap for %s:"
+msgstr "Kikimo: %s %s\n\nWeka kiasi cha %s kitakacho badilishwa kua %s:"
+
+msgid "You will swap %s %s for %s %s:"
+msgstr "Utabadilisha %s %s kua %s %s:"
+
+msgid "Your request has been sent. You will receive an SMS when your debt of %s %s has been removed from %s."
+msgstr "Ombi lako limetumwa. Utapokea ujumbe wakati deni lako la %s %s litatolewa kwa %s."
+
+msgid "Enter the amount of Mpesa to withdraw: (Min: Ksh %s, Max %s Ksh)\n"
+msgstr "Weka kiasi cha Mpesa utakacho toa: (Min: Ksh %s, Max %s Ksh)\n"
+
+msgid "Enter the amount of credit to deposit: (Minimum %s Ksh)\n"
+msgstr "Weka kiasi utakacho weka (Kima cha chini: %s Ksh)\n"

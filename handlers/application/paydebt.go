@@ -238,7 +238,7 @@ func (h *MenuHandlers) ConfirmDebtRemoval(ctx context.Context, sym string, input
 	}
 
 	res.Content = l.Get(
-		"Please confirm that you will use %s %s to remove your debt of %s %s\n",
+		"Please confirm that you will use %s %s to remove your debt of %s %s\nEnter your PIN:",
 		inputStr, payDebtVoucher.TokenSymbol, qouteStr, string(activeSym),
 	)
 
