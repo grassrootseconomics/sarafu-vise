@@ -206,8 +206,8 @@ func (h *MenuHandlers) InitiatePoolDeposit(ctx context.Context, sym string, inpu
 		return res, err
 	}
 
-	// Call pool deposit API
-	r, err := h.accountService.PoolDeposit(ctx, finalAmountStr, string(publicKey), string(activePoolAddress), poolDepositVoucher.TokenAddress)
+	// Call token transfer API and send the token to the pool address
+	r, err := h.accountService.TokenTransfer(ctx, finalAmountStr, string(publicKey), string(activePoolAddress), poolDepositVoucher.TokenAddress)
 	if err != nil {
 		flag_api_call_error, _ := h.flagManager.GetFlag("flag_api_call_error")
 		res.FlagSet = append(res.FlagSet, flag_api_call_error)
