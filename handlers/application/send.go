@@ -242,7 +242,9 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 		// fetch data for use (to_voucher data)
 		recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 		if err != nil {
-			return err
+			// missing key (case for new users)
+			logg.ErrorCtxf(ctx, "failed on getRecipientData", "error", err)
+			return nil
 		}
 		swapMetadata := &dataserviceapi.TokenHoldings{
 			TokenAddress:  string(recipientActiveAddress),
