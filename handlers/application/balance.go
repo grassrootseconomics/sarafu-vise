@@ -13,8 +13,7 @@ import (
 	"gopkg.in/leonelquinteros/gotext.v1"
 )
 
-// CheckBalance retrieves the balance of the active voucher and sets
-// the balance as the result content.
+// CheckBalance retrieves the balance of the active voucher, alias and pool symbol
 func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byte) (resource.Result, error) {
 	var (
 		res     resource.Result
@@ -38,7 +37,6 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 			return res, err
 		}
 	}
-
 	activeBal, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACTIVE_BAL)
 	if err != nil {
 		if !db.IsNotFound(err) {
@@ -47,6 +45,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		}
 	}
 
+	// get the account alias
 	accAlias, err := store.ReadEntry(ctx, sessionId, storedb.DATA_ACCOUNT_ALIAS)
 	if err != nil {
 		if !db.IsNotFound(err) {
@@ -55,7 +54,13 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 		}
 	}
 
-	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias))
+	// Resolve active pool
+	_, activePoolSymbol, err := h.resolveActivePoolDetails(ctx, sessionId)
+	if err != nil {
+		return res, err
+	}
+
+	content, err = loadUserContent(ctx, string(activeSym), string(activeBal), string(accAlias), string(activePoolSymbol))
 	if err != nil {
 		return res, err
 	}
@@ -65,7 +70,7 @@ func (h *MenuHandlers) CheckBalance(ctx context.Context, sym string, input []byt
 }
 
 // loadUserContent loads the main user content in the main menu: the alias, balance and active symbol associated with active voucher
-func loadUserContent(ctx context.Context, activeSym, balance, alias string) (string, error) {
+func loadUserContent(ctx context.Context, activeSym, balance, alias, activePoolSymbol string) (string, error) {
 	var content string
 
 	code := codeFromCtx(ctx)
@@ -82,9 +87,9 @@ func loadUserContent(ctx context.Context, activeSym, balance, alias string) (str
 	balStr := fmt.Sprintf("%s %s", formattedAmount, activeSym)
 
 	if alias != "" {
-		content = l.Get("%s\nBalance: %s\n", alias, balStr)
+		content = l.Get("%s\n%s\nPool: %s\n", alias, balStr, activePoolSymbol)
 	} else {
-		content = l.Get("Balance: %s\n", balStr)
+		content = l.Get("%s\nPool: %s\n", balStr, activePoolSymbol)
 	}
 	return content, nil
 }
