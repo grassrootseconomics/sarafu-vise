@@ -242,7 +242,9 @@ func (h *MenuHandlers) determineAndSaveTransactionType(
 		// fetch data for use (to_voucher data)
 		recipientActiveSym, recipientActiveAddress, recipientActiveDecimal, err := h.getRecipientData(ctx, string(recipientPhoneNumber))
 		if err != nil {
-			return err
+			// missing key (case for new users)
+			logg.ErrorCtxf(ctx, "failed on getRecipientData", "error", err)
+			return nil
 		}
 		swapMetadata := &dataserviceapi.TokenHoldings{
 			TokenAddress:  string(recipientActiveAddress),
@@ -373,13 +375,6 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 	// Format the active balance amount to 2 decimal places
 	formattedBalance, _ := store.TruncateDecimalString(string(activeBal), 2)
 
-	// confirm the transaction type
-	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
-	if err != nil {
-		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
-		return res, err
-	}
-
 	// Case for M-Pesa
 	// if the recipient is Mpesa (address), check if the sender's voucher is a stable coin
 	recipientAddress, err := userStore.ReadEntry(ctx, sessionId, storedb.DATA_RECIPIENT)
@@ -388,6 +383,16 @@ func (h *MenuHandlers) MaxAmount(ctx context.Context, sym string, input []byte) 
 		return res, err
 	}
 	if string(recipientAddress) == config.DefaultMpesaAddress() && isStableVoucher(string(activeAddress)) {
+		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
+		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
+		return res, nil
+	}
+
+	// confirm the transaction type
+	swapToVoucher, err := store.ReadSwapToVoucher(ctx, h.userdataStore, sessionId)
+	if err != nil {
+		logg.ErrorCtxf(ctx, "failed on ReadSwapFromVoucher", "error", err)
+		// switch to normal transaction as the recipient isn't registered (pool or alias only on sarafu)
 		res.FlagReset = append(res.FlagReset, flag_swap_transaction)
 		res.Content = l.Get("Maximum amount: %s %s\nEnter amount:", formattedBalance, string(activeSym))
 		return res, nil
