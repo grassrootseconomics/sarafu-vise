@@ -10,7 +10,7 @@ INCMP > 88
 INCMP < 98
 INCMP _ 0
 INCMP quit 99
-LOAD calculate_max_pay_debt 0
+LOAD calculate_max_pay_debt 128
 RELOAD calculate_max_pay_debt
 CATCH . flag_incorrect_voucher 1
 CATCH low_pay_debt_amount flag_low_swap_amount 1
