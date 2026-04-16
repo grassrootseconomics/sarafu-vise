@@ -2,10 +2,6 @@ git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66 h1:hmtb2Q3lHxq+S
 git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66/go.mod h1:jyBMe1qTYUz3mmuoC9JQ/TvFeW0vTanCUcPu3H8p4Ck=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20251127132814-8ceadabbc215 h1:cxWmd3WG3iVEqP6qG8ZeQRa7Ujno3rSKz3YXjZnmTEY=
 git.grassecon.net/grassrootseconomics/common v0.9.0-beta.1.0.20251127132814-8ceadabbc215/go.mod h1:wgQJZGIS6QuNLHqDhcsvehsbn5PvgV7aziRebMnJi60=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251128071248-bfdeef125576 h1:Ov4zENfEnzuU4ZpsNGbFjog9NUM0h1A7RYwWkmHRJWo=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251128071248-bfdeef125576/go.mod h1:h/y/lJNJAVTcIzAxCMXXw8Dh2aoLxBFZ6F1nTB8C0nU=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251202085112-45469d4ba326 h1:qH4QulgncvAD7b/YeHGPxcDJTBIychPeoZJACefYryI=
-git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20251202085112-45469d4ba326/go.mod h1:h/y/lJNJAVTcIzAxCMXXw8Dh2aoLxBFZ6F1nTB8C0nU=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20260207150752-71aa5ce7b537 h1:2AoOHiRTN3SXX4qnc2wOaF2ktVXLlFAa3X/n9DLu8/s=
 git.grassecon.net/grassrootseconomics/sarafu-api v0.9.0-beta.1.0.20260207150752-71aa5ce7b537/go.mod h1:h/y/lJNJAVTcIzAxCMXXw8Dh2aoLxBFZ6F1nTB8C0nU=
 git.grassecon.net/grassrootseconomics/visedriver v0.9.0-beta.2.0.20250408094335-e2d1f65bb306 h1:Jo+yWysWw/N5BJQtAyEMN8ePVvAyPHv+JG4lQti+1N4=
@@ -92,8 +88,8 @@ github.com/jackc/pgpassfile v1.0.0 h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsI
 github.com/jackc/pgpassfile v1.0.0/go.mod h1:CEx0iS5ambNFdcRtxPj5JhEz+xB6uRky5eyVu/W2HEg=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=
 github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761/go.mod h1:5TJZWKEWniPve33vlWYSoGYefn3gLQRzjfDlhSJ9ZKM=
-github.com/jackc/pgx/v5 v5.7.6 h1:rWQc5FwZSPX58r1OQmkuaNicxdmExaEz5A2DO2hUuTk=
-github.com/jackc/pgx/v5 v5.7.6/go.mod h1:aruU7o91Tc2q2cFp5h4uP3f6ztExVpyVv88Xl/8Vl8M=
+github.com/jackc/pgx/v5 v5.9.0 h1:T/dI+2TvmI2H8s/KH1/lXIbz1CUFk3gn5oTjr0/mBsE=
+github.com/jackc/pgx/v5 v5.9.0/go.mod h1:mal1tBGAFfLHvZzaYh77YS/eC6IX9OWbRV1QIIM0Jn4=
 github.com/jackc/puddle/v2 v2.2.2 h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo=
 github.com/jackc/puddle/v2 v2.2.2/go.mod h1:vriiEXHvEE654aYKXXjOvZM39qJ0q+azkZFrfEOc3H4=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
