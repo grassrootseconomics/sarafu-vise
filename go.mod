@@ -1,8 +1,6 @@
 module git.grassecon.net/grassrootseconomics/sarafu-vise
 
-go 1.24.0
-
-toolchain go1.24.10
+go 1.25.0
 
 require (
 	git.defalsify.org/vise.git v0.3.2-0.20250528124150-03bf7bfc1b66
@@ -14,7 +12,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/grassrootseconomics/ethutils v1.6.0
 	github.com/grassrootseconomics/ussd-data-service v1.10.1-beta
-	github.com/jackc/pgx/v5 v5.7.6
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/peteole/testdata-loader v0.3.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.45.0
